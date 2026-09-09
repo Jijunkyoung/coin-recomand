@@ -38,6 +38,29 @@ class MainAnalysisTests(unittest.TestCase):
         error.response = type("Response", (), {"status_code": 403})()
         self.assertEqual(warning_reason(error), "HTTP 403 접근 거부(수집 실행환경 제한)")
 
+    @patch.dict("os.environ", {"MOBULA_API_KEY": "test"})
+    @patch("src.main.time.sleep", return_value=None)
+    def test_short_history_is_a_notice_not_a_provider_warning(self, _sleep):
+        candles = self.candles()
+
+        class FakeClient:
+            def upbit_markets(self): return [{"market": "KRW-BTC", "korean_name": "비트코인", "english_name": "Bitcoin"}, {"market": "KRW-CP", "korean_name": "컨버전스", "english_name": "Convergence"}]
+            def upbit_tickers(self, _markets): return [{"market": "KRW-CP", "acc_trade_price_24h": 10_000_000_000}]
+            def upbit_daily_candles(self, market, _count): return candles if market == "KRW-BTC" else candles[:2]
+            def bitcoin_mvrv_z(self): return 1.2
+            def fear_and_greed(self): return {"value": 50, "classification": "Neutral", "previous": 48}
+            def coingecko_trending(self): return {}
+            def reddit_mentions(self, _aliases): return None, 0
+            def dcinside_mentions(self, _aliases, _pages): return {}, 0
+            def coinpan_mentions(self, _aliases, _pages): return {}, 0
+            def coingecko_coin_list(self): return []
+
+        settings = {"upbit_candle_days": 60, "excluded_symbols": ["BTC"], "minimum_24h_value_krw": 1, "screen_count": 1, "recommendation_count": 1, "fundamental_candidate_count": 1, "community_pages": 1}
+        report = build_report(settings, FakeClient())
+        self.assertEqual(report["data_quality"]["status"], "정상")
+        self.assertEqual(report["data_quality"]["warnings"], [])
+        self.assertEqual(report["data_quality"]["notices"], ["KRW-CP 분석 제외: 거래이력 부족 (2일/최소 60일)"])
+
     @patch("src.main.time.sleep", return_value=None)
     def test_report_combines_three_community_sources_and_project_context(self, _sleep):
         candles = self.candles()

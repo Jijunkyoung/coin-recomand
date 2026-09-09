@@ -240,6 +240,7 @@ def load_settings(path: Path) -> dict[str, Any]:
 def build_report(settings: dict[str, Any], client: MarketDataClient | None = None) -> dict[str, Any]:
     client = client or MarketDataClient()
     warnings: list[str] = []
+    notices: list[str] = []
     market_rows = client.upbit_markets()
     market_names = {row["market"]: row.get("korean_name") or row["market"] for row in market_rows}
     english_names = {row["market"]: row.get("english_name") or row["market"] for row in market_rows}
@@ -336,7 +337,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                 }
             )
         except InsufficientHistoryError as exc:
-            warnings.append(f"{market} 분석 제외: {exc}")
+            notices.append(f"{market} 분석 제외: {exc}")
         except Exception as exc:
             warnings.append(f"{market} 분석 제외: {warning_reason(exc)}")
         time.sleep(0.12)
@@ -454,7 +455,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             ],
             "execution": "실제 주문은 실행하지 않으며, 분할매수 후보도 손절·비중·호재 출처를 다시 확인하는 연구용 신호입니다.",
         },
-        "data_quality": {"status": "주의" if warnings else "정상", "warnings": warnings},
+        "data_quality": {"status": "주의" if warnings else "정상", "warnings": warnings, "notices": notices},
         "sources": [
             {"name": "Upbit", "url": "https://global-docs.upbit.com/reference/list-tickers"},
             {"name": "Coin Metrics", "url": "https://docs.coinmetrics.io/api/v4"},
