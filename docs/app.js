@@ -4,14 +4,18 @@ const pct = value => value == null ? "—" : `${value > 0 ? "+" : ""}${fmt(value
 let detailCoin = null;
 let detailDays = 30;
 let detailPlot = null;
+let detailFrame = null;
+let detailHoverIndex = null;
 
 function drawLine(canvas, values, color = "#4d8dff") {
   if (!values?.length) return;
   const ratio = window.devicePixelRatio || 1;
   const width = canvas.clientWidth || 300;
   const height = Number(canvas.getAttribute("height")) || 80;
-  canvas.width = width * ratio; canvas.height = height * ratio;
-  const ctx = canvas.getContext("2d"); ctx.scale(ratio, ratio);
+  canvas.style.height = `${height}px`;
+  const pixelWidth = Math.round(width * ratio), pixelHeight = Math.round(height * ratio);
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
+  const ctx = canvas.getContext("2d"); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, height);
   const min = Math.min(...values), max = Math.max(...values), spread = max - min || 1;
   const points = values.map((v, i) => [8 + i * (width - 16) / Math.max(1, values.length - 1), height - 8 - (v - min) / spread * (height - 18)]);
   const gradient = ctx.createLinearGradient(0, 0, 0, height); gradient.addColorStop(0, `${color}55`); gradient.addColorStop(1, `${color}00`);
@@ -45,15 +49,18 @@ function drawDetailedChart(crossIndex = null) {
   const all = historyFor(detailCoin);
   const length = detailDays === "all" ? all.length : Math.min(Number(detailDays), all.length);
   const start = all.length - length, rows = all.slice(start);
+  if (!rows.length) return;
   const prices = rows.map(row => Number(row.price));
   const volumes = rows.map(row => Number(row.volume) || 0);
   const allPrices = all.map(row => Number(row.price));
   const ema20 = emaValues(allPrices, 20).slice(start);
   const ema50 = emaValues(allPrices, 50).slice(start);
   const canvas = $("#detailChart"), ratio = window.devicePixelRatio || 1;
-  const width = canvas.clientWidth || 900, height = Number(canvas.getAttribute("height")) || 360;
-  canvas.width = width * ratio; canvas.height = height * ratio;
-  const ctx = canvas.getContext("2d"); ctx.scale(ratio, ratio); ctx.clearRect(0, 0, width, height);
+  const bounds = canvas.getBoundingClientRect();
+  const width = Math.max(280, Math.floor(bounds.width)), height = Math.max(280, Math.floor(bounds.height));
+  const pixelWidth = Math.round(width * ratio), pixelHeight = Math.round(height * ratio);
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
+  const ctx = canvas.getContext("2d"); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, height);
   const pad = { left: width < 560 ? 49 : 68, right: 18, top: 21, bottom: 40 };
   const priceBottom = height * .72, volumeTop = priceBottom + 22, plotWidth = width - pad.left - pad.right;
   const low = Math.min(...prices), high = Math.max(...prices), margin = (high - low || high * .02 || 1) * .09;
@@ -90,13 +97,23 @@ function drawDetailedChart(crossIndex = null) {
   $("#detailStats").innerHTML = metric("기간 수익률", pct(change)) + metric("기간 최고가", `₩${fmt(high, 4)}`) + metric("기간 최저가", `₩${fmt(low, 4)}`) + metric("EMA20", `₩${fmt(detailCoin.ema20, 4)}`) + metric("EMA50", `₩${fmt(detailCoin.ema50, 4)}`);
 }
 
+function scheduleDetailedChart(crossIndex = null) {
+  detailHoverIndex = crossIndex;
+  if (detailFrame != null) return;
+  detailFrame = requestAnimationFrame(() => {
+    detailFrame = null;
+    drawDetailedChart(detailHoverIndex);
+  });
+}
+
 function openDetailChart(coin) {
   detailCoin = coin; detailDays = 30;
   $("#chartSymbol").textContent = `${coin.symbol || "BTC"} / KRW · DAILY`;
   $("#chartTitle").textContent = `${coin.name || "비트코인"} 상세차트`;
   $("#chartPrice").textContent = `현재 ₩${fmt(coin.price, 4)} · 30일 ${pct(coin.return_30d)}`;
   $("#periodTabs").querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.days === "30"));
-  const dialog = $("#chartDialog"); dialog.showModal(); requestAnimationFrame(() => drawDetailedChart());
+  const dialog = $("#chartDialog"); dialog.showModal();
+  requestAnimationFrame(() => scheduleDetailedChart());
 }
 
 function metric(label, value) { return `<div><span>${label}</span><strong>${value}</strong></div>`; }
@@ -139,18 +156,18 @@ $("#chartDialog").addEventListener("click", event => { if (event.target === even
 $("#periodTabs").addEventListener("click", event => {
   const button = event.target.closest("button"); if (!button) return;
   detailDays = button.dataset.days === "all" ? "all" : Number(button.dataset.days);
-  $("#periodTabs").querySelectorAll("button").forEach(item => item.classList.toggle("active", item === button)); drawDetailedChart();
+  $("#periodTabs").querySelectorAll("button").forEach(item => item.classList.toggle("active", item === button)); scheduleDetailedChart();
 });
 $("#detailChart").addEventListener("pointermove", event => {
   if (!detailPlot) return;
   const rect = event.currentTarget.getBoundingClientRect(), localX = event.clientX - rect.left;
   const ratioX = (localX - detailPlot.pad.left) / Math.max(1, detailPlot.width - detailPlot.pad.left - detailPlot.pad.right);
   const index = Math.max(0, Math.min(detailPlot.rows.length - 1, Math.round(ratioX * (detailPlot.rows.length - 1))));
-  drawDetailedChart(index); const row = detailPlot.rows[index], tooltip = $("#chartTooltip");
+  scheduleDetailedChart(index); const row = detailPlot.rows[index], tooltip = $("#chartTooltip");
   tooltip.innerHTML = `<strong>${row.date}</strong><span>종가 ₩${fmt(row.price,4)}</span><span>거래대금 ${compact(row.volume)}원</span>`; tooltip.hidden = false;
   tooltip.style.left = `${Math.max(8, Math.min(rect.width - 162, localX + 13))}px`; tooltip.style.top = "18px";
 });
-$("#detailChart").addEventListener("pointerleave", () => { $("#chartTooltip").hidden = true; drawDetailedChart(); });
-window.addEventListener("resize", () => { if ($("#chartDialog").open) drawDetailedChart(); });
+$("#detailChart").addEventListener("pointerleave", () => { $("#chartTooltip").hidden = true; scheduleDetailedChart(); });
+window.addEventListener("resize", () => { if ($("#chartDialog").open) scheduleDetailedChart(); });
 
 fetch(`data/latest.json?v=${Date.now()}`).then(response => { if (!response.ok) throw new Error("분석 파일을 읽지 못했습니다."); return response.json(); }).then(render).catch(error => { $("#recommendations").innerHTML = `<div class="error-card">${error.message} 잠시 후 다시 시도하거나 GitHub Actions 실행 상태를 확인하세요.</div>`; $("#qualityText").textContent = "데이터 오류"; });
