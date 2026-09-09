@@ -8,6 +8,9 @@ class MainAnalysisTests(unittest.TestCase):
         candles = [
             {
                 "trade_price": 100 + index,
+                "opening_price": 99 + index,
+                "high_price": 102 + index,
+                "low_price": 98 + index,
                 "candle_acc_trade_price": 1_000_000 + index * 10_000,
                 "candle_date_time_kst": f"2026-01-{(index % 28) + 1:02d}T00:00:00",
             }
@@ -17,6 +20,9 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(len(result["history"]), 60)
         self.assertEqual(result["history"][0]["date"], "2026-01-01")
         self.assertIn("price", result["history"][0])
+        self.assertEqual(result["history"][0]["open"], 99)
+        self.assertEqual(result["history"][0]["high"], 102)
+        self.assertEqual(result["history"][0]["low"], 98)
         self.assertIn("volume", result["history"][0])
 
 

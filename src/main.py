@@ -42,6 +42,9 @@ def technical_metrics(candles: list[dict[str, Any]]) -> dict[str, Any]:
         "history": [
             {
                 "date": candle.get("candle_date_time_kst", candle.get("candle_date_time_utc", ""))[:10],
+                "open": round(float(candle.get("opening_price", candle["trade_price"])), 4),
+                "high": round(float(candle.get("high_price", candle["trade_price"])), 4),
+                "low": round(float(candle.get("low_price", candle["trade_price"])), 4),
                 "price": round(float(candle["trade_price"]), 4),
                 "volume": round(float(candle["candle_acc_trade_price"])),
             }

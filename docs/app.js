@@ -33,7 +33,7 @@ function historyFor(coin) {
   const end = new Date();
   return (coin.sparkline || []).map((price, index, array) => {
     const date = new Date(end); date.setDate(end.getDate() - (array.length - index - 1));
-    return { date: date.toISOString().slice(0, 10), price, volume: 0 };
+    return { date: date.toISOString().slice(0, 10), open: price, high: price, low: price, price, volume: 0 };
   });
 }
 
@@ -44,6 +44,37 @@ function emaValues(values, period) {
   return result;
 }
 
+function bollingerValues(values, period = 20, multiplier = 2) {
+  const middle = Array(values.length).fill(null), upper = Array(values.length).fill(null), lower = Array(values.length).fill(null);
+  for (let index = period - 1; index < values.length; index += 1) {
+    const windowValues = values.slice(index - period + 1, index + 1);
+    const average = windowValues.reduce((sum, value) => sum + value, 0) / period;
+    const deviation = Math.sqrt(windowValues.reduce((sum, value) => sum + (value - average) ** 2, 0) / period);
+    middle[index] = average; upper[index] = average + multiplier * deviation; lower[index] = average - multiplier * deviation;
+  }
+  return { middle, upper, lower };
+}
+
+function rsiValues(values, period = 14) {
+  const result = Array(values.length).fill(null);
+  if (values.length <= period) return result;
+  let gain = 0, loss = 0;
+  for (let index = 1; index <= period; index += 1) {
+    const change = values[index] - values[index - 1];
+    gain += Math.max(change, 0); loss += Math.max(-change, 0);
+  }
+  let averageGain = gain / period, averageLoss = loss / period;
+  const value = () => averageLoss === 0 ? 100 : 100 - 100 / (1 + averageGain / averageLoss);
+  result[period] = value();
+  for (let index = period + 1; index < values.length; index += 1) {
+    const change = values[index] - values[index - 1];
+    averageGain = (averageGain * (period - 1) + Math.max(change, 0)) / period;
+    averageLoss = (averageLoss * (period - 1) + Math.max(-change, 0)) / period;
+    result[index] = value();
+  }
+  return result;
+}
+
 function drawDetailedChart(crossIndex = null) {
   if (!detailCoin) return;
   const all = historyFor(detailCoin);
@@ -51,21 +82,31 @@ function drawDetailedChart(crossIndex = null) {
   const start = all.length - length, rows = all.slice(start);
   if (!rows.length) return;
   const prices = rows.map(row => Number(row.price));
+  const opens = rows.map(row => Number(row.open ?? row.price));
+  const highs = rows.map(row => Number(row.high ?? row.price));
+  const lows = rows.map(row => Number(row.low ?? row.price));
   const volumes = rows.map(row => Number(row.volume) || 0);
   const allPrices = all.map(row => Number(row.price));
   const ema20 = emaValues(allPrices, 20).slice(start);
   const ema50 = emaValues(allPrices, 50).slice(start);
+  const bands = bollingerValues(allPrices);
+  const bandUpper = bands.upper.slice(start), bandMiddle = bands.middle.slice(start), bandLower = bands.lower.slice(start);
+  const rsi14 = rsiValues(allPrices).slice(start);
   const canvas = $("#detailChart"), ratio = window.devicePixelRatio || 1;
   const bounds = canvas.getBoundingClientRect();
   const width = Math.max(280, Math.floor(bounds.width)), height = Math.max(280, Math.floor(bounds.height));
   const pixelWidth = Math.round(width * ratio), pixelHeight = Math.round(height * ratio);
   if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
   const ctx = canvas.getContext("2d"); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, height);
-  const pad = { left: width < 560 ? 49 : 68, right: 18, top: 21, bottom: 40 };
-  const priceBottom = height * .72, volumeTop = priceBottom + 22, plotWidth = width - pad.left - pad.right;
-  const low = Math.min(...prices), high = Math.max(...prices), margin = (high - low || high * .02 || 1) * .09;
+  const pad = { left: width < 560 ? 49 : 68, right: 18, top: 21, bottom: 22 };
+  const priceBottom = height * .56, volumeTop = priceBottom + 10, volumeBottom = height * .69;
+  const dateY = volumeBottom + 6, rsiTop = height * .76, rsiBottom = height - pad.bottom;
+  const plotWidth = width - pad.left - pad.right;
+  const bandRange = [...bandUpper, ...bandLower].filter(value => value != null && Number.isFinite(value));
+  const low = Math.min(...lows, ...bandRange), high = Math.max(...highs, ...bandRange), margin = (high - low || high * .02 || 1) * .09;
   const min = low - margin, max = high + margin, spread = max - min || 1;
-  const x = index => pad.left + index * plotWidth / Math.max(1, rows.length - 1);
+  const candleSpace = plotWidth / Math.max(1, rows.length), candleWidth = Math.max(1.5, Math.min(10, candleSpace * .62));
+  const x = index => pad.left + (index + .5) * candleSpace;
   const y = value => pad.top + (max - value) / spread * (priceBottom - pad.top);
 
   ctx.font = `${width < 560 ? 10 : 11}px system-ui`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
@@ -74,27 +115,70 @@ function drawDetailedChart(crossIndex = null) {
     ctx.beginPath(); ctx.moveTo(pad.left, gridY); ctx.lineTo(width - pad.right, gridY); ctx.strokeStyle = "rgba(143,162,189,.13)"; ctx.lineWidth = 1; ctx.stroke();
     ctx.fillStyle = "#7f93af"; ctx.fillText(compact(value), pad.left - 8, gridY);
   }
-  const maxVolume = Math.max(...volumes, 1), barWidth = Math.max(1, plotWidth / Math.max(1, rows.length) * .68);
-  volumes.forEach((volume, index) => {
-    const barHeight = volume / maxVolume * (height - volumeTop - pad.bottom);
-    ctx.fillStyle = "rgba(77,141,255,.22)"; ctx.fillRect(x(index) - barWidth / 2, height - pad.bottom - barHeight, barWidth, barHeight);
-  });
+
+  const bandIndexes = bandUpper.map((value, index) => value != null && bandLower[index] != null ? index : null).filter(index => index != null);
+  if (bandIndexes.length > 1) {
+    ctx.beginPath();
+    bandIndexes.forEach((index, position) => position ? ctx.lineTo(x(index), y(bandUpper[index])) : ctx.moveTo(x(index), y(bandUpper[index])));
+    [...bandIndexes].reverse().forEach(index => ctx.lineTo(x(index), y(bandLower[index])));
+    ctx.closePath(); ctx.fillStyle = "rgba(169,139,255,.10)"; ctx.fill();
+  }
+
   const plot = (values, color, lineWidth) => {
-    ctx.beginPath(); values.forEach((value, index) => index ? ctx.lineTo(x(index), y(value)) : ctx.moveTo(x(index), y(value)));
+    ctx.beginPath(); let started = false;
+    values.forEach((value, index) => {
+      if (value == null || !Number.isFinite(value)) { started = false; return; }
+      if (started) ctx.lineTo(x(index), y(value)); else { ctx.moveTo(x(index), y(value)); started = true; }
+    });
     ctx.strokeStyle = color; ctx.lineWidth = lineWidth; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
   };
-  plot(ema50, "#ffbf47", 1.35); plot(ema20, "#31d8c5", 1.45); plot(prices, "#6da2ff", 2.3);
+  plot(bandUpper, "rgba(169,139,255,.76)", 1.1); plot(bandLower, "rgba(169,139,255,.76)", 1.1); plot(bandMiddle, "rgba(169,139,255,.38)", 1);
+  plot(ema50, "#ffbf47", 1.15); plot(ema20, "#31d8c5", 1.25);
+
+  rows.forEach((row, index) => {
+    const rising = prices[index] >= opens[index], color = rising ? "#ff6b78" : "#4d8dff";
+    const center = x(index), openY = y(opens[index]), closeY = y(prices[index]);
+    ctx.beginPath(); ctx.moveTo(center, y(highs[index])); ctx.lineTo(center, y(lows[index])); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();
+    const bodyTop = Math.min(openY, closeY), bodyHeight = Math.max(1.5, Math.abs(closeY - openY));
+    ctx.fillStyle = color; ctx.fillRect(center - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+  });
+
+  const maxVolume = Math.max(...volumes, 1), barWidth = Math.max(1, candleWidth * .82);
+  volumes.forEach((volume, index) => {
+    const barHeight = volume / maxVolume * (volumeBottom - volumeTop);
+    ctx.fillStyle = prices[index] >= opens[index] ? "rgba(255,107,120,.24)" : "rgba(77,141,255,.25)";
+    ctx.fillRect(x(index) - barWidth / 2, volumeBottom - barHeight, barWidth, barHeight);
+  });
+
   const labels = [0, Math.floor((rows.length - 1) / 2), rows.length - 1];
   ctx.fillStyle = "#7f93af"; ctx.textBaseline = "top";
-  labels.forEach((index, position) => { ctx.textAlign = position === 0 ? "left" : position === 2 ? "right" : "center"; ctx.fillText(rows[index]?.date || "", x(index), height - pad.bottom + 12); });
+  labels.forEach((index, position) => { ctx.textAlign = position === 0 ? "left" : position === 2 ? "right" : "center"; ctx.fillText(rows[index]?.date || "", x(index), dateY); });
+
+  const rsiY = value => rsiTop + (100 - value) / 100 * (rsiBottom - rsiTop);
+  ctx.fillStyle = "rgba(255,107,120,.035)"; ctx.fillRect(pad.left, rsiTop, plotWidth, rsiY(70) - rsiTop);
+  ctx.fillStyle = "rgba(77,141,255,.035)"; ctx.fillRect(pad.left, rsiY(30), plotWidth, rsiBottom - rsiY(30));
+  [70, 50, 30].forEach(level => {
+    const lineY = rsiY(level); ctx.beginPath(); ctx.moveTo(pad.left, lineY); ctx.lineTo(width - pad.right, lineY);
+    ctx.strokeStyle = level === 50 ? "rgba(143,162,189,.12)" : "rgba(212,129,255,.22)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = "#7f93af"; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(String(level), pad.left - 8, lineY);
+  });
+  ctx.beginPath(); let rsiStarted = false;
+  rsi14.forEach((value, index) => {
+    if (value == null || !Number.isFinite(value)) { rsiStarted = false; return; }
+    if (rsiStarted) ctx.lineTo(x(index), rsiY(value)); else { ctx.moveTo(x(index), rsiY(value)); rsiStarted = true; }
+  });
+  ctx.strokeStyle = "#d481ff"; ctx.lineWidth = 1.7; ctx.lineJoin = "round"; ctx.stroke();
+  ctx.fillStyle = "#a8b8ce"; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("RSI(14)", pad.left + 5, rsiTop + 4);
+
   if (crossIndex != null && rows[crossIndex]) {
     const pointX = x(crossIndex), pointY = y(prices[crossIndex]);
-    ctx.beginPath(); ctx.moveTo(pointX, pad.top); ctx.lineTo(pointX, height - pad.bottom); ctx.strokeStyle = "rgba(237,244,255,.32)"; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(pointX, pad.top); ctx.lineTo(pointX, rsiBottom); ctx.strokeStyle = "rgba(237,244,255,.32)"; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
     ctx.beginPath(); ctx.arc(pointX, pointY, 4, 0, Math.PI * 2); ctx.fillStyle = "#edf4ff"; ctx.fill();
   }
-  detailPlot = { rows, x, pad, width };
+  detailPlot = { rows, rsi14, x, pad, width };
   const change = prices[0] ? (prices.at(-1) / prices[0] - 1) * 100 : null;
-  $("#detailStats").innerHTML = metric("기간 수익률", pct(change)) + metric("기간 최고가", `₩${fmt(high, 4)}`) + metric("기간 최저가", `₩${fmt(low, 4)}`) + metric("EMA20", `₩${fmt(detailCoin.ema20, 4)}`) + metric("EMA50", `₩${fmt(detailCoin.ema50, 4)}`);
+  const latestRsi = [...rsi14].reverse().find(value => value != null);
+  $("#detailStats").innerHTML = metric("기간 수익률", pct(change)) + metric("기간 최고가", `₩${fmt(Math.max(...highs), 4)}`) + metric("기간 최저가", `₩${fmt(Math.min(...lows), 4)}`) + metric("EMA20", `₩${fmt(detailCoin.ema20, 4)}`) + metric("EMA50", `₩${fmt(detailCoin.ema50, 4)}`) + metric("RSI(14)", fmt(latestRsi, 1));
 }
 
 function scheduleDetailedChart(crossIndex = null) {
@@ -164,8 +248,9 @@ $("#detailChart").addEventListener("pointermove", event => {
   const ratioX = (localX - detailPlot.pad.left) / Math.max(1, detailPlot.width - detailPlot.pad.left - detailPlot.pad.right);
   const index = Math.max(0, Math.min(detailPlot.rows.length - 1, Math.round(ratioX * (detailPlot.rows.length - 1))));
   scheduleDetailedChart(index); const row = detailPlot.rows[index], tooltip = $("#chartTooltip");
-  tooltip.innerHTML = `<strong>${row.date}</strong><span>종가 ₩${fmt(row.price,4)}</span><span>거래대금 ${compact(row.volume)}원</span>`; tooltip.hidden = false;
-  tooltip.style.left = `${Math.max(8, Math.min(rect.width - 162, localX + 13))}px`; tooltip.style.top = "18px";
+  const open = row.open ?? row.price, high = row.high ?? row.price, low = row.low ?? row.price, pointRsi = detailPlot.rsi14[index];
+  tooltip.innerHTML = `<strong>${row.date}</strong><span>시가 ₩${fmt(open,4)} · 고가 ₩${fmt(high,4)}</span><span>저가 ₩${fmt(low,4)} · 종가 ₩${fmt(row.price,4)}</span><span>거래대금 ${compact(row.volume)}원 · RSI ${fmt(pointRsi,1)}</span>`; tooltip.hidden = false;
+  tooltip.style.left = `${Math.max(8, Math.min(rect.width - 234, localX + 13))}px`; tooltip.style.top = "18px";
 });
 $("#detailChart").addEventListener("pointerleave", () => { $("#chartTooltip").hidden = true; scheduleDetailedChart(); });
 window.addEventListener("resize", () => { if ($("#chartDialog").open) scheduleDetailedChart(); });
