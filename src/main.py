@@ -39,6 +39,14 @@ def technical_metrics(candles: list[dict[str, Any]]) -> dict[str, Any]:
         "volume_ratio": round_or_none(volume_ratio(volumes)),
         "volatility": round_or_none(annualized_volatility(closes)),
         "sparkline": [round(value, 4) for value in closes[-30:]],
+        "history": [
+            {
+                "date": candle.get("candle_date_time_kst", candle.get("candle_date_time_utc", ""))[:10],
+                "price": round(float(candle["trade_price"]), 4),
+                "volume": round(float(candle["candle_acc_trade_price"])),
+            }
+            for candle in candles
+        ],
     }
 
 
