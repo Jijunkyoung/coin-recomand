@@ -5,6 +5,9 @@
   "upbit_candle_days": 120,
   "community_pages": 2,
   "fundamental_candidate_count": 12,
+  "coingecko_id_overrides": {
+    "PROS": "prosper-2"
+  },
   "excluded_symbols": ["BTC", "USDT", "USDC", "DAI", "BUSD", "FDUSD", "TUSD"],
   "schedule_note": "매일 07:15 KST"
 }

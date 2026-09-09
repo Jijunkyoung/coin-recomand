@@ -44,14 +44,14 @@ class MainAnalysisTests(unittest.TestCase):
             def dcinside_mentions(self, _aliases, _pages): return {"XRP": 2}, 40
             def coinpan_mentions(self, _aliases, _pages): return {"XRP": 3}, 40
             def coingecko_coin_list(self): return [{"id": "ripple", "symbol": "xrp", "name": "XRP"}]
-            def coingecko_coin_details(self, _coin_id): return {"id": "ripple", "market_data": {"circulating_supply": 80, "total_supply": 100}, "links": {"repos_url": {"github": []}}}
+            def coingecko_coin_details(self, _coin_id): return {"id": "ripple", "market_data": {"circulating_supply": 80, "total_supply": 100}, "links": {"repos_url": {"github": []}, "homepage": ["https://ripple.com"]}}
 
         settings = {"upbit_candle_days": 60, "excluded_symbols": ["BTC"], "minimum_24h_value_krw": 1, "screen_count": 1, "recommendation_count": 1, "fundamental_candidate_count": 1, "community_pages": 1}
         report = build_report(settings, FakeClient())
         coin = report["recommendations"][0]
         self.assertEqual(coin["community_total"], 6)
         self.assertEqual(coin["community_sources"], 3)
-        self.assertEqual(coin["development"]["status"], "미수집")
+        self.assertEqual(coin["development"]["status"], "공개 GitHub 없음")
         self.assertEqual(coin["tokenomics"]["circulating_ratio"], 80.0)
 
 

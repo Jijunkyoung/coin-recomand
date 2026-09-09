@@ -1,12 +1,19 @@
 import unittest
 from datetime import datetime, timezone
 
-from src.main import summarize_unlock
-from src.providers import _link_titles, count_post_mentions
+from src.main import resolve_coingecko_id, summarize_unlock
+from src.providers import MarketDataClient, _coinpan_posts, _link_titles, count_post_mentions
 from src.scoring import alt_score
 
 
 class CommunityAndEventTests(unittest.TestCase):
+    def test_coingecko_override_resolves_renamed_pros_token(self):
+        rows = [
+            {"id": "prosper", "symbol": "pros", "name": "Prosper [OLD]"},
+            {"id": "prosper-2", "symbol": "pros", "name": "Prosper"},
+        ]
+        self.assertEqual(resolve_coingecko_id(rows, "PROS", "Prosper", {"PROS": "prosper-2"}), "prosper-2")
+
     def test_counts_each_matching_post_once_and_avoids_common_ticker_noise(self):
         aliases = {"XRP": ("XRP", "리플"), "ONE": ("Harmony", "하모니")}
         posts = ["리플 XRP 오늘 강하네", "xrp 상승", "someone said this", "하모니 메인넷 업데이트"]
@@ -18,6 +25,25 @@ class CommunityAndEventTests(unittest.TestCase):
         page = '<a href="/free/123">리플 소식</a><a href="/notice/1">공지</a><a href="/free/124#comment">2</a>'
         titles = _link_titles(page, lambda href: href.startswith("/free/") and "#comment" not in href)
         self.assertEqual(titles, ["리플 소식"])
+
+    def test_coinpan_parser_supports_clean_and_query_urls_and_deduplicates(self):
+        page = '''
+            <a href="/free/123">리플 소식</a>
+            <a href="https://coinpan.com/index.php?mid=free&document_srl=124">프로스퍼 진척</a>
+            <a href="/free/123#comment">댓글 2</a>
+            <a href="?mid=free&document_srl=124&comment_srl=9">댓글 링크</a>
+        '''
+        self.assertEqual(_coinpan_posts(page), {"123": "리플 소식", "124": "프로스퍼 진척"})
+
+    def test_github_project_activity_chooses_active_repository(self):
+        client = MarketDataClient()
+        client.github_repository_activity = lambda url: {
+            "repository": url,
+            "commits_30d": 9 if url.endswith("active") else 0,
+            "latest_commit": "2026-09-08T00:00:00Z" if url.endswith("active") else "2024-01-01T00:00:00Z",
+        }
+        result = client.github_project_activity(["https://github.com/example/old", "https://github.com/example/active"])
+        self.assertEqual(result["repository"], "https://github.com/example/active")
 
     def test_summarizes_nearest_upcoming_unlock(self):
         metadata = {"release_schedule": [{"date": "2026-09-20T00:00:00Z", "amount": 5_000_000}, {"date": "2026-10-20T00:00:00Z", "amount": 1_000_000}]}

@@ -63,6 +63,8 @@ MVRV Z-Score의 완전한 자동 수집에는 Glassnode API 키가 필요합니�
 
 설정값은 [`config/settings.json`](config/settings.json)에서 조정할 수 있습니다.
 
+동일 티커가 여러 CoinGecko 자산에 쓰이는 경우 `coingecko_id_overrides`에 현재 자산 ID를 지정합니다. PROS는 폐기된 `prosper` 대신 현재 자산인 `prosper-2`로 고정되어 있습니다. 프로젝트가 공개 GitHub를 제공하지 않으면 개발량을 추정하지 않고 `공개 GitHub 없음`으로 표시합니다.
+
 ## 테스트
 
 ```bash

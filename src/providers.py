@@ -6,7 +6,7 @@ import time
 import html
 from datetime import datetime, timezone
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -29,6 +29,32 @@ def _link_titles(page: str, predicate: Any) -> list[str]:
             seen.add(href)
             titles.append(text)
     return titles
+
+
+def _coinpan_post_id(href: str) -> str | None:
+    parsed = urlparse(html.unescape(href))
+    if parsed.fragment.lower().startswith("comment") or "comment_srl" in parse_qs(parsed.query):
+        return None
+    match = re.fullmatch(r"/free/(\d+)/?", parsed.path)
+    if match:
+        return match.group(1)
+    document_ids = parse_qs(parsed.query).get("document_srl", [])
+    if document_ids and document_ids[0].isdigit() and parse_qs(parsed.query).get("mid", ["free"])[0] == "free":
+        return document_ids[0]
+    return None
+
+
+def _coinpan_posts(page: str) -> dict[str, str]:
+    posts: dict[str, str] = {}
+    for href, body in re.findall(r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', page, flags=re.IGNORECASE | re.DOTALL):
+        post_id = _coinpan_post_id(href)
+        if not post_id:
+            continue
+        title = html.unescape(re.sub(r"<[^>]+>", " ", body))
+        title = " ".join(title.split())
+        if len(title) >= 2:
+            posts.setdefault(post_id, title)
+    return posts
 
 
 def count_post_mentions(posts: list[str], aliases: dict[str, tuple[str, str]]) -> dict[str, int]:
@@ -127,6 +153,10 @@ class MarketDataClient:
         latest_commit = None
         if commits:
             latest_commit = commits[0].get("commit", {}).get("committer", {}).get("date") or commits[0].get("commit", {}).get("author", {}).get("date")
+        else:
+            latest = self._json(f"https://api.github.com/repos/{repository}/commits", params={"per_page": 1}, headers=headers)
+            if latest:
+                latest_commit = latest[0].get("commit", {}).get("committer", {}).get("date") or latest[0].get("commit", {}).get("author", {}).get("date")
         latest_release = None
         try:
             release = self._json(f"https://api.github.com/repos/{repository}/releases/latest", headers=headers)
@@ -135,6 +165,27 @@ class MarketDataClient:
             if exc.response is None or exc.response.status_code != 404:
                 raise
         return {"repository": repository, "commits_30d": len(commits), "latest_commit": latest_commit, "latest_release": latest_release}
+
+    def github_project_activity(self, repository_urls: list[str]) -> dict[str, Any] | None:
+        activities: list[dict[str, Any]] = []
+        for repository_url in dict.fromkeys(repository_urls[:4]):
+            try:
+                activities.append(self.github_repository_activity(repository_url))
+            except (DataProviderError, requests.RequestException):
+                continue
+        if not activities:
+            return None
+
+        def rank(activity: dict[str, Any]) -> tuple[int, int, float]:
+            commits = int(activity.get("commits_30d") or 0)
+            parsed = activity.get("latest_commit") or ""
+            try:
+                timestamp = datetime.fromisoformat(str(parsed).replace("Z", "+00:00")).timestamp()
+            except (ValueError, TypeError):
+                timestamp = 0
+            return (1 if commits else 0, commits, timestamp)
+
+        return max(activities, key=rank)
 
     def mobula_metadata(self, asset: str) -> dict[str, Any] | None:
         key = os.getenv("MOBULA_API_KEY", "").strip()
@@ -232,14 +283,15 @@ class MarketDataClient:
         return count_post_mentions(posts, aliases), len(posts)
 
     def coinpan_mentions(self, aliases: dict[str, tuple[str, str]], pages: int = 2) -> tuple[dict[str, int], int]:
-        posts: list[str] = []
+        posts: dict[str, str] = {}
         for page in range(1, pages + 1):
-            body = self._text("https://coinpan.com/free", params={"page": page})
-            posts.extend(
-                _link_titles(
-                    body,
-                    lambda href: bool(re.fullmatch(r"/free/\d+", urlparse(href).path)) and "#comment" not in href,
-                )
-            )
+            try:
+                body = self._text("https://coinpan.com/index.php", params={"mid": "free", "page": page, "m": 0})
+            except requests.RequestException:
+                body = self._text("https://coinpan.com/free", params={"page": page, "m": 1})
+            posts.update(_coinpan_posts(body))
             time.sleep(0.25)
-        return count_post_mentions(posts, aliases), len(posts)
+        titles = list(posts.values())
+        if not titles:
+            raise DataProviderError("코인판 게시글 주소를 찾지 못했습니다.")
+        return count_post_mentions(titles, aliases), len(titles)

@@ -44,7 +44,10 @@ def _days_since(value: Any, now: datetime | None = None) -> int | None:
     return max(0, (current - parsed).days)
 
 
-def resolve_coingecko_id(rows: list[dict[str, Any]], symbol: str, english_name: str) -> str | None:
+def resolve_coingecko_id(rows: list[dict[str, Any]], symbol: str, english_name: str, overrides: dict[str, str] | None = None) -> str | None:
+    override = (overrides or {}).get(symbol.upper())
+    if override:
+        return override
     matches = [row for row in rows if str(row.get("symbol", "")).upper() == symbol.upper()]
     normalized_name = re.sub(r"[^a-z0-9]", "", english_name.lower())
     for row in matches:
@@ -114,7 +117,7 @@ def project_context(details: dict[str, Any], activity: dict[str, Any] | None, un
         release = activity.get("latest_release") or {}
         release_days = _days_since(release.get("date"), now)
         commits = activity.get("commits_30d")
-        status = "활발" if (commits or 0) >= 20 or (release_days is not None and release_days <= 30) else "진행 중" if (commits or 0) >= 5 else "정체 확인" if commit_days is not None and commit_days >= 120 else "낮은 활동"
+        status = activity.get("status") or ("활발" if (commits or 0) >= 20 or (release_days is not None and release_days <= 30) else "진행 중" if (commits or 0) >= 5 else "정체 확인" if commit_days is not None and commit_days >= 120 else "낮은 활동")
         development = {
             **activity,
             "status": status,
@@ -282,7 +285,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     if not os.getenv("MOBULA_API_KEY", "").strip():
         warnings.append("예정 토큰 언락 상세 미수집: MOBULA_API_KEY를 GitHub Secret에 등록하면 반영됩니다.")
     for coin in enriched:
-        coin_id = resolve_coingecko_id(coingecko_coins, coin["symbol"], coin["english_name"])
+        coin_id = resolve_coingecko_id(coingecko_coins, coin["symbol"], coin["english_name"], settings.get("coingecko_id_overrides"))
         if not coin_id:
             continue
         try:
@@ -291,9 +294,14 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             activity = None
             if repositories:
                 try:
-                    activity = client.github_repository_activity(repositories[0])
+                    activity = client.github_project_activity(repositories)
+                    if activity is None:
+                        warnings.append(f"{coin['symbol']} 공개 GitHub 저장소 응답 없음")
                 except Exception as exc:
                     warnings.append(f"{coin['symbol']} 개발 진척 미수집: {type(exc).__name__}")
+            else:
+                homepage = next((url for url in ((details.get("links") or {}).get("homepage") or []) if url), None)
+                activity = {"status": "공개 GitHub 없음", "repository": None, "commits_30d": None, "latest_commit": None, "latest_release": None, "source_url": homepage}
             unlock_metadata = None
             if os.getenv("MOBULA_API_KEY", "").strip():
                 try:
