@@ -54,15 +54,22 @@
         <div class="gauge"><span id="fearGauge"></span></div>
         <div class="gauge-labels"><span>극단적 공포</span><strong id="fearClass">—</strong><span>극단적 탐욕</span></div>
       </article>
-      <article class="panel">
-        <span class="eyebrow">SYSTEM RULES</span><h2>판정 원칙</h2>
-        <ul id="methodology" class="plain-list"></ul>
-      </article>
       <article class="panel data-panel">
         <span class="eyebrow">DATA HEALTH</span><h2>데이터 상태</h2>
         <div id="warnings" class="warning-list"></div>
         <div id="sources" class="source-links"></div>
       </article>
+    </section>
+
+    <section class="panel methodology-panel" aria-labelledby="methodologyTitle">
+      <div class="methodology-head">
+        <div><span class="eyebrow">SCORING METHODOLOGY</span><h2 id="methodologyTitle">판정 원칙</h2></div>
+        <span class="base-score">알트 기본 35점</span>
+      </div>
+      <p id="methodologyIntro" class="methodology-intro"></p>
+      <div id="methodologyGroups" class="methodology-groups"></div>
+      <div class="decision-rules"><h3>최종 판정선</h3><ul id="methodologyDecisions" class="plain-list"></ul></div>
+      <p id="methodologyExecution" class="methodology-note"></p>
     </section>
   </main>
 

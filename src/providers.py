@@ -105,8 +105,8 @@ class MarketDataClient:
         response.raise_for_status()
         return response.json()
 
-    def _text(self, url: str, *, params: dict[str, Any] | None = None) -> str:
-        response = self.session.get(url, params=params, timeout=self.timeout)
+    def _text(self, url: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None) -> str:
+        response = self.session.get(url, params=params, headers=headers, timeout=self.timeout)
         response.raise_for_status()
         return response.text
 
@@ -305,17 +305,39 @@ class MarketDataClient:
 
     def coinpan_mentions(self, aliases: dict[str, tuple[str, str]], pages: int = 2) -> tuple[dict[str, int], int]:
         posts: dict[str, str] = {}
+        browser_headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.7",
+            "Referer": "https://coinpan.com/",
+            "Cache-Control": "no-cache",
+        }
         for page in range(1, pages + 1):
-            try:
-                body = self._text("https://coinpan.com/index.php", params={"mid": "free", "page": page, "m": 0})
-            except requests.RequestException:
-                body = self._text("https://coinpan.com/free", params={"page": page, "m": 1})
-            today_rows = "".join(
-                row
-                for row in re.findall(r"<tr\b[^>]*>.*?</tr>", body, flags=re.IGNORECASE | re.DOTALL)
-                if _today_link_titles(row, lambda href: _coinpan_post_id(href) is not None)
+            page_posts: dict[str, str] = {}
+            last_error: requests.RequestException | None = None
+            successful_response = False
+            attempts = (
+                ("https://coinpan.com/free", {"page": page}),
+                ("https://coinpan.com/index.php", {"mid": "free", "page": page}),
+                ("https://coinpan.com/free", {"page": page, "m": 1}),
             )
-            page_posts = _coinpan_posts(today_rows)
+            for url, params in attempts:
+                try:
+                    body = self._text(url, params=params, headers=browser_headers)
+                except requests.RequestException as exc:
+                    last_error = exc
+                    continue
+                successful_response = True
+                today_rows = "".join(
+                    row
+                    for row in re.findall(r"<tr\b[^>]*>.*?</tr>", body, flags=re.IGNORECASE | re.DOTALL)
+                    if _today_link_titles(row, lambda href: _coinpan_post_id(href) is not None)
+                )
+                page_posts = _coinpan_posts(today_rows)
+                if page_posts:
+                    break
+            if not page_posts and page == 1 and last_error is not None and not successful_response:
+                raise last_error
             posts.update(page_posts)
             if page > 1 and not page_posts:
                 break

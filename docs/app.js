@@ -202,6 +202,22 @@ function openDetailChart(coin) {
 
 function metric(label, value) { return `<div><span>${label}</span><strong>${value}</strong></div>`; }
 
+function renderMethodology(methodology) {
+  if (!methodology?.groups) {
+    const legacy = methodology ? Object.values(methodology) : [];
+    $("#methodologyIntro").textContent = legacy.join(" · ");
+    return;
+  }
+  $("#methodologyIntro").textContent = methodology.intro;
+  $("#methodologyGroups").innerHTML = methodology.groups.map(group => `
+    <article class="rule-group">
+      <div class="rule-group-head"><h3>${group.title}</h3><strong>${group.range}</strong></div>
+      <ul>${group.items.map(item => `<li>${item}</li>`).join("")}</ul>
+    </article>`).join("");
+  $("#methodologyDecisions").innerHTML = methodology.decisions.map(item => `<li>${item}</li>`).join("");
+  $("#methodologyExecution").textContent = methodology.execution;
+}
+
 function renderCoin(coin, index) {
   const node = $("#coinTemplate").content.cloneNode(true);
   const card = $(".coin-card", node); card.setAttribute("aria-label", `${coin.name} 상세차트 열기`);
@@ -233,7 +249,7 @@ function render(report) {
   const btcCard = $("#btcDetailCard"); btcCard.onclick = () => openDetailChart(btc); btcCard.onkeydown = event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDetailChart(btc); } };
   $("#screenedCount").textContent = report.screened; const list = $("#recommendations"); list.innerHTML = ""; report.recommendations.forEach((coin, i) => list.appendChild(renderCoin(coin, i)));
   const fear = market.fear_greed; $("#fearValue").textContent = fear.value ?? "—"; $("#fearClass").textContent = fear.classification; $("#fearGauge").style.left = `${fear.value ?? 50}%`;
-  $("#methodology").innerHTML = Object.values(report.methodology).map(x => `<li>${x}</li>`).join("");
+  renderMethodology(report.methodology);
   $("#warnings").innerHTML = report.data_quality.warnings.length ? report.data_quality.warnings.map(x => `<p>• ${x}</p>`).join("") : `<p class="ok">모든 핵심 데이터가 정상 수집됐습니다.</p>`;
   $("#sources").innerHTML = report.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener">${s.name}</a>`).join(""); $("#disclaimer").textContent = report.disclaimer;
 }

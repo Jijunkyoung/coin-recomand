@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from src.main import build_report, technical_metrics
+from src.main import InsufficientHistoryError, build_report, technical_metrics, warning_reason
 
 
 class MainAnalysisTests(unittest.TestCase):
@@ -29,6 +29,15 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(result["history"][0]["low"], 98)
         self.assertIn("volume", result["history"][0])
 
+    def test_short_history_error_explains_available_days(self):
+        with self.assertRaisesRegex(InsufficientHistoryError, r"59일/최소 60일"):
+            technical_metrics(self.candles()[:59])
+
+    def test_http_403_warning_is_human_readable(self):
+        error = RuntimeError()
+        error.response = type("Response", (), {"status_code": 403})()
+        self.assertEqual(warning_reason(error), "HTTP 403 접근 거부(수집 실행환경 제한)")
+
     @patch("src.main.time.sleep", return_value=None)
     def test_report_combines_three_community_sources_and_project_context(self, _sleep):
         candles = self.candles()
@@ -53,6 +62,7 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(coin["community_sources"], 3)
         self.assertEqual(coin["development"]["status"], "공개 GitHub 없음")
         self.assertEqual(coin["tokenomics"]["circulating_ratio"], 80.0)
+        self.assertEqual(report["methodology"]["groups"][0]["range"], "-18 ~ +22점")
 
 
 if __name__ == "__main__":

@@ -18,6 +18,24 @@ from .scoring import alt_score, market_regime, recommendation_label
 KST = timezone(timedelta(hours=9))
 
 
+class InsufficientHistoryError(ValueError):
+    def __init__(self, available: int, required: int = 60) -> None:
+        self.available = available
+        self.required = required
+        super().__init__(f"거래이력 부족 ({available}일/최소 {required}일)")
+
+
+def warning_reason(exc: Exception) -> str:
+    response = getattr(exc, "response", None)
+    status = getattr(response, "status_code", None)
+    if status == 403:
+        return "HTTP 403 접근 거부(수집 실행환경 제한)"
+    if status:
+        return f"HTTP {status}"
+    message = str(exc).strip()
+    return message if message else type(exc).__name__
+
+
 def round_or_none(value: float | None, digits: int = 2) -> float | None:
     return round(value, digits) if value is not None else None
 
@@ -184,7 +202,7 @@ def project_context(details: dict[str, Any], activity: dict[str, Any] | None, un
 
 def technical_metrics(candles: list[dict[str, Any]]) -> dict[str, Any]:
     if len(candles) < 60:
-        raise ValueError("60일 이상 거래 이력이 필요합니다.")
+        raise InsufficientHistoryError(len(candles))
     closes = [float(candle["trade_price"]) for candle in candles]
     volumes = [float(candle["candle_acc_trade_price"]) for candle in candles]
     macd_line, signal, histogram = macd(closes)
@@ -279,7 +297,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         except Exception as exc:
             community_mentions[source] = None
             community_samples[source] = 0
-            warnings.append(f"{source_names[source]} 언급 수 미수집: {type(exc).__name__}")
+            warnings.append(f"{source_names[source]} 언급 수 미수집: {warning_reason(exc)}")
 
     analyzed: list[dict[str, Any]] = []
     for ticker in candidates:
@@ -317,8 +335,10 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                     **metrics,
                 }
             )
+        except InsufficientHistoryError as exc:
+            warnings.append(f"{market} 분석 제외: {exc}")
         except Exception as exc:
-            warnings.append(f"{market} 분석 제외: {type(exc).__name__}")
+            warnings.append(f"{market} 분석 제외: {warning_reason(exc)}")
         time.sleep(0.12)
     analyzed.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
     enriched = analyzed[: settings.get("fundamental_candidate_count", 12)]
@@ -376,9 +396,63 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         "recommendations": top,
         "screened": len(analyzed),
         "methodology": {
-            "market": "BTC 추세·모멘텀·거래량·MVRV Z·공포탐욕 종합",
-            "alt": "중복 기술신호 그룹 상한 + 당일 Reddit·디시·코인판 노출도 + 개발 진척·토큰 언락·희석 위험",
-            "execution": "실제 주문 없음, 하락장 신규 매수 차단, 후보는 분할 접근 전제",
+            "intro": "알트코인은 35점에서 시작해 아래 신호를 가감합니다. 같은 가격 흐름에서 파생된 기술 신호는 합산 상한을 두어 중복 가산을 줄입니다.",
+            "groups": [
+                {
+                    "title": "기술 분석",
+                    "range": "-18 ~ +22점",
+                    "items": [
+                        "추세(가격·EMA20·EMA50): 정배열 +8 / 역배열 -10",
+                        "RSI(14): 45~65 +4 / 75 이상 -7 / 35 미만 -3",
+                        "MACD 히스토그램: 양수 +4 / 0 이하 -3",
+                        "수익률: 7일 0~15%이면서 30일 3~35% +6 / 7일 25% 초과 또는 30일 60% 초과 -8",
+                        "위 항목 합계는 최대 +22, 최소 -18로 제한",
+                    ],
+                },
+                {
+                    "title": "거래량·관심도",
+                    "range": "-4 ~ +9점",
+                    "items": [
+                        "최근 7일 거래대금 ÷ 30일 평균: 1.1~3배 +5 / 0.65배 미만 -4",
+                        "CoinGecko 24시간 인기 검색: 1~3위 +4 / 4~6위 +3 / 7~9위 +2 / 그 밖의 순위 +1",
+                    ],
+                },
+                {
+                    "title": "커뮤니티 노출",
+                    "range": "0 ~ +5점",
+                    "items": [
+                        "한국시간 당일 Reddit·디시인사이드·코인판 게시물만 집계하며 한 게시물은 코인별 1회로 계산",
+                        "1회 이상 +1 / 3회 이상 추가 +1 / 7회 이상 추가 +1",
+                        "언급된 커뮤니티가 늘 때마다 +1(추가 최대 2점), 전체 표본 대비 노출률 3% 이상 +1",
+                        "합계는 최대 +5점이며 미수집 출처는 0회로 간주하지 않고 표본·배점에서 제외",
+                    ],
+                },
+                {
+                    "title": "개발·토크노믹스",
+                    "range": "상한 +6점 / 위험별 감점",
+                    "items": [
+                        "공식 GitHub 최근 30일 커밋: 20건 이상 +3 / 5건 이상 +2, 45일 이내 릴리스 +2(개발 호재 합계 최대 +4)",
+                        "30일 커밋 0건이고 마지막 커밋 120일 이상 경과: -5",
+                        "유통 비율: 35% 미만 -6 / 35~55% 미만 -4 / 85% 이상 +2",
+                        "언락: 30일 이내 유통량 5% 이상 -14, 1% 이상 -9, 수량 미확인 -6~-8, 소규모 -1~-4 / 31~60일 대규모 -10·그 외 -4",
+                        "30일 연환산 변동성 120% 초과: -8",
+                    ],
+                },
+                {
+                    "title": "비트코인 시장 국면",
+                    "range": "0 ~ -20점",
+                    "items": [
+                        "BTC 상승 국면: 추가 조정 없음 / 중립: -4 / 하락: -20",
+                        "하락 국면에서는 점수가 높아도 신규 매수 후보로 표시하지 않음",
+                    ],
+                },
+            ],
+            "decisions": [
+                "상승 국면: 67점 이상 분할매수 후보 / 52~66점 관찰 / 51점 이하 보류",
+                "중립 국면: 72점 이상 분할매수 후보 / 52~71점 관찰 / 51점 이하 보류",
+                "하락 국면: 55점 이상 관찰 / 54점 이하 보류",
+            ],
+            "execution": "실제 주문은 실행하지 않으며, 분할매수 후보도 손절·비중·호재 출처를 다시 확인하는 연구용 신호입니다.",
         },
         "data_quality": {"status": "주의" if warnings else "정상", "warnings": warnings},
         "sources": [
