@@ -210,7 +210,10 @@ function renderCoin(coin, index) {
   $(".rank", node).textContent = `#${index + 1}`; $("h3", node).textContent = coin.name; $(".ticker", node).textContent = `${coin.symbol} · ₩${fmt(coin.price, 4)}`;
   const decision = $(".decision", node); decision.textContent = coin.decision; decision.classList.add(coin.decision === "분할매수 후보" ? "buy" : coin.decision === "보류" ? "hold" : "watch");
   $(".coin-score strong", node).textContent = coin.score; $(".score-bar i", node).style.width = `${coin.score}%`;
-  $(".coin-metrics", node).innerHTML = metric("RSI", fmt(coin.rsi)) + metric("7일", pct(coin.return_7d)) + metric("30일", pct(coin.return_30d)) + metric("거래량 비율", coin.volume_ratio == null ? "—" : `${fmt(coin.volume_ratio,2)}×`) + metric("변동성", pct(coin.volatility)) + metric("커뮤니티", coin.trending_rank ? `인기 ${coin.trending_rank}위` : coin.reddit_mentions ? `${coin.reddit_mentions}회` : "미수집");
+  const communityText = coin.community_sources ? `${coin.community_total || 0}회 · ${coin.community_sources}곳` : coin.trending_rank ? `인기 ${coin.trending_rank}위` : "미수집";
+  const developmentText = coin.development?.status || "미수집";
+  const unlockText = coin.tokenomics?.next_unlock?.date || (coin.tokenomics?.unlock_data_available ? "예정 없음" : "미수집");
+  $(".coin-metrics", node).innerHTML = metric("RSI", fmt(coin.rsi)) + metric("7일", pct(coin.return_7d)) + metric("30일", pct(coin.return_30d)) + metric("거래량 비율", coin.volume_ratio == null ? "—" : `${fmt(coin.volume_ratio,2)}×`) + metric("변동성", pct(coin.volatility)) + metric("커뮤니티", communityText) + metric("개발 진척", developmentText) + metric("다음 언락", unlockText);
   $(".reasons", node).innerHTML = (coin.reasons?.length ? coin.reasons : ["정량 점수 상위 종목입니다."]).map(x => `<li>${x}</li>`).join("");
   const risks = coin.risks?.length ? coin.risks : ["뚜렷한 정량 위험 신호 없음 — 시장 변동성은 별도 관리 필요"];
   $(".risks", node).innerHTML = risks.map(x => `<li>${x}</li>`).join("");

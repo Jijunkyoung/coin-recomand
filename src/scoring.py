@@ -77,7 +77,12 @@ def alt_score(metrics: dict[str, Any], regime: str) -> tuple[int, list[str], lis
     volume = metrics.get("volume_ratio")
     volatility = metrics.get("volatility")
     trending_rank = metrics.get("trending_rank")
-    mentions = metrics.get("reddit_mentions") or 0
+    community_mentions = metrics.get("community_mentions") or {}
+    community_total = metrics.get("community_total") or 0
+    community_sources = metrics.get("community_sources") or 0
+    development = metrics.get("development") or {}
+    tokenomics = metrics.get("tokenomics") or {}
+    unlock = tokenomics.get("next_unlock") or {}
 
     if ema20 and ema50 and price > ema20 > ema50:
         score += 18
@@ -119,9 +124,59 @@ def alt_score(metrics: dict[str, Any], regime: str) -> tuple[int, list[str], lis
     if trending_rank is not None:
         score += max(2, 11 - trending_rank)
         reasons.append(f"CoinGecko 24시간 인기 검색 {trending_rank}위입니다.")
-    if mentions:
-        score += min(8, mentions * 2)
-        reasons.append(f"Reddit 최근 24시간 표본에서 {mentions}회 언급됐습니다.")
+    if community_total:
+        mentioned_sources = sum(1 for value in community_mentions.values() if value)
+        community_points = min(8, 2 + round((metrics.get("community_exposure_rate") or 0) * 0.7) + max(0, mentioned_sources - 1))
+        score += community_points
+        source_labels = {"reddit": "Reddit", "dcinside": "디시", "coinpan": "코인판"}
+        breakdown = "·".join(f"{source_labels.get(name, name)} {value}회" for name, value in community_mentions.items() if value is not None)
+        reasons.append(f"최근 커뮤니티 표본 {community_sources}곳에서 총 {community_total}회 언급됐습니다({breakdown}).")
+    commits = development.get("commits_30d")
+    release_days = development.get("latest_release_days")
+    commit_days = development.get("latest_commit_days")
+    if commits is not None:
+        if commits >= 20:
+            score += 6
+            reasons.append(f"공식 GitHub에서 최근 30일 {commits}건의 커밋이 확인돼 개발 활동이 활발합니다.")
+        elif commits >= 5:
+            score += 3
+            reasons.append(f"공식 GitHub에서 최근 30일 {commits}건의 개발 커밋이 확인됐습니다.")
+        elif commits == 0 and commit_days is not None and commit_days >= 120:
+            score -= 5
+            risks.append(f"공식 GitHub의 마지막 커밋이 {commit_days}일 전으로 개발 정체 여부를 확인해야 합니다.")
+    if release_days is not None and release_days <= 45:
+        score += 4
+        release_name = development.get("latest_release_name") or "신규 버전"
+        reasons.append(f"{release_days}일 전 공식 GitHub에 {release_name} 릴리스가 게시됐습니다.")
+    circulating_ratio = tokenomics.get("circulating_ratio")
+    if circulating_ratio is not None:
+        if circulating_ratio < 35:
+            score -= 5
+            risks.append(f"총공급량 대비 유통 비율이 {circulating_ratio:.1f}%로 장기 희석 위험이 큽니다.")
+        elif circulating_ratio < 55:
+            score -= 2
+            risks.append(f"총공급량 대비 유통 비율이 {circulating_ratio:.1f}%로 추가 공급 부담을 확인해야 합니다.")
+        elif circulating_ratio >= 85:
+            score += 2
+            reasons.append(f"총공급량의 {circulating_ratio:.1f}%가 유통돼 잠재 희석 부담이 비교적 낮습니다.")
+    unlock_days = unlock.get("days_until")
+    if unlock_days is not None and unlock_days <= 60:
+        unlock_ratio = unlock.get("percent_circulating")
+        if unlock_days <= 30 and unlock_ratio is not None and unlock_ratio >= 5:
+            score -= 12
+        elif unlock_days <= 30 and unlock_ratio is not None and unlock_ratio >= 1:
+            score -= 7
+        elif unlock_days <= 30:
+            score -= 4
+        elif unlock_ratio is not None and unlock_ratio >= 5:
+            score -= 8
+        else:
+            score -= 3
+        ratio_text = f"(유통량의 {unlock_ratio:.2f}%)" if unlock_ratio is not None else ""
+        risks.append(f"{unlock_days}일 후 토큰 언락이 예정돼 공급 증가 가능성이 있습니다{ratio_text}.")
+    project_notice = tokenomics.get("project_notice")
+    if project_notice:
+        risks.append(f"프로젝트 공지 확인 필요: {project_notice}")
     if volatility is not None and volatility > 120:
         score -= 8
         risks.append(f"30일 연환산 변동성 {volatility:.0f}%로 가격 진폭이 큽니다.")

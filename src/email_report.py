@@ -11,12 +11,14 @@ def build_email_html(report: dict[str, Any]) -> str:
     market = report["market"]
     rows = []
     for coin in report["recommendations"]:
-        reason = coin["reasons"][0] if coin["reasons"] else "점수 기준 상위 종목"
+        reasons = coin["reasons"][:3] if coin["reasons"] else ["점수 기준 상위 종목"]
+        risks = coin["risks"][:3] if coin["risks"] else ["뚜렷한 정량 위험 신호 없음"]
         rows.append(
             "<tr>"
             f"<td>{html.escape(coin['name'])} ({html.escape(coin['symbol'])})</td>"
             f"<td>{coin['score']}</td><td>{html.escape(coin['decision'])}</td>"
-            f"<td>{html.escape(reason)}</td>"
+            f"<td>{'<br>'.join(html.escape(reason) for reason in reasons)}</td>"
+            f"<td>{'<br>'.join(html.escape(risk) for risk in risks)}</td>"
             "</tr>"
         )
     warning = "<p style='color:#b45309'>하락장에서는 신규 매수 후보를 표시하지 않습니다.</p>" if market["regime"] == "하락" else ""
@@ -33,7 +35,7 @@ def build_email_html(report: dict[str, Any]) -> str:
       {warning}
       <h2 style="font-size:19px">알트코인 우선순위</h2>
       <table style="width:100%;border-collapse:collapse" border="1" cellpadding="8">
-        <thead><tr><th>종목</th><th>점수</th><th>판정</th><th>핵심 사유</th></tr></thead>
+        <thead><tr><th>종목</th><th>점수</th><th>판정</th><th>호재·선정 근거</th><th>악재·위험</th></tr></thead>
         <tbody>{''.join(rows)}</tbody>
       </table>
       <p style="font-size:12px;color:#64748b">본 보고서는 정량 지표 기반 참고자료이며 투자 자문이나 수익 보장이 아닙니다. 실제 주문을 실행하지 않습니다.</p>
