@@ -4,7 +4,7 @@ import os
 import re
 import time
 import html
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -15,6 +15,9 @@ from urllib3.util.retry import Retry
 
 class DataProviderError(RuntimeError):
     pass
+
+
+KST = timezone(timedelta(hours=9))
 
 
 def _link_titles(page: str, predicate: Any) -> list[str]:
@@ -28,6 +31,22 @@ def _link_titles(page: str, predicate: Any) -> list[str]:
         if len(text) >= 2:
             seen.add(href)
             titles.append(text)
+    return titles
+
+
+def _today_link_titles(page: str, predicate: Any, now: datetime | None = None) -> list[str]:
+    current_date = (now or datetime.now(KST)).astimezone(KST).date()
+    titles: list[str] = []
+    for row in re.findall(r"<tr\b[^>]*>.*?</tr>", page, flags=re.IGNORECASE | re.DOTALL):
+        dates = re.findall(r"(?<!\d)((?:20)?\d{2})[./-](\d{1,2})[./-](\d{1,2})(?!\d)", row)
+        if dates:
+            year, month, day = dates[-1]
+            year_number = int(year) if len(year) == 4 else 2000 + int(year)
+            if (year_number, int(month), int(day)) != (current_date.year, current_date.month, current_date.day):
+                continue
+        elif not re.search(r"(?<!\d)[0-2]?\d:[0-5]\d(?!\d)", row):
+            continue
+        titles.extend(_link_titles(row, predicate))
     return titles
 
 
@@ -261,7 +280,8 @@ class MarketDataClient:
             params={"limit": 100, "raw_json": 1},
             headers={"Authorization": f"Bearer {token}"},
         )
-        cutoff = datetime.now(timezone.utc).timestamp() - 86400
+        now_kst = datetime.now(KST)
+        cutoff = now_kst.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
         posts = [
             f"{child['data'].get('title', '')} {child['data'].get('selftext', '')}"
             for child in posts.get("data", {}).get("children", [])
@@ -273,12 +293,13 @@ class MarketDataClient:
         posts: list[str] = []
         for page in range(1, pages + 1):
             body = self._text("https://gall.dcinside.com/board/lists/", params={"id": "bitcoins_new1", "page": page})
-            posts.extend(
-                _link_titles(
+            page_posts = _today_link_titles(
                     body,
                     lambda href: "/board/view/" in href and "id=bitcoins_new1" in href and "t=cv" not in href and "no=1&" not in href,
                 )
-            )
+            posts.extend(page_posts)
+            if page > 1 and not page_posts:
+                break
             time.sleep(0.25)
         return count_post_mentions(posts, aliases), len(posts)
 
@@ -289,7 +310,15 @@ class MarketDataClient:
                 body = self._text("https://coinpan.com/index.php", params={"mid": "free", "page": page, "m": 0})
             except requests.RequestException:
                 body = self._text("https://coinpan.com/free", params={"page": page, "m": 1})
-            posts.update(_coinpan_posts(body))
+            today_rows = "".join(
+                row
+                for row in re.findall(r"<tr\b[^>]*>.*?</tr>", body, flags=re.IGNORECASE | re.DOTALL)
+                if _today_link_titles(row, lambda href: _coinpan_post_id(href) is not None)
+            )
+            page_posts = _coinpan_posts(today_rows)
+            posts.update(page_posts)
+            if page > 1 and not page_posts:
+                break
             time.sleep(0.25)
         titles = list(posts.values())
         if not titles:

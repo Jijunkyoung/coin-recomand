@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime, timezone
 
 from src.main import resolve_coingecko_id, summarize_unlock
-from src.providers import MarketDataClient, _coinpan_posts, _link_titles, count_post_mentions
+from src.providers import MarketDataClient, _coinpan_posts, _link_titles, _today_link_titles, count_post_mentions
 from src.scoring import alt_score
 
 
@@ -35,6 +35,14 @@ class CommunityAndEventTests(unittest.TestCase):
         '''
         self.assertEqual(_coinpan_posts(page), {"123": "리플 소식", "124": "프로스퍼 진척"})
 
+    def test_today_filter_excludes_previous_board_posts(self):
+        page = '''
+            <tr><td><a href="/free/123">오늘 리플</a></td><td>09:15</td></tr>
+            <tr><td><a href="/free/122">어제 리플</a></td><td title="2026-09-08 23:50">09.08</td></tr>
+        '''
+        titles = _today_link_titles(page, lambda href: href.startswith("/free/"), datetime(2026, 9, 9, tzinfo=timezone.utc))
+        self.assertEqual(titles, ["오늘 리플"])
+
     def test_github_project_activity_chooses_active_repository(self):
         client = MarketDataClient()
         client.github_repository_activity = lambda url: {
@@ -51,6 +59,13 @@ class CommunityAndEventTests(unittest.TestCase):
         self.assertEqual(result["date"], "2026-09-20")
         self.assertEqual(result["percent_circulating"], 5.0)
 
+    def test_unlock_supports_mobula_total_supply_percentage(self):
+        metadata = {"release_schedule": [{"unlockDate": "2026-09-20T00:00:00Z", "percentage_of_total_supply": 0.02}]}
+        result = summarize_unlock(metadata, 400_000_000, datetime(2026, 9, 9, tzinfo=timezone.utc), 1_000_000_000)
+        self.assertEqual(result["amount"], 20_000_000)
+        self.assertEqual(result["percent_circulating"], 5.0)
+        self.assertTrue(result["amount_available"])
+
     def test_large_near_unlock_outweighs_development_bonus(self):
         base = {"price": 120, "ema20": 110, "ema50": 100, "rsi": 55, "macd_histogram": 1, "return_7d": 5, "return_30d": 15, "volume_ratio": 1.2, "volatility": 60}
         active = {**base, "development": {"commits_30d": 30, "latest_commit_days": 1}}
@@ -59,6 +74,23 @@ class CommunityAndEventTests(unittest.TestCase):
         risky_score, _, risks = alt_score(risky, "상승")
         self.assertLess(risky_score, active_score)
         self.assertTrue(any("언락" in risk for risk in risks))
+
+    def test_correlated_sui_signals_are_capped_and_unknown_unlock_is_conservative(self):
+        metrics = {
+            "price": 1105,
+            "ema20": 1059.63,
+            "ema50": 1055.75,
+            "rsi": 57.78,
+            "macd_histogram": 6.93,
+            "return_7d": 7.7,
+            "return_30d": 14.51,
+            "volume_ratio": 1.15,
+            "volatility": 75.08,
+            "development": {"commits_30d": 100, "latest_commit_days": 0, "latest_release_days": 7, "latest_release_name": "testnet-v1.79.0"},
+            "tokenomics": {"circulating_ratio": 40.97, "next_unlock": {"days_until": 0, "percent_circulating": None}},
+        }
+        score, _, _ = alt_score(metrics, "상승")
+        self.assertEqual(score, 54)
 
 
 if __name__ == "__main__":

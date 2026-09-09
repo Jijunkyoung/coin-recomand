@@ -57,7 +57,12 @@ def resolve_coingecko_id(rows: list[dict[str, Any]], symbol: str, english_name: 
     return str(matches[0]["id"]) if len(matches) == 1 else None
 
 
-def summarize_unlock(metadata: dict[str, Any] | None, circulating_supply: float | None, now: datetime | None = None) -> dict[str, Any] | None:
+def summarize_unlock(
+    metadata: dict[str, Any] | None,
+    circulating_supply: float | None,
+    now: datetime | None = None,
+    total_supply: float | None = None,
+) -> dict[str, Any] | None:
     if not metadata:
         return None
     schedule = metadata.get("release_schedule") or metadata.get("releaseSchedule") or []
@@ -72,34 +77,69 @@ def summarize_unlock(metadata: dict[str, Any] | None, circulating_supply: float 
                     event = dict(item)
                     event.setdefault("date", key)
                     events.append(event)
+                elif isinstance(item, (int, float, str)):
+                    events.append({"date": key, "amount": item})
     current = now or datetime.now(timezone.utc)
     upcoming: list[tuple[datetime, dict[str, Any]]] = []
     for event in events:
-        date = _parse_datetime(next((event.get(key) for key in ("date", "unlock_date", "release_date", "timestamp", "time") if event.get(key) is not None), None))
+        date = _parse_datetime(next((event.get(key) for key in ("date", "unlock_date", "unlockDate", "release_date", "releaseDate", "timestamp", "time") if event.get(key) is not None), None))
         if date and date >= current:
             upcoming.append((date, event))
     if not upcoming:
         return None
     date, event = min(upcoming, key=lambda item: item[0])
-    amount_value = next((event.get(key) for key in ("amount", "token_amount", "tokens", "quantity", "value") if event.get(key) is not None), None)
+    amount_value = next(
+        (
+            event.get(key)
+            for key in ("amount", "token_amount", "tokenAmount", "tokens", "tokens_to_unlock", "tokensToUnlock", "unlock_amount", "unlockAmount", "quantity", "value")
+            if event.get(key) is not None
+        ),
+        None,
+    )
     try:
         amount = float(amount_value) if amount_value is not None else None
     except (TypeError, ValueError):
         amount = None
     percent = amount / circulating_supply * 100 if amount is not None and circulating_supply else None
     if percent is None:
-        percent_value = next((event.get(key) for key in ("percent_circulating", "percentage", "percent", "unlock_percentage") if event.get(key) is not None), None)
+        percent_value = next(
+            (
+                event.get(key)
+                for key in ("percent_circulating", "percentage", "percent", "unlock_percentage", "unlockPercentage", "percentage_of_circulating_supply")
+                if event.get(key) is not None
+            ),
+            None,
+        )
         try:
             percent = float(percent_value) if percent_value is not None else None
             if percent is not None and 0 < percent <= 1:
                 percent *= 100
         except (TypeError, ValueError):
             percent = None
+    total_percent_value = next(
+        (
+            event.get(key)
+            for key in ("percentage_of_total_supply", "percent_total_supply", "percentTotalSupply", "total_supply_percentage")
+            if event.get(key) is not None
+        ),
+        None,
+    )
+    try:
+        total_percent = float(total_percent_value) if total_percent_value is not None else None
+        if total_percent is not None and 0 < total_percent <= 1:
+            total_percent *= 100
+    except (TypeError, ValueError):
+        total_percent = None
+    if amount is None and total_percent is not None and total_supply:
+        amount = total_supply * total_percent / 100
+    if percent is None and amount is not None and circulating_supply:
+        percent = amount / circulating_supply * 100
     return {
         "date": date.date().isoformat(),
         "days_until": max(0, (date - current).days),
         "amount": round(amount, 4) if amount is not None else None,
         "percent_circulating": round(percent, 2) if percent is not None else None,
+        "amount_available": amount is not None,
     }
 
 
@@ -129,7 +169,12 @@ def project_context(details: dict[str, Any], activity: dict[str, Any] | None, un
         "development": development,
         "tokenomics": {
             "circulating_ratio": round(circulating_ratio, 2) if circulating_ratio is not None else None,
-            "next_unlock": summarize_unlock(unlock_metadata, float(circulating) if circulating else None, now),
+            "next_unlock": summarize_unlock(
+                unlock_metadata,
+                float(circulating) if circulating else None,
+                now,
+                float(total) if total else None,
+            ),
             "unlock_data_available": unlock_metadata is not None,
             "project_notice": notice or None,
         },
@@ -332,7 +377,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         "screened": len(analyzed),
         "methodology": {
             "market": "BTC 추세·모멘텀·거래량·MVRV Z·공포탐욕 종합",
-            "alt": "기술지표·거래량 + Reddit·디시·코인판 노출도 + 개발 진척·토큰 언락·희석 위험",
+            "alt": "중복 기술신호 그룹 상한 + 당일 Reddit·디시·코인판 노출도 + 개발 진척·토큰 언락·희석 위험",
             "execution": "실제 주문 없음, 하락장 신규 매수 차단, 후보는 분할 접근 전제",
         },
         "data_quality": {"status": "주의" if warnings else "정상", "warnings": warnings},
