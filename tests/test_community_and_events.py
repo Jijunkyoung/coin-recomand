@@ -92,6 +92,17 @@ class CommunityAndEventTests(unittest.TestCase):
         score, _, _ = alt_score(metrics, "상승")
         self.assertEqual(score, 54)
 
+    def test_small_known_unlock_is_not_penalized_like_unknown_amount(self):
+        base = {
+            "price": 1105, "ema20": 1059.63, "ema50": 1055.75, "rsi": 51.1,
+            "macd_histogram": 1, "return_7d": 3, "return_30d": 9.5, "volume_ratio": 1.2,
+            "development": {"commits_30d": 100, "latest_release_days": 7},
+            "tokenomics": {"circulating_ratio": 40.97},
+        }
+        known_score, _, _ = alt_score({**base, "tokenomics": {**base["tokenomics"], "next_unlock": {"days_until": 0, "percent_circulating": 0.01}}}, "상승")
+        unknown_score, _, _ = alt_score({**base, "tokenomics": {**base["tokenomics"], "next_unlock": {"days_until": 0, "percent_circulating": None}}}, "상승")
+        self.assertEqual(known_score - unknown_score, 7)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -171,15 +171,21 @@ def alt_score(metrics: dict[str, Any], regime: str) -> tuple[int, list[str], lis
             score -= 14
         elif unlock_days <= 30 and unlock_ratio is not None and unlock_ratio >= 1:
             score -= 9
-        elif unlock_days <= 7:
+        elif unlock_days <= 7 and unlock_ratio is None:
             score -= 8
-        elif unlock_days <= 30:
+        elif unlock_days <= 7 and unlock_ratio >= 0.1:
+            score -= 4
+        elif unlock_days <= 7:
+            score -= 1
+        elif unlock_days <= 30 and unlock_ratio is None:
             score -= 6
+        elif unlock_days <= 30:
+            score -= 2
         elif unlock_ratio is not None and unlock_ratio >= 5:
             score -= 10
         else:
             score -= 4
-        ratio_text = f"(유통량의 {unlock_ratio:.2f}%)" if unlock_ratio is not None else ""
+        ratio_text = f"(유통량의 {unlock_ratio:.2f}%)" if unlock_ratio is not None else "(수량 미확인)"
         risks.append(f"{unlock_days}일 후 토큰 언락이 예정돼 공급 증가 가능성이 있습니다{ratio_text}.")
     project_notice = tokenomics.get("project_notice")
     if project_notice:
