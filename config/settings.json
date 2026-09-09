@@ -1,0 +1,8 @@
+{
+  "screen_count": 25,
+  "recommendation_count": 5,
+  "minimum_24h_value_krw": 5000000000,
+  "upbit_candle_days": 120,
+  "excluded_symbols": ["BTC", "USDT", "USDC", "DAI", "BUSD", "FDUSD", "TUSD"],
+  "schedule_note": "매일 07:15 KST"
+}

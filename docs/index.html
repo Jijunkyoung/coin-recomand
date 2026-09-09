@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="비트코인 시장 국면과 알트코인 정량 지표 분석 대시보드">
+  <title>Coin Signal Desk</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">C</span>
+      <div><strong>Coin Signal Desk</strong><span>KRW Market Research</span></div>
+    </div>
+    <div class="timestamp"><span id="qualityDot" class="status-dot"></span><span id="qualityText">데이터 확인 중</span><time id="generatedAt">—</time></div>
+  </header>
+
+  <main>
+    <section class="market-grid" aria-labelledby="marketTitle">
+      <article class="regime-card">
+        <div class="eyebrow">BITCOIN MARKET REGIME</div>
+        <div class="regime-row">
+          <div><h1 id="marketTitle">시장 분석 중</h1><p id="marketSummary">최신 분석 결과를 불러오고 있습니다.</p></div>
+          <div class="score-ring" id="scoreRing"><strong id="marketScore">—</strong><span>/ 100</span></div>
+        </div>
+        <div id="marketReasons" class="reason-list"></div>
+      </article>
+
+      <article class="btc-card">
+        <div class="card-heading"><span>BTC / KRW</span><strong id="btcPrice">—</strong></div>
+        <canvas id="btcChart" height="120" aria-label="비트코인 최근 30일 가격 추세"></canvas>
+        <div class="metric-strip">
+          <div><span>MVRV Z</span><strong id="mvrv">—</strong></div>
+          <div><span>RSI 14</span><strong id="btcRsi">—</strong></div>
+          <div><span>30일</span><strong id="btcReturn">—</strong></div>
+          <div><span>거래량</span><strong id="btcVolume">—</strong></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="section-block" aria-labelledby="recommendTitle">
+      <div class="section-head">
+        <div><span class="eyebrow">ALTCOIN PRIORITY</span><h2 id="recommendTitle">알트코인 우선순위</h2></div>
+        <p><strong id="screenedCount">—</strong>개 유동성 상위 종목 분석</p>
+      </div>
+      <div id="recommendations" class="recommend-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="lower-grid">
+      <article class="panel">
+        <div class="section-head compact"><div><span class="eyebrow">SENTIMENT</span><h2>시장 심리</h2></div><strong id="fearValue" class="sentiment-number">—</strong></div>
+        <div class="gauge"><span id="fearGauge"></span></div>
+        <div class="gauge-labels"><span>극단적 공포</span><strong id="fearClass">—</strong><span>극단적 탐욕</span></div>
+      </article>
+      <article class="panel">
+        <span class="eyebrow">SYSTEM RULES</span><h2>판정 원칙</h2>
+        <ul id="methodology" class="plain-list"></ul>
+      </article>
+      <article class="panel data-panel">
+        <span class="eyebrow">DATA HEALTH</span><h2>데이터 상태</h2>
+        <div id="warnings" class="warning-list"></div>
+        <div id="sources" class="source-links"></div>
+      </article>
+    </section>
+  </main>
+
+  <footer><p id="disclaimer">정량 지표 기반 참고자료이며 투자 자문이나 수익 보장이 아닙니다.</p></footer>
+  <template id="coinTemplate">
+    <article class="coin-card">
+      <div class="coin-top"><div><span class="rank"></span><h3></h3><p class="ticker"></p></div><span class="decision"></span></div>
+      <div class="coin-score"><strong></strong><span>점</span><div class="score-bar"><i></i></div></div>
+      <canvas height="58" aria-label="최근 30일 가격 추세"></canvas>
+      <div class="coin-metrics"></div>
+      <div class="coin-copy"><h4>선정 근거</h4><ul class="reasons"></ul><h4 class="risk-title">확인할 위험</h4><ul class="risks"></ul></div>
+    </article>
+  </template>
+  <script src="app.js" defer></script>
+</body>
+</html>
