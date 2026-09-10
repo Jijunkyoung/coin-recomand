@@ -14,6 +14,7 @@
 - 프로젝트: 공식 GitHub 최근 30일 커밋·릴리스로 개발 진척 확인
 - 토크노믹스: 유통 비율과 향후 토큰 언락 일정·규모를 공급 위험으로 반영
 - 결과: `분할매수 후보`, `관찰`, `보류`와 항목별 점수·선정 사유·위험 요인
+- 주요 이슈: 최근 24시간 한국어 코인 뉴스의 출처·분류·관련 종목·영향 방향과 원문 링크
 - 상세차트: 비트코인 또는 추천 코인을 클릭해 7일·30일·90일·전체 가격, EMA20·EMA50, 거래대금 확인
 
 ## 로컬 실행
@@ -30,7 +31,7 @@ python -m http.server 8000 --directory docs
 
 ## GitHub Actions 설정
 
-워크플로는 매일 한국시간 오전 7시 15분과 수동 실행 시 분석·메일 발송·GitHub Pages 배포를 수행합니다. 저장소의 **Settings → Pages → Source**를 `GitHub Actions`로 지정하세요.
+워크플로는 매일 한국시간 오전 7시 30분과 수동 실행 시 분석·메일 발송·GitHub Pages 배포를 수행합니다. 저장소의 **Settings → Pages → Source**를 `GitHub Actions`로 지정하세요.
 
 이메일을 사용하려면 **Settings → Secrets and variables → Actions**에 아래 Repository secrets를 등록합니다.
 
@@ -49,7 +50,9 @@ Reddit 언급 수는 선택 기능입니다. 사용하려면 Reddit의 script �
 
 CoinGecko 키리스 API의 제한이 걸리는 환경에서는 무료 Demo 키를 발급해 `COINGECKO_API_KEY`로 등록할 수 있습니다.
 
-예약 워크플로는 매일 오전 8시(KST)에 최신 자료를 생성하고 `EMAIL_TO`에 등록된 모든 주소로 보고서를 발송합니다. 대시보드의 `메일 수신 설정`에서 복수 주소를 검증·복사한 뒤 GitHub Actions Secret `EMAIL_TO`에 붙여넣을 수 있습니다. 정적 페이지에서는 Secret을 직접 수정할 수 없으므로 최초 등록이나 주소 변경 시 GitHub에서 저장하는 단계가 필요합니다.
+예약 워크플로는 매일 오전 7시 30분(KST)에 최신 자료를 생성하고 `EMAIL_TO`에 등록된 모든 주소로 보고서를 발송합니다. GitHub Actions 대기 및 분석 시간 때문에 실제 수신은 보통 예약 시각보다 몇 분 늦을 수 있습니다. 대시보드의 `메일 수신 설정`에서 복수 주소를 검증·복사한 뒤 GitHub Actions Secret `EMAIL_TO`에 붙여넣을 수 있습니다. 정적 페이지에서는 Secret을 직접 수정할 수 없으므로 최초 등록이나 주소 변경 시 GitHub에서 저장하는 단계가 필요합니다.
+
+주요 코인 이슈는 별도 키 없이 Google News 한국어 RSS의 최근 24시간 제목을 수집합니다. 추천 종목 심볼과 보안·규제·ETF·상장·개발·토크노믹스 핵심어를 기준으로 분류하며, 한 매체가 목록을 독점하지 않도록 매체별 최대 2건으로 제한합니다. 영향 방향은 제목 기반 참고 분류이므로 반드시 메일의 원문 링크에서 사실관계와 맥락을 확인하세요.
 
 MVRV Z-Score는 별도 키 없이 Blockchain.com 공개 차트의 MVRV와 BTC 시가총액으로 계산합니다. `GLASSNODE_API_KEY`가 등록돼 있고 요금제 권한이 있으면 Glassnode 공식 값을 우선 사용하며, 키가 없거나 요청이 실패하면 무료 계산값으로 자동 전환합니다. 데이터 제공처별 산정·표본 방식 차이로 Glassnode 값과 소폭 다를 수 있습니다.
 
@@ -87,4 +90,5 @@ python -m unittest discover -s tests -v
 - [Reddit r/CryptoCurrency](https://www.reddit.com/r/CryptoCurrency/)
 - [디시인사이드 비트코인 갤러리](https://gall.dcinside.com/board/lists/?id=bitcoins_new1)
 - [코인판 자유게시판](https://coinpan.com/free)
+- [Google News 한국어 RSS](https://news.google.com/)
 coin recomand-01
