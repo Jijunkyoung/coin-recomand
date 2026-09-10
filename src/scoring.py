@@ -3,6 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 
+ALT_RAW_MAX_SCORE = 77
+
+
+def normalize_alt_score(raw_score: float) -> int:
+    bounded = max(0, min(ALT_RAW_MAX_SCORE, raw_score))
+    return round(bounded / ALT_RAW_MAX_SCORE * 100)
+
+
 def market_regime(metrics: dict[str, Any]) -> tuple[int, str, list[str]]:
     score = 50
     reasons: list[str] = []
@@ -198,13 +206,13 @@ def alt_score(metrics: dict[str, Any], regime: str) -> tuple[int, list[str], lis
         risks.insert(0, "비트코인 시장 국면이 하락으로 판정됐습니다.")
     elif regime == "중립":
         score -= 4
-    return max(0, min(100, round(score))), reasons, risks
+    return normalize_alt_score(score), reasons, risks
 
 
 def recommendation_label(score: int, regime: str) -> str:
     if regime == "하락":
-        return "관찰" if score >= 55 else "보류"
-    threshold = 72 if regime == "중립" else 67
+        return "관찰" if score >= 71 else "보류"
+    threshold = 94 if regime == "중립" else 87
     if score >= threshold:
         return "분할매수 후보"
-    return "관찰" if score >= 52 else "보류"
+    return "관찰" if score >= 68 else "보류"

@@ -24,6 +24,9 @@ def build_email_html(report: dict[str, Any]) -> str:
     warning = "<p style='color:#b45309'>하락장에서는 신규 매수 후보를 표시하지 않습니다.</p>" if market["regime"] == "하락" else ""
     mvrv = market["bitcoin"].get("mvrv_z")
     mvrv_text = f"{mvrv:.2f}" if mvrv is not None else "미수집"
+    mvrv_source = market["bitcoin"].get("mvrv_source")
+    if mvrv_source:
+        mvrv_text += f" ({mvrv_source})"
     return f"""
     <div style="font-family:Arial,'Noto Sans KR',sans-serif;max-width:760px;margin:auto;color:#172033">
       <h1 style="font-size:24px">코인 시장 분석 보고서</h1>

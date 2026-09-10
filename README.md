@@ -6,7 +6,7 @@
 
 ## 분석 항목
 
-- 비트코인: Coin Metrics 기반 MVRV Z-Score, EMA20/EMA50 추세, RSI, MACD, 거래량 비율, 7일·30일 수익률
+- 비트코인: Blockchain.com 공개 MVRV·시가총액 기반 MVRV Z-Score, EMA20/EMA50 추세, RSI, MACD, 거래량 비율, 7일·30일 수익률
 - 시장 심리: Alternative.me Crypto Fear & Greed Index
 - 알트코인: RSI, MACD, EMA 추세, 7일·30일 모멘텀, 거래량 변화, 변동성, 유동성
 - 커뮤니티: CoinGecko 인기 검색 + Reddit·디시인사이드 비트코인 갤러리·코인판 한국시간 당일 게시글 언급 노출도
@@ -48,7 +48,7 @@ Reddit 언급 수는 선택 기능입니다. 사용하려면 Reddit의 script �
 
 CoinGecko 키리스 API의 제한이 걸리는 환경에서는 무료 Demo 키를 발급해 `COINGECKO_API_KEY`로 등록할 수 있습니다.
 
-MVRV Z-Score의 완전한 자동 수집에는 Glassnode API 키가 필요합니다. `GLASSNODE_API_KEY`를 Secret으로 등록하면 공식 MVRV Z-Score 엔드포인트를 사용합니다. 키가 없을 때는 Coin Metrics Community 데이터로 직접 계산을 시도하며, 실현 시가총액이 무료 범위에서 제공되지 않으면 해당 지표를 `미수집`으로 명확히 표시합니다.
+MVRV Z-Score는 별도 키 없이 Blockchain.com 공개 차트의 MVRV와 BTC 시가총액으로 계산합니다. `GLASSNODE_API_KEY`가 등록돼 있고 요금제 권한이 있으면 Glassnode 공식 값을 우선 사용하며, 키가 없거나 요청이 실패하면 무료 계산값으로 자동 전환합니다. 데이터 제공처별 산정·표본 방식 차이로 Glassnode 값과 소폭 다를 수 있습니다.
 
 ## 추천 점수 원칙
 
@@ -57,6 +57,7 @@ MVRV Z-Score의 완전한 자동 수집에는 Glassnode API 키가 필요합니�
 - 하락장: 신규 매수 후보를 내지 않고 모두 `관찰` 또는 `보류`
 - 급등·과매수·저유동성·고변동성은 감점
 - EMA·RSI·MACD·수익률처럼 연관된 상승 신호는 합산 최대 22점으로 제한
+- 알트 내부 원점수의 이론상 최고 77점을 최종 100점으로 환산하며 판정선도 같은 비율로 적용
 - 공식 개발 커밋·최근 릴리스는 합산 최대 4점으로 제한하고, 장기 개발 정체는 감점
 - 60일 이내 토큰 언락과 낮은 유통 비율은 규모에 따라 감점하며, 임박 언락의 수량 미확인도 보수적으로 감점
 - 커뮤니티는 한국시간 당일 언급만 반영하고 최대 5점으로 제한
@@ -75,7 +76,7 @@ python -m unittest discover -s tests -v
 ## 데이터 출처
 
 - [Upbit Open API](https://global-docs.upbit.com/reference/list-tickers)
-- [Coin Metrics Community API](https://docs.coinmetrics.io/api/v4)
+- [Blockchain.com Charts API](https://www.blockchain.com/explorer/api/charts_api)
 - [CoinGecko Keyless Public API](https://docs.coingecko.com/docs/keyless-public-api)
 - [Alternative.me Fear & Greed Index](https://alternative.me/crypto/fear-and-greed-index/)
 - [GitHub REST API](https://docs.github.com/rest/commits/commits)

@@ -217,50 +217,43 @@ class MarketDataClient:
         )
         return response.get("data") if isinstance(response, dict) else None
 
-    def coinmetrics_mvrv_inputs(self) -> tuple[list[float], list[float]]:
-        url = "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics"
-        params: dict[str, Any] | None = {
-            "assets": "btc",
-            "metrics": "CapMrktCurUSD,CapRealUSD",
-            "frequency": "1d",
-            "start_time": "2010-01-01",
-            "page_size": 10000,
+    def blockchain_mvrv_z(self) -> float:
+        params = {
+            "timespan": "10years",
+            "sampled": "true",
+            "metadata": "false",
+            "cors": "true",
+            "format": "json",
         }
-        market_caps: list[float] = []
-        realized_caps: list[float] = []
-        while url:
-            data = self._json(url, params=params)
-            params = None
-            for row in data.get("data", []):
-                market = row.get("CapMrktCurUSD")
-                realized = row.get("CapRealUSD")
-                if market is not None and realized is not None:
-                    market_caps.append(float(market))
-                    realized_caps.append(float(realized))
-            url = data.get("next_page_url")
-        if not market_caps:
-            raise DataProviderError("Coin Metrics에서 MVRV 계산 데이터를 받지 못했습니다.")
-        return market_caps, realized_caps
-
-    def bitcoin_mvrv_z(self) -> float:
-        glassnode_key = os.getenv("GLASSNODE_API_KEY", "").strip()
-        if glassnode_key:
-            now = int(datetime.now(timezone.utc).timestamp())
-            data = self._json(
-                "https://api.glassnode.com/v1/metrics/market/mvrv_z_score",
-                params={"a": "BTC", "i": "24h", "s": now - 259200, "u": now, "api_key": glassnode_key},
-            )
-            values = [float(row["v"]) for row in data if row.get("v") is not None]
-            if values:
-                return values[-1]
-            raise DataProviderError("Glassnode MVRV Z-Score 응답이 비어 있습니다.")
-        market_caps, realized_caps = self.coinmetrics_mvrv_inputs()
+        mvrv_data = self._json("https://api.blockchain.info/charts/mvrv", params=params)
+        market_data = self._json("https://api.blockchain.info/charts/market-cap", params=params)
+        mvrv_values = [float(row["y"]) for row in mvrv_data.get("values", []) if row.get("y") is not None and float(row["y"]) > 0]
+        market_caps = [float(row["y"]) for row in market_data.get("values", []) if row.get("y") is not None and float(row["y"]) > 0]
+        if len(market_caps) < 30 or not mvrv_values:
+            raise DataProviderError("Blockchain.com MVRV 계산 데이터가 부족합니다.")
         from .indicators import mvrv_z_score
 
-        value = mvrv_z_score(market_caps, realized_caps)
+        realized_cap = market_caps[-1] / mvrv_values[-1]
+        value = mvrv_z_score(market_caps, [realized_cap])
         if value is None:
-            raise DataProviderError("MVRV Z-Score 계산에 필요한 이력이 부족합니다.")
+            raise DataProviderError("Blockchain.com 데이터로 MVRV Z-Score를 계산할 수 없습니다.")
         return value
+
+    def bitcoin_mvrv_z(self) -> tuple[float, str]:
+        glassnode_key = os.getenv("GLASSNODE_API_KEY", "").strip()
+        if glassnode_key:
+            try:
+                now = int(datetime.now(timezone.utc).timestamp())
+                data = self._json(
+                    "https://api.glassnode.com/v1/metrics/market/mvrv_z_score",
+                    params={"a": "BTC", "i": "24h", "s": now - 259200, "u": now, "api_key": glassnode_key},
+                )
+                values = [float(row["v"]) for row in data if row.get("v") is not None]
+                if values:
+                    return values[-1], "Glassnode"
+            except (requests.RequestException, DataProviderError, TypeError, ValueError):
+                pass
+        return self.blockchain_mvrv_z(), "Blockchain.com 계산값"
 
     def reddit_mentions(self, aliases: dict[str, tuple[str, str]]) -> tuple[dict[str, int] | None, int]:
         client_id = os.getenv("REDDIT_CLIENT_ID", "").strip()

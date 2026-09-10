@@ -251,11 +251,17 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     bitcoin = technical_metrics(btc_candles)
     bitcoin["market"] = "KRW-BTC"
     try:
-        bitcoin["mvrv_z"] = round_or_none(client.bitcoin_mvrv_z())
+        mvrv_result = client.bitcoin_mvrv_z()
+        if isinstance(mvrv_result, tuple):
+            mvrv_value, mvrv_source = mvrv_result
+        else:
+            mvrv_value, mvrv_source = mvrv_result, None
+        bitcoin["mvrv_z"] = round_or_none(mvrv_value)
+        bitcoin["mvrv_source"] = mvrv_source
     except Exception as exc:
         bitcoin["mvrv_z"] = None
-        hint = "GLASSNODE_API_KEY를 등록하면 공식 지표를 수집할 수 있습니다." if not os.getenv("GLASSNODE_API_KEY") else "등록한 Glassnode 키와 요금제 권한을 확인하세요."
-        warnings.append(f"MVRV Z-Score 미수집: {type(exc).__name__}. {hint}")
+        bitcoin["mvrv_source"] = None
+        warnings.append(f"MVRV Z-Score 미수집: {warning_reason(exc)}")
     try:
         fear_greed = client.fear_and_greed()
         bitcoin["fear_greed"] = fear_greed["value"]
@@ -384,7 +390,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     top = enriched[: settings["recommendation_count"]]
     now = datetime.now(timezone.utc)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": now.isoformat(),
         "generated_at_kst": now.astimezone(KST).strftime("%Y-%m-%d %H:%M KST"),
         "market": {
@@ -397,11 +403,11 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         "recommendations": top,
         "screened": len(analyzed),
         "methodology": {
-            "intro": "알트코인은 35점에서 시작해 아래 신호를 가감합니다. 같은 가격 흐름에서 파생된 기술 신호는 합산 상한을 두어 중복 가산을 줄입니다.",
+            "intro": "알트코인은 내부 원점수 35점에서 시작해 아래 신호를 가감하며, 이론상 최고 77점을 최종 100점으로 환산합니다. 같은 가격 흐름에서 파생된 기술 신호는 합산 상한을 두어 중복 가산을 줄입니다.",
             "groups": [
                 {
                     "title": "기술 분석",
-                    "range": "-18 ~ +22점",
+                    "range": "원점수 -18 ~ +22",
                     "items": [
                         "추세(가격·EMA20·EMA50): 정배열 +8 / 역배열 -10",
                         "RSI(14): 45~65 +4 / 75 이상 -7 / 35 미만 -3",
@@ -412,7 +418,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                 },
                 {
                     "title": "거래량·관심도",
-                    "range": "-4 ~ +9점",
+                    "range": "원점수 -4 ~ +9",
                     "items": [
                         "최근 7일 거래대금 ÷ 30일 평균: 1.1~3배 +5 / 0.65배 미만 -4",
                         "CoinGecko 24시간 인기 검색: 1~3위 +4 / 4~6위 +3 / 7~9위 +2 / 그 밖의 순위 +1",
@@ -420,7 +426,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                 },
                 {
                     "title": "커뮤니티 노출",
-                    "range": "0 ~ +5점",
+                    "range": "원점수 0 ~ +5",
                     "items": [
                         "한국시간 당일 Reddit·디시인사이드·코인판 게시물만 집계하며 한 게시물은 코인별 1회로 계산",
                         "1회 이상 +1 / 3회 이상 추가 +1 / 7회 이상 추가 +1",
@@ -430,7 +436,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                 },
                 {
                     "title": "개발·토크노믹스",
-                    "range": "상한 +6점 / 위험별 감점",
+                    "range": "원점수 상한 +6 / 위험별 감점",
                     "items": [
                         "공식 GitHub 최근 30일 커밋: 20건 이상 +3 / 5건 이상 +2, 45일 이내 릴리스 +2(개발 호재 합계 최대 +4)",
                         "30일 커밋 0건이고 마지막 커밋 120일 이상 경과: -5",
@@ -441,7 +447,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                 },
                 {
                     "title": "비트코인 시장 국면",
-                    "range": "0 ~ -20점",
+                    "range": "원점수 0 ~ -20",
                     "items": [
                         "BTC 상승 국면: 추가 조정 없음 / 중립: -4 / 하락: -20",
                         "하락 국면에서는 점수가 높아도 신규 매수 후보로 표시하지 않음",
@@ -449,16 +455,16 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                 },
             ],
             "decisions": [
-                "상승 국면: 67점 이상 분할매수 후보 / 52~66점 관찰 / 51점 이하 보류",
-                "중립 국면: 72점 이상 분할매수 후보 / 52~71점 관찰 / 51점 이하 보류",
-                "하락 국면: 55점 이상 관찰 / 54점 이하 보류",
+                "상승 국면: 87점 이상 분할매수 후보 / 68~86점 관찰 / 67점 이하 보류",
+                "중립 국면: 94점 이상 분할매수 후보 / 68~93점 관찰 / 67점 이하 보류",
+                "하락 국면: 71점 이상 관찰 / 70점 이하 보류",
             ],
             "execution": "실제 주문은 실행하지 않으며, 분할매수 후보도 손절·비중·호재 출처를 다시 확인하는 연구용 신호입니다.",
         },
         "data_quality": {"status": "주의" if warnings else "정상", "warnings": warnings, "notices": notices},
         "sources": [
             {"name": "Upbit", "url": "https://global-docs.upbit.com/reference/list-tickers"},
-            {"name": "Coin Metrics", "url": "https://docs.coinmetrics.io/api/v4"},
+            {"name": "Blockchain.com", "url": "https://www.blockchain.com/explorer/api/charts_api"},
             {"name": "CoinGecko", "url": "https://docs.coingecko.com/docs/keyless-public-api"},
             {"name": "GitHub", "url": "https://docs.github.com/rest/commits/commits"},
             {"name": "Mobula", "url": "https://docs.mobula.io/guides/token-unlock"},

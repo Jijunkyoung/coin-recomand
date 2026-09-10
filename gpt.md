@@ -13,8 +13,8 @@
 
 1. 데이터 수집
    - 업비트 공개 API: KRW 마켓, 현재가, 120일 일봉, 거래대금
-   - Coin Metrics Community API: BTC 시가총액·실현 시가총액으로 MVRV Z-Score 계산
-   - Glassnode API 키가 있으면 공식 MVRV Z-Score를 직접 수집
+   - Blockchain.com Charts API: 공개 MVRV·시가총액으로 MVRV Z-Score 무료 계산
+   - Glassnode API 키와 권한이 있으면 공식 값을 우선하고 실패하면 Blockchain.com으로 자동 전환
    - Alternative.me: Crypto Fear & Greed Index
    - CoinGecko: 최근 24시간 인기 검색 순위
    - Reddit OAuth(선택): r/CryptoCurrency 최근 24시간 표본 언급 수
@@ -114,3 +114,11 @@
 - 신규 상장 `KRW-CP`처럼 60일 캔들이 없는 종목은 오류가 아니라 `거래이력 부족 (n일/최소 60일)`로 명시
 - 거래이력 부족은 수집 장애 경고와 분리한 회색 `참고` 항목으로 표시하고 데이터 품질 상태 산정에서는 제외
 - 판정원칙을 대시보드 하단의 전폭 카드로 이동하고 기술·거래량·커뮤니티·개발·토크노믹스·시장국면 배점을 실제 코드 기준으로 공개
+
+## 2026-09-10 · 무료 MVRV와 알트 100점 환산
+
+- 유료 Glassnode가 없어도 Blockchain.com 공개 MVRV·시가총액으로 최근 MVRV Z-Score를 계산하도록 변경
+- Glassnode 키가 유효하면 공식 값을 우선하고, 키가 없거나 권한 오류가 나면 무료 계산값으로 자동 대체
+- 알트 점수의 실제 이론상 최고가 `35+22+5+4+5+4+2=77점`임을 확인
+- 내부 77점 만점 원점수를 최종 100점으로 환산하고 기존 판정 경계도 동일 비율(상승장 매수 87점 등)로 조정해 추천 강도 유지
+- 대시보드와 이메일에 MVRV 데이터 출처를 함께 표시

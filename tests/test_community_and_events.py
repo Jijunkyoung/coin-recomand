@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timezone
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from src.main import resolve_coingecko_id, summarize_unlock
 from src.providers import MarketDataClient, _coinpan_posts, _link_titles, _today_link_titles, count_post_mentions
@@ -63,6 +63,18 @@ class CommunityAndEventTests(unittest.TestCase):
         result = client.github_project_activity(["https://github.com/example/old", "https://github.com/example/active"])
         self.assertEqual(result["repository"], "https://github.com/example/active")
 
+    @patch.dict("os.environ", {}, clear=True)
+    def test_blockchain_mvrv_is_free_fallback(self):
+        client = MarketDataClient()
+        client._json = Mock(side_effect=[
+            {"values": [{"x": 1, "y": 2.0}]},
+            {"values": [{"x": index, "y": 100 + index * 10} for index in range(30)]},
+        ])
+        value, source = client.bitcoin_mvrv_z()
+        self.assertIsInstance(value, float)
+        self.assertEqual(source, "Blockchain.com 계산값")
+        self.assertEqual(client._json.call_count, 2)
+
     def test_summarizes_nearest_upcoming_unlock(self):
         metadata = {"release_schedule": [{"date": "2026-09-20T00:00:00Z", "amount": 5_000_000}, {"date": "2026-10-20T00:00:00Z", "amount": 1_000_000}]}
         result = summarize_unlock(metadata, 100_000_000, datetime(2026, 9, 9, tzinfo=timezone.utc))
@@ -100,7 +112,7 @@ class CommunityAndEventTests(unittest.TestCase):
             "tokenomics": {"circulating_ratio": 40.97, "next_unlock": {"days_until": 0, "percent_circulating": None}},
         }
         score, _, _ = alt_score(metrics, "상승")
-        self.assertEqual(score, 54)
+        self.assertEqual(score, 70)
 
     def test_small_known_unlock_is_not_penalized_like_unknown_amount(self):
         base = {
@@ -111,7 +123,7 @@ class CommunityAndEventTests(unittest.TestCase):
         }
         known_score, _, _ = alt_score({**base, "tokenomics": {**base["tokenomics"], "next_unlock": {"days_until": 0, "percent_circulating": 0.01}}}, "상승")
         unknown_score, _, _ = alt_score({**base, "tokenomics": {**base["tokenomics"], "next_unlock": {"days_until": 0, "percent_circulating": None}}}, "상승")
-        self.assertEqual(known_score - unknown_score, 7)
+        self.assertEqual(known_score - unknown_score, 9)
 
 
 if __name__ == "__main__":

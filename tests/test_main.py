@@ -85,7 +85,7 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(coin["community_sources"], 3)
         self.assertEqual(coin["development"]["status"], "공개 GitHub 없음")
         self.assertEqual(coin["tokenomics"]["circulating_ratio"], 80.0)
-        self.assertEqual(report["methodology"]["groups"][0]["range"], "-18 ~ +22점")
+        self.assertEqual(report["methodology"]["groups"][0]["range"], "원점수 -18 ~ +22")
 
 
 if __name__ == "__main__":
