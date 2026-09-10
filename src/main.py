@@ -392,6 +392,11 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         coin["rank"] = rank
     enriched.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
     top = enriched[: settings["recommendation_count"]]
+    try:
+        news_issues = client.crypto_news(["BTC", "ETH", *(coin["symbol"] for coin in top)], limit=7)
+    except Exception as exc:
+        news_issues = []
+        warnings.append(f"주요 코인 이슈 미수집: {warning_reason(exc)}")
     ranking_fields = (
         "rank", "market", "symbol", "name", "english_name", "score", "decision", "analysis_scope", "reasons", "risks",
         "price", "ema20", "ema50", "rsi", "macd_histogram", "return_7d", "return_30d", "volume_ratio",
@@ -412,6 +417,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             "fear_greed": fear_greed,
         },
         "recommendations": top,
+        "news_issues": news_issues,
         "alt_rankings": alt_rankings,
         "screened": len(analyzed),
         "methodology": {
@@ -484,6 +490,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             {"name": "DCInside", "url": "https://gall.dcinside.com/board/lists/?id=bitcoins_new1"},
             {"name": "Coinpan", "url": "https://coinpan.com/free"},
             {"name": "Alternative.me", "url": "https://alternative.me/crypto/fear-and-greed-index/"},
+            {"name": "Google News RSS", "url": "https://news.google.com/"},
         ],
         "disclaimer": "정량 지표 기반 참고자료이며 투자 자문이나 수익 보장이 아닙니다. 실제 주문을 실행하지 않습니다.",
     }
