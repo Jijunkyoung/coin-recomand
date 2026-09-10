@@ -249,6 +249,7 @@ function renderAltSearchResult(coin) {
     : "커뮤니티 데이터 미수집";
   const development = coin.development || {};
   const tokenomics = coin.tokenomics || {};
+  const detailed = coin.analysis_scope === "정밀분석";
   const unlock = tokenomics.next_unlock;
   const unlockText = unlock
     ? `${unlock.date || "일정 확인 필요"}${unlock.days_until != null ? ` · ${unlock.days_until}일 후` : ""}${unlock.percent_circulating != null ? ` · 유통량의 ${fmt(unlock.percent_circulating, 2)}%` : " · 수량 미확인"}`
@@ -270,12 +271,12 @@ function renderAltSearchResult(coin) {
         <section class="search-risks"><h4>감점·확인할 위험</h4><ul>${risks.map(item => `<li>${escapeHTML(item)}</li>`).join("")}</ul></section>
       </div>
       <div class="search-updates">
-        <div><span>개발 진척</span><strong>${escapeHTML(development.status || "미수집")}</strong><small>${development.commits_30d != null ? `최근 30일 ${escapeHTML(development.commits_30d)}개 커밋` : "공개 활동 기준"}</small></div>
+        <div><span>개발 진척</span><strong>${escapeHTML(development.status || (detailed ? "미수집" : "정밀분석 대상 외"))}</strong><small>${development.commits_30d != null ? `최근 30일 ${escapeHTML(development.commits_30d)}개 커밋` : detailed ? "공개 활동 기준" : "현재 상위 25개 종목만 조회"}</small></div>
         <div><span>최근 릴리스</span><strong>${escapeHTML(development.latest_release_name || "확인된 릴리스 없음")}</strong><small>${development.latest_release_days != null ? `${escapeHTML(development.latest_release_days)}일 전` : "GitHub 공개 저장소 기준"}</small></div>
         <div><span>토큰 언락</span><strong>${escapeHTML(unlockText)}</strong><small>${tokenomics.circulating_ratio != null ? `현재 유통 비율 ${fmt(tokenomics.circulating_ratio)}%` : "유통량 미수집"}</small></div>
         <div><span>프로젝트 공지</span><strong>${escapeHTML(tokenomics.project_notice || "확인된 주요 공지 없음")}</strong><small>CoinGecko 공개 공지 기준</small></div>
       </div>
-      <p class="search-note">순위는 현재 분석된 유동성 상위 ${escapeHTML(altRankings.length)}개 종목 안에서 산정됩니다. 데이터 생성 시각 이후의 뉴스나 공지는 반영되지 않을 수 있습니다.</p>
+      <p class="search-note">순위는 유동성·거래이력 기준을 통과한 ${escapeHTML(altRankings.length)}개 종목 안에서 산정됩니다. 개발·언락 정밀자료는 기술 점수 상위 25개를 우선 조회하며, 데이터 생성 시각 이후의 뉴스나 공지는 반영되지 않을 수 있습니다.</p>
     </article>`;
 }
 

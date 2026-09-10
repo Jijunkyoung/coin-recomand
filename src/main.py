@@ -339,6 +339,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                     "decision": recommendation_label(score, regime),
                     "reasons": reasons[:6],
                     "risks": risks[:5],
+                    "analysis_scope": "기술·커뮤니티 분석",
                     **metrics,
                 }
             )
@@ -382,21 +383,22 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                     warnings.append(f"{coin['symbol']} 언락 일정 미수집: {type(exc).__name__}")
             coin.update(project_context(details, activity, unlock_metadata))
             score, reasons, risks = alt_score(coin, regime)
-            coin.update({"score": score, "decision": recommendation_label(score, regime), "reasons": reasons[:6], "risks": risks[:5]})
+            coin.update({"score": score, "decision": recommendation_label(score, regime), "reasons": reasons[:6], "risks": risks[:5], "analysis_scope": "정밀분석"})
         except Exception as exc:
             warnings.append(f"{coin['symbol']} 프로젝트 정보 미수집: {type(exc).__name__}")
         time.sleep(0.8)
-    enriched.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
-    for rank, coin in enumerate(enriched, start=1):
+    analyzed.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
+    for rank, coin in enumerate(analyzed, start=1):
         coin["rank"] = rank
+    enriched.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
     top = enriched[: settings["recommendation_count"]]
     ranking_fields = (
-        "rank", "market", "symbol", "name", "english_name", "score", "decision", "reasons", "risks",
+        "rank", "market", "symbol", "name", "english_name", "score", "decision", "analysis_scope", "reasons", "risks",
         "price", "ema20", "ema50", "rsi", "macd_histogram", "return_7d", "return_30d", "volume_ratio",
         "volatility", "trending_rank", "community_mentions", "community_total", "community_sources",
         "community_exposure_rate", "trade_value_24h", "development", "tokenomics", "coingecko_id",
     )
-    alt_rankings = [{field: coin.get(field) for field in ranking_fields} for coin in enriched]
+    alt_rankings = [{field: coin.get(field) for field in ranking_fields} for coin in analyzed]
     now = datetime.now(timezone.utc)
     return {
         "schema_version": 3,
