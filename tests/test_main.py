@@ -81,6 +81,9 @@ class MainAnalysisTests(unittest.TestCase):
         settings = {"upbit_candle_days": 60, "excluded_symbols": ["BTC"], "minimum_24h_value_krw": 1, "screen_count": 1, "recommendation_count": 1, "fundamental_candidate_count": 1, "community_pages": 1}
         report = build_report(settings, FakeClient())
         coin = report["recommendations"][0]
+        self.assertEqual(report["alt_rankings"][0]["rank"], 1)
+        self.assertEqual(report["alt_rankings"][0]["symbol"], "XRP")
+        self.assertNotIn("history", report["alt_rankings"][0])
         self.assertEqual(coin["community_total"], 6)
         self.assertEqual(coin["community_sources"], 3)
         self.assertEqual(coin["development"]["status"], "공개 GitHub 없음")

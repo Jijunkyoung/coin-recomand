@@ -387,10 +387,19 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             warnings.append(f"{coin['symbol']} 프로젝트 정보 미수집: {type(exc).__name__}")
         time.sleep(0.8)
     enriched.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
+    for rank, coin in enumerate(enriched, start=1):
+        coin["rank"] = rank
     top = enriched[: settings["recommendation_count"]]
+    ranking_fields = (
+        "rank", "market", "symbol", "name", "english_name", "score", "decision", "reasons", "risks",
+        "price", "ema20", "ema50", "rsi", "macd_histogram", "return_7d", "return_30d", "volume_ratio",
+        "volatility", "trending_rank", "community_mentions", "community_total", "community_sources",
+        "community_exposure_rate", "trade_value_24h", "development", "tokenomics", "coingecko_id",
+    )
+    alt_rankings = [{field: coin.get(field) for field in ranking_fields} for coin in enriched]
     now = datetime.now(timezone.utc)
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "generated_at": now.isoformat(),
         "generated_at_kst": now.astimezone(KST).strftime("%Y-%m-%d %H:%M KST"),
         "market": {
@@ -401,6 +410,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             "fear_greed": fear_greed,
         },
         "recommendations": top,
+        "alt_rankings": alt_rankings,
         "screened": len(analyzed),
         "methodology": {
             "intro": "알트코인은 내부 원점수 35점에서 시작해 아래 신호를 가감하며, 이론상 최고 77점을 최종 100점으로 환산합니다. 같은 가격 흐름에서 파생된 기술 신호는 합산 상한을 두어 중복 가산을 줄입니다.",

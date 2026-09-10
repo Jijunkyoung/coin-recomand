@@ -46,6 +46,21 @@
         <p><strong id="screenedCount">—</strong>개 유동성 상위 종목 분석</p>
       </div>
       <div id="recommendations" class="recommend-grid" aria-live="polite"></div>
+      <section class="alt-search-panel" aria-labelledby="altSearchTitle">
+        <div class="alt-search-head">
+          <div><span class="eyebrow">ALTCOIN LOOKUP</span><h2 id="altSearchTitle">원하는 알트코인 검색</h2></div>
+          <p>종목명이나 심볼로 전체 분석 순위와 점수 근거를 확인하세요.</p>
+        </div>
+        <form id="altSearchForm" class="alt-search-form" role="search">
+          <label class="sr-only" for="altSearchInput">알트코인 이름 또는 심볼</label>
+          <input id="altSearchInput" type="search" list="altSearchOptions" placeholder="예: 수이, SUI, 리플, XRP" autocomplete="off">
+          <datalist id="altSearchOptions"></datalist>
+          <button type="submit">검색</button>
+        </form>
+        <div id="altSearchResult" class="alt-search-result" aria-live="polite">
+          <p class="search-empty">검색할 코인을 입력하면 최신 분석 결과를 보여드립니다.</p>
+        </div>
+      </section>
     </section>
 
     <section class="lower-grid">

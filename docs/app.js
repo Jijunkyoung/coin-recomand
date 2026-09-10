@@ -6,6 +6,9 @@ let detailDays = 30;
 let detailPlot = null;
 let detailFrame = null;
 let detailHoverIndex = null;
+let altRankings = [];
+
+const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 
 function drawLine(canvas, values, color = "#4d8dff") {
   if (!values?.length) return;
@@ -237,6 +240,58 @@ function renderCoin(coin, index) {
   return node;
 }
 
+function renderAltSearchResult(coin) {
+  const result = $("#altSearchResult");
+  const decisionClass = coin.decision === "분할매수 후보" ? "buy" : coin.decision === "보류" ? "hold" : "watch";
+  const mentions = coin.community_mentions || {};
+  const community = coin.community_sources
+    ? `오늘 ${coin.community_total || 0}회 · Reddit ${mentions.reddit ?? "미수집"} / 디시 ${mentions.dcinside ?? "미수집"} / 코인판 ${mentions.coinpan ?? "미수집"}`
+    : "커뮤니티 데이터 미수집";
+  const development = coin.development || {};
+  const tokenomics = coin.tokenomics || {};
+  const unlock = tokenomics.next_unlock;
+  const unlockText = unlock
+    ? `${unlock.date || "일정 확인 필요"}${unlock.days_until != null ? ` · ${unlock.days_until}일 후` : ""}${unlock.percent_circulating != null ? ` · 유통량의 ${fmt(unlock.percent_circulating, 2)}%` : " · 수량 미확인"}`
+    : tokenomics.unlock_data_available ? "60일 이내 예정 없음" : "미수집";
+  const reasons = coin.reasons?.length ? coin.reasons : ["현재 가산 근거가 확인되지 않았습니다."];
+  const risks = coin.risks?.length ? coin.risks : ["뚜렷한 정량 위험 신호 없음 — 시장 변동성은 별도 관리 필요"];
+  result.innerHTML = `
+    <article class="search-result-card">
+      <div class="search-result-top">
+        <div><span class="search-rank">전체 분석 #${escapeHTML(coin.rank)}</span><h3>${escapeHTML(coin.name)} <small>${escapeHTML(coin.symbol)}</small></h3><p>${escapeHTML(coin.english_name || "")} · 현재가 ₩${fmt(coin.price, 4)}</p></div>
+        <div class="search-score"><span class="decision ${decisionClass}">${escapeHTML(coin.decision)}</span><strong>${escapeHTML(coin.score)}</strong><small>/ 100점</small></div>
+      </div>
+      <div class="search-score-track"><i style="width:${Math.max(0, Math.min(100, Number(coin.score) || 0))}%"></i></div>
+      <div class="search-metrics">
+        ${metric("RSI(14)", fmt(coin.rsi))}${metric("7일 수익률", pct(coin.return_7d))}${metric("30일 수익률", pct(coin.return_30d))}${metric("거래량 비율", coin.volume_ratio == null ? "—" : `${fmt(coin.volume_ratio, 2)}×`)}${metric("변동성", pct(coin.volatility))}${metric("커뮤니티 노출", escapeHTML(community))}
+      </div>
+      <div class="search-context">
+        <section><h4>점수 상승 근거</h4><ul>${reasons.map(item => `<li>${escapeHTML(item)}</li>`).join("")}</ul></section>
+        <section class="search-risks"><h4>감점·확인할 위험</h4><ul>${risks.map(item => `<li>${escapeHTML(item)}</li>`).join("")}</ul></section>
+      </div>
+      <div class="search-updates">
+        <div><span>개발 진척</span><strong>${escapeHTML(development.status || "미수집")}</strong><small>${development.commits_30d != null ? `최근 30일 ${escapeHTML(development.commits_30d)}개 커밋` : "공개 활동 기준"}</small></div>
+        <div><span>최근 릴리스</span><strong>${escapeHTML(development.latest_release_name || "확인된 릴리스 없음")}</strong><small>${development.latest_release_days != null ? `${escapeHTML(development.latest_release_days)}일 전` : "GitHub 공개 저장소 기준"}</small></div>
+        <div><span>토큰 언락</span><strong>${escapeHTML(unlockText)}</strong><small>${tokenomics.circulating_ratio != null ? `현재 유통 비율 ${fmt(tokenomics.circulating_ratio)}%` : "유통량 미수집"}</small></div>
+        <div><span>프로젝트 공지</span><strong>${escapeHTML(tokenomics.project_notice || "확인된 주요 공지 없음")}</strong><small>CoinGecko 공개 공지 기준</small></div>
+      </div>
+      <p class="search-note">순위는 현재 분석된 유동성 상위 ${escapeHTML(altRankings.length)}개 종목 안에서 산정됩니다. 데이터 생성 시각 이후의 뉴스나 공지는 반영되지 않을 수 있습니다.</p>
+    </article>`;
+}
+
+function searchAltcoin(query) {
+  const normalized = query.trim().toLocaleLowerCase("ko-KR");
+  if (!normalized) {
+    $("#altSearchResult").innerHTML = `<p class="search-empty">검색할 코인 이름이나 심볼을 입력해 주세요.</p>`;
+    return;
+  }
+  const exact = altRankings.find(coin => [coin.symbol, coin.name, coin.english_name].some(value => String(value || "").toLocaleLowerCase("ko-KR") === normalized));
+  const partial = altRankings.find(coin => [coin.symbol, coin.name, coin.english_name].some(value => String(value || "").toLocaleLowerCase("ko-KR").includes(normalized)));
+  const coin = exact || partial;
+  if (coin) renderAltSearchResult(coin);
+  else $("#altSearchResult").innerHTML = `<p class="search-empty"><strong>${escapeHTML(query)}</strong>은 현재 유동성·거래이력 기준을 통과한 ${escapeHTML(altRankings.length)}개 분석 종목에서 찾지 못했습니다.</p>`;
+}
+
 function render(report) {
   const { market } = report, btc = market.bitcoin;
   $("#generatedAt").textContent = report.generated_at_kst; $("#qualityText").textContent = `데이터 ${report.data_quality.status}`;
@@ -248,12 +303,16 @@ function render(report) {
   $("#btcPrice").textContent = `₩${fmt(btc.price,0)}`; $("#mvrv").textContent = fmt(btc.mvrv_z,2); $("#mvrvLabel").textContent = btc.mvrv_source ? `MVRV Z · ${btc.mvrv_source}` : "MVRV Z"; $("#btcRsi").textContent = fmt(btc.rsi); $("#btcReturn").textContent = pct(btc.return_30d); $("#btcVolume").textContent = btc.volume_ratio == null ? "—" : `${fmt(btc.volume_ratio,2)}×`; drawLine($("#btcChart"), btc.sparkline, "#4d8dff");
   const btcCard = $("#btcDetailCard"); btcCard.onclick = () => openDetailChart(btc); btcCard.onkeydown = event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDetailChart(btc); } };
   $("#screenedCount").textContent = report.screened; const list = $("#recommendations"); list.innerHTML = ""; report.recommendations.forEach((coin, i) => list.appendChild(renderCoin(coin, i)));
+  altRankings = report.alt_rankings?.length ? report.alt_rankings : report.recommendations.map((coin, index) => ({ ...coin, rank: index + 1 }));
+  $("#altSearchOptions").innerHTML = altRankings.map(coin => `<option value="${escapeHTML(coin.symbol)}">${escapeHTML(coin.name)} · ${escapeHTML(coin.english_name || "")}</option>`).join("");
   const fear = market.fear_greed; $("#fearValue").textContent = fear.value ?? "—"; $("#fearClass").textContent = fear.classification; $("#fearGauge").style.left = `${fear.value ?? 50}%`;
   renderMethodology(report.methodology);
   const warnings = report.data_quality.warnings || [], notices = report.data_quality.notices || [];
   $("#warnings").innerHTML = (warnings.length ? warnings.map(x => `<p>• ${x}</p>`).join("") : `<p class="ok">모든 핵심 데이터가 정상 수집됐습니다.</p>`) + notices.map(x => `<p class="notice">참고 · ${x}</p>`).join("");
   $("#sources").innerHTML = report.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener">${s.name}</a>`).join(""); $("#disclaimer").textContent = report.disclaimer;
 }
+
+$("#altSearchForm").addEventListener("submit", event => { event.preventDefault(); searchAltcoin($("#altSearchInput").value); });
 
 $("#chartClose").addEventListener("click", () => $("#chartDialog").close());
 $("#chartDialog").addEventListener("click", event => { if (event.target === event.currentTarget) event.currentTarget.close(); });
