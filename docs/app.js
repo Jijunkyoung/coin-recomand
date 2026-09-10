@@ -9,6 +9,36 @@ let detailHoverIndex = null;
 let altRankings = [];
 
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
+const EMAIL_STORAGE_KEY = "coin-signal-email-recipients";
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseEmailRecipients(value) {
+  const seen = new Set();
+  const valid = [], invalid = [];
+  value.split(/[,;\n]+/).map(item => item.trim()).filter(Boolean).forEach(address => {
+    const key = address.toLocaleLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    if (EMAIL_PATTERN.test(address)) valid.push(address); else invalid.push(address);
+  });
+  return { valid, invalid };
+}
+
+function updateEmailPreview() {
+  const parsed = parseEmailRecipients($("#emailRecipients").value);
+  $("#emailRecipientPreview").innerHTML = parsed.valid.length
+    ? parsed.valid.map(address => `<span>${escapeHTML(address)}</span>`).join("")
+    : `<small>등록할 주소를 입력해 주세요.</small>`;
+  $("#emailSettingsStatus").textContent = parsed.invalid.length ? `형식이 잘못된 주소: ${parsed.invalid.join(", ")}` : `${parsed.valid.length}개 주소 입력됨`;
+  $("#emailSettingsStatus").classList.toggle("error", Boolean(parsed.invalid.length));
+  return parsed;
+}
+
+function openEmailSettings() {
+  $("#emailRecipients").value = localStorage.getItem(EMAIL_STORAGE_KEY) || "";
+  updateEmailPreview();
+  $("#emailDialog").showModal();
+}
 
 function drawLine(canvas, values, color = "#4d8dff") {
   if (!values?.length) return;
@@ -334,5 +364,30 @@ $("#detailChart").addEventListener("pointermove", event => {
 });
 $("#detailChart").addEventListener("pointerleave", () => { $("#chartTooltip").hidden = true; scheduleDetailedChart(); });
 window.addEventListener("resize", () => { if ($("#chartDialog").open) scheduleDetailedChart(); });
+
+$("#emailSettingsButton").addEventListener("click", openEmailSettings);
+$("#emailDialogClose").addEventListener("click", () => $("#emailDialog").close());
+$("#emailDialog").addEventListener("click", event => { if (event.target === event.currentTarget) event.currentTarget.close(); });
+$("#emailRecipients").addEventListener("input", updateEmailPreview);
+$("#saveEmailRecipients").addEventListener("click", () => {
+  const parsed = updateEmailPreview();
+  if (parsed.invalid.length || !parsed.valid.length) return;
+  localStorage.setItem(EMAIL_STORAGE_KEY, parsed.valid.join("\n"));
+  $("#emailSettingsStatus").textContent = "이 브라우저에 주소 목록을 저장했습니다. 예약 발송에는 GitHub Secret 등록도 필요합니다.";
+});
+$("#copyEmailSecret").addEventListener("click", async () => {
+  const parsed = updateEmailPreview();
+  if (parsed.invalid.length || !parsed.valid.length) return;
+  const value = parsed.valid.join(",");
+  localStorage.setItem(EMAIL_STORAGE_KEY, parsed.valid.join("\n"));
+  try {
+    await navigator.clipboard.writeText(value);
+    $("#emailSettingsStatus").textContent = "EMAIL_TO 값이 복사됐습니다. GitHub Secret 등록 버튼을 눌러 붙여넣으세요.";
+  } catch {
+    $("#emailRecipients").value = value;
+    $("#emailRecipients").select();
+    $("#emailSettingsStatus").textContent = "자동 복사가 차단됐습니다. 선택된 주소를 직접 복사해 주세요.";
+  }
+});
 
 fetch(`data/latest.json?v=${Date.now()}`).then(response => { if (!response.ok) throw new Error("분석 파일을 읽지 못했습니다."); return response.json(); }).then(render).catch(error => { $("#recommendations").innerHTML = `<div class="error-card">${error.message} 잠시 후 다시 시도하거나 GitHub Actions 실행 상태를 확인하세요.</div>`; $("#qualityText").textContent = "데이터 오류"; });

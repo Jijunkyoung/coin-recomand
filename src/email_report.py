@@ -2,9 +2,28 @@ from __future__ import annotations
 
 import html
 import os
+import re
 import smtplib
 from email.message import EmailMessage
 from typing import Any
+
+
+EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+def parse_recipients(value: str) -> list[str]:
+    recipients: list[str] = []
+    seen: set[str] = set()
+    for raw in re.split(r"[,;\n]+", value):
+        address = raw.strip()
+        normalized = address.lower()
+        if not address or normalized in seen:
+            continue
+        if not EMAIL_PATTERN.fullmatch(address):
+            raise ValueError(f"잘못된 수신 이메일 주소: {address}")
+        recipients.append(address)
+        seen.add(normalized)
+    return recipients
 
 
 def build_email_html(report: dict[str, Any]) -> str:
@@ -58,7 +77,10 @@ def send_email(report: dict[str, Any]) -> bool:
         return False
     port = int(os.getenv("SMTP_PORT", "465"))
     sender = os.getenv("EMAIL_FROM", "").strip() or required["SMTP_USERNAME"]
-    recipients = [address.strip() for address in required["EMAIL_TO"].split(",") if address.strip()]
+    recipients = parse_recipients(required["EMAIL_TO"])
+    if not recipients:
+        print("유효한 수신 이메일 주소가 없어 발송을 건너뜁니다.")
+        return False
     message = EmailMessage()
     message["Subject"] = f"[{report['market']['regime']}] 코인 분석 {report['generated_at_kst'][:10]}"
     message["From"] = sender

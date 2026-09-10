@@ -41,13 +41,15 @@ python -m http.server 8000 --directory docs
 | `SMTP_USERNAME` | SMTP 로그인 계정 | 보내는 Gmail 주소 |
 | `SMTP_PASSWORD` | SMTP 비밀번호 | Google 2단계 인증 후 만든 앱 비밀번호 |
 | `EMAIL_FROM` | 발신 주소(선택) | 미설정 시 SMTP 계정 |
-| `EMAIL_TO` | 수신 주소, 여러 개는 쉼표 구분 | `me@example.com` |
+| `EMAIL_TO` | 수신 주소, 여러 개는 쉼표·세미콜론·줄바꿈 구분 | `me@example.com,team@example.com` |
 
 Reddit 언급 수는 선택 기능입니다. 사용하려면 Reddit의 script 앱을 만든 뒤 `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`을 추가하세요. 세 커뮤니티 모두 한국시간 당일 작성된 게시물만 반영합니다. 디시인사이드 비트코인 갤러리와 코인판은 별도 키 없이 게시글 제목을 표본 수집하며, 사이트 접근이 제한되면 0회로 간주하지 않고 `미수집`으로 표시합니다.
 
 예정된 토큰 언락 날짜와 수량을 반영하려면 Mobula에서 API 키를 발급한 뒤 `MOBULA_API_KEY`를 Repository secret으로 추가하세요. 키가 없을 때도 CoinGecko의 총공급량 대비 유통 비율은 희석 위험에 반영되지만 정확한 언락 날짜는 `미수집`으로 표시됩니다. 공식 GitHub 개발 활동은 Actions의 기본 토큰을 사용하므로 별도 Secret이 필요하지 않습니다.
 
 CoinGecko 키리스 API의 제한이 걸리는 환경에서는 무료 Demo 키를 발급해 `COINGECKO_API_KEY`로 등록할 수 있습니다.
+
+예약 워크플로는 매일 오전 8시(KST)에 최신 자료를 생성하고 `EMAIL_TO`에 등록된 모든 주소로 보고서를 발송합니다. 대시보드의 `메일 수신 설정`에서 복수 주소를 검증·복사한 뒤 GitHub Actions Secret `EMAIL_TO`에 붙여넣을 수 있습니다. 정적 페이지에서는 Secret을 직접 수정할 수 없으므로 최초 등록이나 주소 변경 시 GitHub에서 저장하는 단계가 필요합니다.
 
 MVRV Z-Score는 별도 키 없이 Blockchain.com 공개 차트의 MVRV와 BTC 시가총액으로 계산합니다. `GLASSNODE_API_KEY`가 등록돼 있고 요금제 권한이 있으면 Glassnode 공식 값을 우선 사용하며, 키가 없거나 요청이 실패하면 무료 계산값으로 자동 전환합니다. 데이터 제공처별 산정·표본 방식 차이로 Glassnode 값과 소폭 다를 수 있습니다.
 
