@@ -4,7 +4,10 @@ import os
 import re
 import time
 import html
+import hashlib
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -152,6 +155,80 @@ class MarketDataClient:
             params={"localization": "false", "tickers": "false", "market_data": "true", "community_data": "false", "developer_data": "false", "sparkline": "false"},
             headers=self._coingecko_headers(),
         )
+
+    def crypto_news(self, symbols: list[str] | None = None, limit: int = 7) -> list[dict[str, Any]]:
+        """Collect and classify recent Korean crypto headlines without an API key."""
+        symbol_terms = [symbol.upper() for symbol in (symbols or []) if re.fullmatch(r"[A-Z0-9]{2,10}", symbol.upper())]
+        query = "(비트코인 OR 이더리움 OR 암호화폐 OR 가상자산 OR 코인"
+        if symbol_terms:
+            query += " OR " + " OR ".join(symbol_terms[:5])
+        query += ") when:1d"
+        body = self._text(
+            "https://news.google.com/rss/search",
+            params={"q": query, "hl": "ko", "gl": "KR", "ceid": "KR:ko"},
+        )
+        root = ET.fromstring(body)
+        now = datetime.now(timezone.utc)
+        seen: set[str] = set()
+        issues: list[dict[str, Any]] = []
+        for item in root.findall(".//item"):
+            raw_title = " ".join((item.findtext("title") or "").split())
+            link = (item.findtext("link") or "").strip()
+            source_node = item.find("source")
+            source = " ".join(((source_node.text if source_node is not None else "") or "").split()) or "Google News"
+            if not raw_title or not link:
+                continue
+            title = re.sub(rf"\s+-\s+{re.escape(source)}\s*$", "", raw_title, flags=re.IGNORECASE).strip()
+            normalized = re.sub(r"[^0-9a-z가-힣]", "", title.lower())
+            fingerprint = hashlib.sha1(normalized.encode("utf-8")).hexdigest()[:16]
+            if not normalized or fingerprint in seen:
+                continue
+            try:
+                published = parsedate_to_datetime(item.findtext("pubDate") or "").astimezone(timezone.utc)
+            except (TypeError, ValueError):
+                published = now
+            if published < now - timedelta(hours=36):
+                continue
+            seen.add(fingerprint)
+            combined = title.lower()
+            categories = (
+                ("보안", ("해킹", "해커", "탈취", "공격", "취약점", "exploit", "hack")),
+                ("ETF·기관", ("etf", "기관", "현물", "펀드", "보유량")),
+                ("규제", ("규제", "법안", "sec", "소송", "정부", "금지", "승인")),
+                ("상장·거래", ("상장", "상장폐지", "거래지원", "거래소", "listing")),
+                ("개발·사업", ("업그레이드", "메인넷", "파트너십", "출시", "개발", "투자 유치")),
+                ("토크노믹스", ("언락", "락업", "소각", "발행", "unlock", "burn")),
+            )
+            category = next((name for name, words in categories if any(word in combined for word in words)), "시장")
+            negative_words = ("해킹", "탈취", "공격", "취약점", "상장폐지", "소송", "금지", "급락", "폭락", "청산", "언락", "파산")
+            positive_words = ("승인", "상장", "파트너십", "출시", "업그레이드", "투자 유치", "신고가", "급등", "소각")
+            negative = sum(word in combined for word in negative_words)
+            positive = sum(word in combined for word in positive_words)
+            impact = "악재 가능" if negative > positive else "호재 가능" if positive > negative else "중립·혼재"
+            related = [symbol for symbol in symbol_terms if re.search(rf"(?<![A-Z0-9]){re.escape(symbol)}(?![A-Z0-9])", title, flags=re.IGNORECASE)]
+            issues.append(
+                {
+                    "title": title[:220],
+                    "source": source[:80],
+                    "url": link,
+                    "published_at": published.isoformat(),
+                    "published_at_kst": published.astimezone(KST).strftime("%m-%d %H:%M"),
+                    "category": category,
+                    "impact": impact,
+                    "related_symbols": related,
+                }
+            )
+        issues.sort(key=lambda issue: issue["published_at"], reverse=True)
+        selected: list[dict[str, Any]] = []
+        source_counts: dict[str, int] = {}
+        for issue in issues:
+            if source_counts.get(issue["source"], 0) >= 2:
+                continue
+            selected.append(issue)
+            source_counts[issue["source"]] = source_counts.get(issue["source"], 0) + 1
+            if len(selected) >= limit:
+                break
+        return selected
 
     def github_repository_activity(self, repository_url: str) -> dict[str, Any]:
         parsed = urlparse(repository_url)
