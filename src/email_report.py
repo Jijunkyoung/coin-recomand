@@ -46,6 +46,23 @@ def build_email_html(report: dict[str, Any]) -> str:
     mvrv_source = market["bitcoin"].get("mvrv_source")
     if mvrv_source:
         mvrv_text += f" ({mvrv_source})"
+    issue_rows = []
+    for issue in report.get("news_issues", [])[:7]:
+        symbols = ", ".join(issue.get("related_symbols") or []) or "시장 전체"
+        issue_rows.append(
+            "<li style='margin:0 0 12px'>"
+            f"<a href='{html.escape(issue.get('url', ''), quote=True)}' style='color:#1d4ed8;text-decoration:none'>"
+            f"<strong>{html.escape(issue.get('title', '제목 없음'))}</strong></a><br>"
+            f"<span style='font-size:12px;color:#64748b'>{html.escape(issue.get('published_at_kst', ''))} KST · "
+            f"{html.escape(issue.get('source', '출처 미상'))} · {html.escape(issue.get('category', '시장'))} · "
+            f"{html.escape(issue.get('impact', '중립·혼재'))} · 관련: {html.escape(symbols)}</span>"
+            "</li>"
+        )
+    issues_html = (
+        f"<ul style='padding-left:20px'>{''.join(issue_rows)}</ul>"
+        if issue_rows
+        else "<p style='color:#64748b'>최근 24시간 주요 이슈를 수집하지 못했거나 선별된 기사가 없습니다.</p>"
+    )
     return f"""
     <div style="font-family:Arial,'Noto Sans KR',sans-serif;max-width:760px;margin:auto;color:#172033">
       <h1 style="font-size:24px">코인 시장 분석 보고서</h1>
@@ -60,6 +77,9 @@ def build_email_html(report: dict[str, Any]) -> str:
         <thead><tr><th>종목</th><th>점수</th><th>판정</th><th>호재·선정 근거</th><th>악재·위험</th></tr></thead>
         <tbody>{''.join(rows)}</tbody>
       </table>
+      <h2 style="font-size:19px">최근 24시간 주요 코인 이슈</h2>
+      <p style="font-size:12px;color:#64748b">제목의 핵심어를 기준으로 분류한 참고용 영향 방향이며, 원문 확인이 필요합니다.</p>
+      {issues_html}
       <p style="font-size:12px;color:#64748b">본 보고서는 정량 지표 기반 참고자료이며 투자 자문이나 수익 보장이 아닙니다. 실제 주문을 실행하지 않습니다.</p>
     </div>
     """
