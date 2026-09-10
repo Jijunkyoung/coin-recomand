@@ -40,6 +40,13 @@ function openEmailSettings() {
   $("#emailDialog").showModal();
 }
 
+function toggleQualityNote(forceOpen) {
+  const note = $("#dataQualityNote"), button = $("#dataQualityButton");
+  const open = forceOpen ?? note.hidden;
+  note.hidden = !open;
+  button.setAttribute("aria-expanded", String(open));
+}
+
 function drawLine(canvas, values, color = "#4d8dff") {
   if (!values?.length) return;
   const ratio = window.devicePixelRatio || 1;
@@ -325,7 +332,7 @@ function searchAltcoin(query) {
 
 function render(report) {
   const { market } = report, btc = market.bitcoin;
-  $("#generatedAt").textContent = report.generated_at_kst; $("#qualityText").textContent = `데이터 ${report.data_quality.status}`;
+  $("#generatedAt").textContent = report.generated_at_kst;
   $("#qualityDot").style.background = report.data_quality.status === "정상" ? "var(--green)" : "var(--amber)";
   $("#marketTitle").textContent = `${market.regime} 국면`; $("#marketSummary").textContent = market.regime === "상승" ? "추세가 우호적입니다. 후보별 과열 여부를 확인하세요." : market.regime === "하락" ? "신규 매수보다 현금 비중과 손실 제한을 우선합니다." : "방향 확인 전 강한 종목만 선별적으로 관찰합니다.";
   $("#marketScore").textContent = market.score; $("#scoreRing").style.background = `conic-gradient(${market.regime === "하락" ? "var(--red)" : market.regime === "상승" ? "var(--green)" : "var(--blue)"} ${market.score * 3.6}deg, var(--line) 0)`;
@@ -339,11 +346,22 @@ function render(report) {
   const fear = market.fear_greed; $("#fearValue").textContent = fear.value ?? "—"; $("#fearClass").textContent = fear.classification; $("#fearGauge").style.left = `${fear.value ?? 50}%`;
   renderMethodology(report.methodology);
   const warnings = report.data_quality.warnings || [], notices = report.data_quality.notices || [];
-  $("#warnings").innerHTML = (warnings.length ? warnings.map(x => `<p>• ${x}</p>`).join("") : `<p class="ok">모든 핵심 데이터가 정상 수집됐습니다.</p>`) + notices.map(x => `<p class="notice">참고 · ${x}</p>`).join("");
+  $("#qualityText").textContent = warnings.length ? "일부 보조자료 미수집" : "데이터 정상";
+  $("#qualityNoteTitle").textContent = warnings.length ? "일부 보조자료를 가져오지 못했습니다" : "핵심 데이터가 정상 수집됐습니다";
+  $("#qualityNoteSummary").textContent = warnings.length
+    ? "가격·거래량·BTC 지표 전체의 오류를 뜻하지 않습니다. 아래 보조자료가 빠진 종목은 확인 가능한 데이터만으로 평가했습니다."
+    : "가격·거래량·시장지표를 포함한 핵심 자료가 정상적으로 반영됐습니다.";
+  $("#qualityNoteWarnings").innerHTML = warnings.length ? `<h3>미수집 항목</h3><ul>${warnings.map(item => `<li>${escapeHTML(item)}</li>`).join("")}</ul>` : "";
+  $("#qualityNoteNotices").innerHTML = notices.length ? `<h3>분석 제외·참고</h3><ul>${notices.map(item => `<li>${escapeHTML(item)}</li>`).join("")}</ul>` : "";
+  $("#warnings").innerHTML = (warnings.length ? warnings.map(x => `<p>• ${escapeHTML(x)}</p>`).join("") : `<p class="ok">모든 핵심 데이터가 정상 수집됐습니다.</p>`) + notices.map(x => `<p class="notice">참고 · ${escapeHTML(x)}</p>`).join("");
   $("#sources").innerHTML = report.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener">${s.name}</a>`).join(""); $("#disclaimer").textContent = report.disclaimer;
 }
 
 $("#altSearchForm").addEventListener("submit", event => { event.preventDefault(); searchAltcoin($("#altSearchInput").value); });
+$("#dataQualityButton").addEventListener("click", event => { event.stopPropagation(); toggleQualityNote(); });
+$("#dataQualityNote").addEventListener("click", event => event.stopPropagation());
+document.addEventListener("click", () => toggleQualityNote(false));
+document.addEventListener("keydown", event => { if (event.key === "Escape") toggleQualityNote(false); });
 
 $("#chartClose").addEventListener("click", () => $("#chartDialog").close());
 $("#chartDialog").addEventListener("click", event => { if (event.target === event.currentTarget) event.currentTarget.close(); });

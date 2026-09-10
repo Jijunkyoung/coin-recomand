@@ -15,7 +15,18 @@
     </div>
     <div class="top-actions">
       <button type="button" id="emailSettingsButton" class="email-settings-button">메일 수신 설정</button>
-      <div class="timestamp"><span id="qualityDot" class="status-dot"></span><span id="qualityText">데이터 확인 중</span><time id="generatedAt">—</time></div>
+      <div class="timestamp">
+        <button type="button" id="dataQualityButton" class="data-quality-button" aria-expanded="false" aria-controls="dataQualityNote"><span id="qualityDot" class="status-dot"></span><span id="qualityText">데이터 확인 중</span></button>
+        <time id="generatedAt">—</time>
+      </div>
+      <aside id="dataQualityNote" class="quality-note" hidden>
+        <span class="quality-note-kicker">DATA CHECK</span>
+        <h2 id="qualityNoteTitle">데이터 상태 설명</h2>
+        <p id="qualityNoteSummary"></p>
+        <div id="qualityNoteWarnings"></div>
+        <div id="qualityNoteNotices"></div>
+        <p class="quality-note-help">상단 상태 버튼을 다시 누르면 닫힙니다.</p>
+      </aside>
     </div>
   </header>
 
