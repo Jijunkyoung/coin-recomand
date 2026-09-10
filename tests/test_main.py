@@ -53,6 +53,7 @@ class MainAnalysisTests(unittest.TestCase):
             def reddit_mentions(self, _aliases): return None, 0
             def dcinside_mentions(self, _aliases, _pages): return {}, 0
             def coinpan_mentions(self, _aliases, _pages): return {}, 0
+            def crypto_news(self, _symbols, limit=7): return []
             def coingecko_coin_list(self): return []
 
         settings = {"upbit_candle_days": 60, "excluded_symbols": ["BTC"], "minimum_24h_value_krw": 1, "screen_count": 1, "recommendation_count": 1, "fundamental_candidate_count": 1, "community_pages": 1}
@@ -75,6 +76,7 @@ class MainAnalysisTests(unittest.TestCase):
             def reddit_mentions(self, _aliases): return {"XRP": 1}, 20
             def dcinside_mentions(self, _aliases, _pages): return {"XRP": 2}, 40
             def coinpan_mentions(self, _aliases, _pages): return {"XRP": 3}, 40
+            def crypto_news(self, _symbols, limit=7): return [{"title": "XRP 이슈", "source": "테스트", "url": "https://example.com", "published_at": "2026-01-01T00:00:00+00:00", "published_at_kst": "01-01 09:00", "category": "시장", "impact": "중립·혼재", "related_symbols": ["XRP"]}]
             def coingecko_coin_list(self): return [{"id": "ripple", "symbol": "xrp", "name": "XRP"}]
             def coingecko_coin_details(self, _coin_id): return {"id": "ripple", "market_data": {"circulating_supply": 80, "total_supply": 100}, "links": {"repos_url": {"github": []}, "homepage": ["https://ripple.com"]}}
 
@@ -88,6 +90,7 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(coin["community_sources"], 3)
         self.assertEqual(coin["development"]["status"], "공개 GitHub 없음")
         self.assertEqual(coin["tokenomics"]["circulating_ratio"], 80.0)
+        self.assertEqual(report["news_issues"][0]["related_symbols"], ["XRP"])
         self.assertEqual(report["methodology"]["groups"][0]["range"], "원점수 -18 ~ +22")
 
 
