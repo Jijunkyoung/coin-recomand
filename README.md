@@ -15,6 +15,7 @@
 - 토크노믹스: 유통 비율과 향후 토큰 언락 일정·규모를 공급 위험으로 반영
 - 결과: `분할매수 후보`, `관찰`, `보류`와 항목별 점수·선정 사유·위험 요인
 - 주요 이슈: 최근 24시간 한국어 코인 뉴스의 출처·분류·관련 종목·영향 방향과 원문 링크
+- 시장 유동성: CoinMarketCap BTC 도미넌스·전체 시총과 DefiLlama DeFi TVL·스테이블코인 공급의 7일 변화
 - 상세차트: 비트코인 또는 추천 코인을 클릭해 7일·30일·90일·전체 가격, EMA20·EMA50, 거래대금 확인
 
 ## 로컬 실행
@@ -49,6 +50,8 @@ Reddit 언급 수는 선택 기능입니다. 사용하려면 Reddit의 script �
 예정된 토큰 언락 날짜와 수량을 반영하려면 Mobula에서 API 키를 발급한 뒤 `MOBULA_API_KEY`를 Repository secret으로 추가하세요. 키가 없을 때도 CoinGecko의 총공급량 대비 유통 비율은 희석 위험에 반영되지만 정확한 언락 날짜는 `미수집`으로 표시됩니다. 공식 GitHub 개발 활동은 Actions의 기본 토큰을 사용하므로 별도 Secret이 필요하지 않습니다.
 
 CoinGecko 키리스 API의 제한이 걸리는 환경에서는 무료 Demo 키를 발급해 `COINGECKO_API_KEY`로 등록할 수 있습니다.
+
+CoinMarketCap 시장 지표를 사용하려면 GitHub Secret에 `COINMARKETCAP_API_KEY`를 등록합니다. 기존에 `CMC_API_KEY` 또는 `CMC_PRO_API_KEY`로 등록한 경우에도 자동 인식합니다. DefiLlama의 DeFi TVL·스테이블코인 공급 지표는 무료 공개 API를 사용하므로 별도 키가 필요하지 않습니다. 두 지표는 중복가산을 막기 위해 현재 추천 점수에는 넣지 않고 이메일의 시장 보조지표로 제공합니다.
 
 예약 워크플로는 매일 오전 7시 30분(KST)에 최신 자료를 생성하고 `EMAIL_TO`에 등록된 모든 주소로 보고서를 발송합니다. GitHub Actions 대기 및 분석 시간 때문에 실제 수신은 보통 예약 시각보다 몇 분 늦을 수 있습니다. 대시보드의 `메일 수신 설정`에서 복수 주소를 검증·복사한 뒤 GitHub Actions Secret `EMAIL_TO`에 붙여넣을 수 있습니다. 정적 페이지에서는 Secret을 직접 수정할 수 없으므로 최초 등록이나 주소 변경 시 GitHub에서 저장하는 단계가 필요합니다.
 
@@ -91,4 +94,6 @@ python -m unittest discover -s tests -v
 - [디시인사이드 비트코인 갤러리](https://gall.dcinside.com/board/lists/?id=bitcoins_new1)
 - [코인판 자유게시판](https://coinpan.com/free)
 - [Google News 한국어 RSS](https://news.google.com/)
+- [CoinMarketCap API](https://coinmarketcap.com/api/documentation/)
+- [DefiLlama API](https://api-docs.defillama.com/)
 coin recomand-01
