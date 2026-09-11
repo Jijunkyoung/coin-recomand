@@ -179,6 +179,10 @@ class MarketDataClient:
             if not raw_title or not link:
                 continue
             title = re.sub(rf"\s+-\s+{re.escape(source)}\s*$", "", raw_title, flags=re.IGNORECASE).strip()
+            relevance_words = ("비트코인", "이더리움", "암호화폐", "가상자산", "코인", "블록체인", "bitcoin", "ethereum", "crypto", "blockchain")
+            has_symbol = any(re.search(rf"(?<![A-Z0-9]){re.escape(symbol)}(?![A-Z0-9])", title, flags=re.IGNORECASE) for symbol in symbol_terms)
+            if not has_symbol and not any(word in title.lower() for word in relevance_words):
+                continue
             normalized = re.sub(r"[^0-9a-z가-힣]", "", title.lower())
             fingerprint = hashlib.sha1(normalized.encode("utf-8")).hexdigest()[:16]
             if not normalized or fingerprint in seen:
@@ -205,7 +209,17 @@ class MarketDataClient:
             negative = sum(word in combined for word in negative_words)
             positive = sum(word in combined for word in positive_words)
             impact = "악재 가능" if negative > positive else "호재 가능" if positive > negative else "중립·혼재"
-            related = [symbol for symbol in symbol_terms if re.search(rf"(?<![A-Z0-9]){re.escape(symbol)}(?![A-Z0-9])", title, flags=re.IGNORECASE)]
+            korean_aliases = {
+                "BTC": ("비트코인", "bitcoin"), "ETH": ("이더리움", "ethereum"), "XRP": ("리플", "ripple"),
+                "SOL": ("솔라나", "solana"), "SUI": ("수이",), "ADA": ("에이다", "cardano"),
+                "DOGE": ("도지코인", "dogecoin"), "AVAX": ("아발란체", "avalanche"), "LINK": ("체인링크", "chainlink"),
+            }
+            related = [
+                symbol
+                for symbol in symbol_terms
+                if re.search(rf"(?<![A-Z0-9]){re.escape(symbol)}(?![A-Z0-9])", title, flags=re.IGNORECASE)
+                or any(alias in combined for alias in korean_aliases.get(symbol, ()))
+            ]
             issues.append(
                 {
                     "title": title[:220],
