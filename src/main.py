@@ -415,7 +415,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         "rank", "market", "symbol", "name", "english_name", "score", "decision", "analysis_scope", "reasons", "risks",
         "price", "ema20", "ema50", "rsi", "macd_histogram", "return_7d", "return_30d", "volume_ratio",
         "volatility", "trending_rank", "community_mentions", "community_total", "community_sources",
-        "community_exposure_rate", "trade_value_24h", "development", "tokenomics", "coingecko_id",
+        "community_exposure_rate", "trade_value_24h", "development", "tokenomics", "coingecko_id", "sparkline", "history",
     )
     alt_rankings = [{field: coin.get(field) for field in ranking_fields} for coin in analyzed]
     now = datetime.now(timezone.utc)
