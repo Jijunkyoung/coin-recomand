@@ -49,13 +49,13 @@ class MainAnalysisTests(unittest.TestCase):
             def upbit_daily_candles(self, market, _count): return candles if market == "KRW-BTC" else candles[:2]
             def bitcoin_mvrv_z(self): return 1.2
             def fear_and_greed(self): return {"value": 50, "classification": "Neutral", "previous": 48}
-            def coinmarketcap_global_metrics(self): return None
             def defillama_market_liquidity(self): return None
             def coingecko_trending(self): return {}
             def reddit_mentions(self, _aliases): return None, 0
             def dcinside_mentions(self, _aliases, _pages): return {}, 0
             def coinpan_mentions(self, _aliases, _pages): return {}, 0
             def crypto_news(self, _symbols, limit=7): return []
+            def coinmarketcal_events(self, _symbols, limit=8): return []
             def coingecko_coin_list(self): return []
 
         settings = {"upbit_candle_days": 60, "excluded_symbols": ["BTC"], "minimum_24h_value_krw": 1, "screen_count": 1, "recommendation_count": 1, "fundamental_candidate_count": 1, "community_pages": 1}
@@ -74,13 +74,13 @@ class MainAnalysisTests(unittest.TestCase):
             def upbit_daily_candles(self, _market, _count): return candles
             def bitcoin_mvrv_z(self): return 1.2
             def fear_and_greed(self): return {"value": 50, "classification": "Neutral", "previous": 48}
-            def coinmarketcap_global_metrics(self): return {"btc_dominance": 55.5, "source": "CoinMarketCap"}
             def defillama_market_liquidity(self): return {"defi_tvl_usd": 100, "defi_tvl_change_7d": 2.5, "source": "DefiLlama"}
             def coingecko_trending(self): return {"XRP": 3}
             def reddit_mentions(self, _aliases): return {"XRP": 1}, 20
             def dcinside_mentions(self, _aliases, _pages): return {"XRP": 2}, 40
             def coinpan_mentions(self, _aliases, _pages): return {"XRP": 3}, 40
             def crypto_news(self, _symbols, limit=7): return [{"title": "XRP 이슈", "source": "테스트", "url": "https://example.com", "published_at": "2026-01-01T00:00:00+00:00", "published_at_kst": "01-01 09:00", "category": "시장", "impact": "중립·혼재", "related_symbols": ["XRP"]}]
+            def coinmarketcal_events(self, _symbols, limit=8): return [{"id": "1", "title": "XRP 일정", "date": "2026-01-02", "date_kst": "01-02", "related_symbols": ["XRP"], "categories": [], "impact_score": None, "source": "CoinMarketCal"}]
             def coingecko_coin_list(self): return [{"id": "ripple", "symbol": "xrp", "name": "XRP"}]
             def coingecko_coin_details(self, _coin_id): return {"id": "ripple", "market_data": {"circulating_supply": 80, "total_supply": 100}, "links": {"repos_url": {"github": []}, "homepage": ["https://ripple.com"]}}
 
@@ -95,8 +95,8 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(coin["development"]["status"], "공개 GitHub 없음")
         self.assertEqual(coin["tokenomics"]["circulating_ratio"], 80.0)
         self.assertEqual(report["news_issues"][0]["related_symbols"], ["XRP"])
-        self.assertEqual(report["market"]["coinmarketcap"]["btc_dominance"], 55.5)
         self.assertEqual(report["market"]["liquidity"]["defi_tvl_change_7d"], 2.5)
+        self.assertEqual(report["upcoming_events"][0]["related_symbols"], ["XRP"])
         self.assertEqual(report["methodology"]["groups"][0]["range"], "원점수 -18 ~ +22")
 
 
