@@ -46,7 +46,6 @@ def build_email_html(report: dict[str, Any]) -> str:
     mvrv_source = market["bitcoin"].get("mvrv_source")
     if mvrv_source:
         mvrv_text += f" ({mvrv_source})"
-    cmc = market.get("coinmarketcap") or {}
     liquidity = market.get("liquidity") or {}
 
     def money(value: Any) -> str:
@@ -65,7 +64,6 @@ def build_email_html(report: dict[str, Any]) -> str:
     market_context = (
         "<div style='margin-top:12px;padding:14px;background:#f8fafc;border-radius:10px'>"
         "<strong>시장 보조지표</strong><br>"
-        f"BTC 도미넌스 {cmc.get('btc_dominance', '미수집')}% · 전체 시총 {money(cmc.get('total_market_cap_usd'))}<br>"
         f"DeFi TVL {money(liquidity.get('defi_tvl_usd'))} ({pct(liquidity.get('defi_tvl_change_7d'))}, 7일) · "
         f"스테이블코인 공급 {money(liquidity.get('stablecoin_supply_usd'))} ({pct(liquidity.get('stablecoin_supply_change_7d'))}, 7일)"
         "</div>"
@@ -87,6 +85,23 @@ def build_email_html(report: dict[str, Any]) -> str:
         if issue_rows
         else "<p style='color:#64748b'>최근 24시간 주요 이슈를 수집하지 못했거나 선별된 기사가 없습니다.</p>"
     )
+    event_rows = []
+    for event in report.get("upcoming_events", [])[:8]:
+        symbols = ", ".join(event.get("related_symbols") or [])
+        categories = ", ".join(event.get("categories") or []) or "분류 미제공"
+        impact = event.get("impact_score")
+        impact_text = f" · 영향점수 {impact}" if impact is not None else ""
+        event_rows.append(
+            "<li style='margin:0 0 10px'>"
+            f"<strong>{html.escape(event.get('date_kst', ''))} · {html.escape(event.get('title', '일정'))}</strong><br>"
+            f"<span style='font-size:12px;color:#64748b'>관련: {html.escape(symbols)} · {html.escape(categories)}{html.escape(impact_text)}</span>"
+            "</li>"
+        )
+    events_html = (
+        f"<ul style='padding-left:20px'>{''.join(event_rows)}</ul>"
+        if event_rows
+        else "<p style='color:#64748b'>향후 7일 안에 선별된 관련 일정이 없습니다.</p>"
+    )
     return f"""
     <div style="font-family:Arial,'Noto Sans KR',sans-serif;max-width:760px;margin:auto;color:#172033">
       <h1 style="font-size:24px">코인 시장 분석 보고서</h1>
@@ -102,6 +117,8 @@ def build_email_html(report: dict[str, Any]) -> str:
         <thead><tr><th>종목</th><th>점수</th><th>판정</th><th>호재·선정 근거</th><th>악재·위험</th></tr></thead>
         <tbody>{''.join(rows)}</tbody>
       </table>
+      <h2 style="font-size:19px">향후 7일 주요 일정</h2>
+      {events_html}
       <h2 style="font-size:19px">최근 24시간 주요 코인 이슈</h2>
       <p style="font-size:12px;color:#64748b">제목의 핵심어를 기준으로 분류한 참고용 영향 방향이며, 원문 확인이 필요합니다.</p>
       {issues_html}
