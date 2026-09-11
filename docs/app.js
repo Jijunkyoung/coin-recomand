@@ -115,6 +115,14 @@ function rsiValues(values, period = 14) {
   return result;
 }
 
+function macdValues(values, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
+  if (!values.length) return { line: [], signal: [], histogram: [] };
+  const fast = emaValues(values, fastPeriod), slow = emaValues(values, slowPeriod);
+  const line = values.map((_, index) => fast[index] - slow[index]);
+  const signal = emaValues(line, signalPeriod);
+  return { line, signal, histogram: line.map((value, index) => value - signal[index]) };
+}
+
 function drawDetailedChart(crossIndex = null) {
   if (!detailCoin) return;
   const all = historyFor(detailCoin);
@@ -132,6 +140,8 @@ function drawDetailedChart(crossIndex = null) {
   const bands = bollingerValues(allPrices);
   const bandUpper = bands.upper.slice(start), bandMiddle = bands.middle.slice(start), bandLower = bands.lower.slice(start);
   const rsi14 = rsiValues(allPrices).slice(start);
+  const macd = macdValues(allPrices);
+  const macdLine = macd.line.slice(start), macdSignal = macd.signal.slice(start), macdHistogram = macd.histogram.slice(start);
   const canvas = $("#detailChart"), ratio = window.devicePixelRatio || 1;
   const bounds = canvas.getBoundingClientRect();
   const width = Math.max(280, Math.floor(bounds.width)), height = Math.max(280, Math.floor(bounds.height));
@@ -139,8 +149,9 @@ function drawDetailedChart(crossIndex = null) {
   if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
   const ctx = canvas.getContext("2d"); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, height);
   const pad = { left: width < 560 ? 49 : 68, right: 18, top: 21, bottom: 22 };
-  const priceBottom = height * .56, volumeTop = priceBottom + 10, volumeBottom = height * .69;
-  const dateY = volumeBottom + 6, rsiTop = height * .76, rsiBottom = height - pad.bottom;
+  const priceBottom = height * .47, volumeTop = priceBottom + 8, volumeBottom = height * .57;
+  const dateY = volumeBottom + 4, macdTop = height * .635, macdBottom = height * .77;
+  const rsiTop = height * .82, rsiBottom = height - pad.bottom;
   const plotWidth = width - pad.left - pad.right;
   const bandRange = [...bandUpper, ...bandLower].filter(value => value != null && Number.isFinite(value));
   const low = Math.min(...lows, ...bandRange), high = Math.max(...highs, ...bandRange), margin = (high - low || high * .02 || 1) * .09;
@@ -164,11 +175,11 @@ function drawDetailedChart(crossIndex = null) {
     ctx.closePath(); ctx.fillStyle = "rgba(169,139,255,.10)"; ctx.fill();
   }
 
-  const plot = (values, color, lineWidth) => {
+  const plot = (values, color, lineWidth, mapY = y) => {
     ctx.beginPath(); let started = false;
     values.forEach((value, index) => {
       if (value == null || !Number.isFinite(value)) { started = false; return; }
-      if (started) ctx.lineTo(x(index), y(value)); else { ctx.moveTo(x(index), y(value)); started = true; }
+      if (started) ctx.lineTo(x(index), mapY(value)); else { ctx.moveTo(x(index), mapY(value)); started = true; }
     });
     ctx.strokeStyle = color; ctx.lineWidth = lineWidth; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
   };
@@ -194,6 +205,19 @@ function drawDetailedChart(crossIndex = null) {
   ctx.fillStyle = "#7f93af"; ctx.textBaseline = "top";
   labels.forEach((index, position) => { ctx.textAlign = position === 0 ? "left" : position === 2 ? "right" : "center"; ctx.fillText(rows[index]?.date || "", x(index), dateY); });
 
+  const macdExtent = Math.max(...macdLine.map(Math.abs), ...macdSignal.map(Math.abs), ...macdHistogram.map(Math.abs), 1e-9);
+  const macdY = value => macdTop + (macdExtent - value) / (macdExtent * 2) * (macdBottom - macdTop);
+  const macdZeroY = macdY(0), macdBarWidth = Math.max(1, candleWidth * .78);
+  ctx.beginPath(); ctx.moveTo(pad.left, macdZeroY); ctx.lineTo(width - pad.right, macdZeroY);
+  ctx.strokeStyle = "rgba(143,162,189,.2)"; ctx.lineWidth = 1; ctx.stroke();
+  macdHistogram.forEach((value, index) => {
+    const valueY = macdY(value);
+    ctx.fillStyle = value >= 0 ? "rgba(49,216,197,.48)" : "rgba(255,107,120,.45)";
+    ctx.fillRect(x(index) - macdBarWidth / 2, Math.min(macdZeroY, valueY), macdBarWidth, Math.max(1, Math.abs(valueY - macdZeroY)));
+  });
+  plot(macdLine, "#4d8dff", 1.55, macdY); plot(macdSignal, "#ffbf47", 1.35, macdY);
+  ctx.fillStyle = "#a8b8ce"; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("MACD(12,26,9)", pad.left + 5, macdTop + 3);
+
   const rsiY = value => rsiTop + (100 - value) / 100 * (rsiBottom - rsiTop);
   ctx.fillStyle = "rgba(255,107,120,.035)"; ctx.fillRect(pad.left, rsiTop, plotWidth, rsiY(70) - rsiTop);
   ctx.fillStyle = "rgba(77,141,255,.035)"; ctx.fillRect(pad.left, rsiY(30), plotWidth, rsiBottom - rsiY(30));
@@ -215,10 +239,10 @@ function drawDetailedChart(crossIndex = null) {
     ctx.beginPath(); ctx.moveTo(pointX, pad.top); ctx.lineTo(pointX, rsiBottom); ctx.strokeStyle = "rgba(237,244,255,.32)"; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
     ctx.beginPath(); ctx.arc(pointX, pointY, 4, 0, Math.PI * 2); ctx.fillStyle = "#edf4ff"; ctx.fill();
   }
-  detailPlot = { rows, rsi14, x, pad, width };
+  detailPlot = { rows, rsi14, macdLine, macdSignal, macdHistogram, x, pad, width };
   const change = prices[0] ? (prices.at(-1) / prices[0] - 1) * 100 : null;
   const latestRsi = [...rsi14].reverse().find(value => value != null);
-  $("#detailStats").innerHTML = metric("기간 수익률", pct(change)) + metric("기간 최고가", `₩${fmt(Math.max(...highs), 4)}`) + metric("기간 최저가", `₩${fmt(Math.min(...lows), 4)}`) + metric("EMA20", `₩${fmt(detailCoin.ema20, 4)}`) + metric("EMA50", `₩${fmt(detailCoin.ema50, 4)}`) + metric("RSI(14)", fmt(latestRsi, 1));
+  $("#detailStats").innerHTML = metric("기간 수익률", pct(change)) + metric("기간 최고가", `₩${fmt(Math.max(...highs), 4)}`) + metric("기간 최저가", `₩${fmt(Math.min(...lows), 4)}`) + metric("EMA20", `₩${fmt(detailCoin.ema20, 4)}`) + metric("EMA50", `₩${fmt(detailCoin.ema50, 4)}`) + metric("RSI(14)", fmt(latestRsi, 1)) + metric("MACD", fmt(macdLine.at(-1), 4)) + metric("시그널", fmt(macdSignal.at(-1), 4)) + metric("히스토그램", fmt(macdHistogram.at(-1), 4));
 }
 
 function scheduleDetailedChart(crossIndex = null) {
@@ -301,8 +325,9 @@ function renderAltSearchResult(coin) {
       </div>
       <div class="search-score-track"><i style="width:${Math.max(0, Math.min(100, Number(coin.score) || 0))}%"></i></div>
       <div class="search-metrics">
-        ${metric("RSI(14)", fmt(coin.rsi))}${metric("7일 수익률", pct(coin.return_7d))}${metric("30일 수익률", pct(coin.return_30d))}${metric("거래량 비율", coin.volume_ratio == null ? "—" : `${fmt(coin.volume_ratio, 2)}×`)}${metric("변동성", pct(coin.volatility))}${metric("커뮤니티 노출", escapeHTML(community))}
+        ${metric("RSI(14)", fmt(coin.rsi))}${metric("MACD 히스토그램", fmt(coin.macd_histogram, 4))}${metric("EMA 추세", coin.ema20 != null && coin.ema50 != null ? (coin.ema20 > coin.ema50 ? "정배열" : "역배열") : "—")}${metric("7일 수익률", pct(coin.return_7d))}${metric("30일 수익률", pct(coin.return_30d))}${metric("거래량 비율", coin.volume_ratio == null ? "—" : `${fmt(coin.volume_ratio, 2)}×`)}${metric("변동성", pct(coin.volatility))}${metric("커뮤니티 노출", escapeHTML(community))}
       </div>
+      <button type="button" class="search-chart-button" data-search-chart>캔들 차트·전체 지표 보기 <span aria-hidden="true">↗</span></button>
       <div class="search-context">
         <section><h4>점수 상승 근거</h4><ul>${reasons.map(item => `<li>${escapeHTML(item)}</li>`).join("")}</ul></section>
         <section class="search-risks"><h4>감점·확인할 위험</h4><ul>${risks.map(item => `<li>${escapeHTML(item)}</li>`).join("")}</ul></section>
@@ -315,6 +340,7 @@ function renderAltSearchResult(coin) {
       </div>
       <p class="search-note">순위는 유동성·거래이력 기준을 통과한 ${escapeHTML(altRankings.length)}개 종목 안에서 산정됩니다. 개발·언락 정밀자료는 기술 점수 상위 25개를 우선 조회하며, 데이터 생성 시각 이후의 뉴스나 공지는 반영되지 않을 수 있습니다.</p>
     </article>`;
+  result.querySelector("[data-search-chart]").addEventListener("click", () => openDetailChart(coin));
 }
 
 function searchAltcoin(query) {
@@ -377,7 +403,8 @@ $("#detailChart").addEventListener("pointermove", event => {
   const index = Math.max(0, Math.min(detailPlot.rows.length - 1, Math.round(ratioX * (detailPlot.rows.length - 1))));
   scheduleDetailedChart(index); const row = detailPlot.rows[index], tooltip = $("#chartTooltip");
   const open = row.open ?? row.price, high = row.high ?? row.price, low = row.low ?? row.price, pointRsi = detailPlot.rsi14[index];
-  tooltip.innerHTML = `<strong>${row.date}</strong><span>시가 ₩${fmt(open,4)} · 고가 ₩${fmt(high,4)}</span><span>저가 ₩${fmt(low,4)} · 종가 ₩${fmt(row.price,4)}</span><span>거래대금 ${compact(row.volume)}원 · RSI ${fmt(pointRsi,1)}</span>`; tooltip.hidden = false;
+  const pointMacd = detailPlot.macdLine[index], pointSignal = detailPlot.macdSignal[index], pointHistogram = detailPlot.macdHistogram[index];
+  tooltip.innerHTML = `<strong>${row.date}</strong><span>시가 ₩${fmt(open,4)} · 고가 ₩${fmt(high,4)}</span><span>저가 ₩${fmt(low,4)} · 종가 ₩${fmt(row.price,4)}</span><span>거래대금 ${compact(row.volume)}원 · RSI ${fmt(pointRsi,1)}</span><span>MACD ${fmt(pointMacd,4)} · Signal ${fmt(pointSignal,4)} · Hist ${fmt(pointHistogram,4)}</span>`; tooltip.hidden = false;
   tooltip.style.left = `${Math.max(8, Math.min(rect.width - 234, localX + 13))}px`; tooltip.style.top = "18px";
 });
 $("#detailChart").addEventListener("pointerleave", () => { $("#chartTooltip").hidden = true; scheduleDetailedChart(); });
