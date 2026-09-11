@@ -266,7 +266,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         fear_greed = client.fear_and_greed()
         bitcoin["fear_greed"] = fear_greed["value"]
     except Exception as exc:
-        fear_greed = {"value": None, "classification": "미수집", "previous": None}
+        fear_greed = {"value": None, "classification": "미수집", "previous": None, "history": []}
         bitcoin["fear_greed"] = None
         warnings.append(f"공포·탐욕 지수 미수집: {type(exc).__name__}")
     market_score, regime, market_reasons = market_regime(bitcoin)
