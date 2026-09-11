@@ -178,29 +178,81 @@ class MarketDataClient:
                 continue
         return None
 
-    def coinmarketcap_global_metrics(self) -> dict[str, Any] | None:
-        key = next(
-            (os.getenv(name, "").strip() for name in ("COINMARKETCAP_API_KEY", "CMC_API_KEY", "CMC_PRO_API_KEY") if os.getenv(name, "").strip()),
-            "",
-        )
+    def coinmarketcal_events(
+        self,
+        symbols: list[str],
+        limit: int = 8,
+        now: datetime | None = None,
+    ) -> list[dict[str, Any]] | None:
+        key = os.getenv("COINMARKETCAL_API_KEY", "").strip()
         if not key:
             return None
+        current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
         response = self._json(
-            "https://pro-api.coinmarketcap.com/v1/global-metrics/quotes/latest",
-            params={"convert": "USD"},
-            headers={"X-CMC_PRO_API_KEY": key, "Accept": "application/json"},
+            "https://api.coinmarketcal.com/v2/events",
+            params={
+                "from": current.date().isoformat(),
+                "to": (current + timedelta(days=7)).date().isoformat(),
+                "sortBy": "date_asc",
+                "limit": 100,
+            },
+            headers={"x-api-key": key, "Accept": "application/json"},
         )
-        data = response.get("data", {}) if isinstance(response, dict) else {}
-        quote = (data.get("quote") or {}).get("USD") or {}
-        return {
-            "btc_dominance": round(float(data["btc_dominance"]), 2) if data.get("btc_dominance") is not None else None,
-            "eth_dominance": round(float(data["eth_dominance"]), 2) if data.get("eth_dominance") is not None else None,
-            "total_market_cap_usd": round(float(quote["total_market_cap"])) if quote.get("total_market_cap") is not None else None,
-            "total_volume_24h_usd": round(float(quote["total_volume_24h"])) if quote.get("total_volume_24h") is not None else None,
-            "altcoin_market_cap_usd": round(float(quote["altcoin_market_cap"])) if quote.get("altcoin_market_cap") is not None else None,
-            "last_updated": data.get("last_updated"),
-            "source": "CoinMarketCap",
-        }
+        target_symbols = {symbol.upper() for symbol in symbols}
+        selected: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for event in response.get("data", []) if isinstance(response, dict) else []:
+            coins = event.get("coins") or []
+            event_symbols = sorted(
+                {
+                    str(coin.get("symbol", "")).upper()
+                    for coin in coins
+                    if isinstance(coin, dict) and coin.get("symbol")
+                }
+            )
+            related = [symbol for symbol in event_symbols if symbol in target_symbols]
+            if not related:
+                continue
+            title = " ".join(str(event.get("title") or "").split())
+            raw_date = event.get("date") or event.get("displayedDate") or event.get("displayed_date")
+            if not title or not raw_date:
+                continue
+            parsed = None
+            try:
+                parsed = datetime.fromisoformat(str(raw_date).replace("Z", "+00:00"))
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+            except ValueError:
+                for pattern in ("%d %B %Y", "%Y-%m-%d"):
+                    try:
+                        parsed = datetime.strptime(str(raw_date), pattern).replace(tzinfo=timezone.utc)
+                        break
+                    except ValueError:
+                        continue
+            if parsed is None:
+                continue
+            identifier = str(event.get("id") or f"{title}|{parsed.date().isoformat()}")
+            if identifier in seen:
+                continue
+            seen.add(identifier)
+            categories = event.get("categories") or []
+            category_names = [str(item.get("name") if isinstance(item, dict) else item) for item in categories]
+            selected.append(
+                {
+                    "id": identifier,
+                    "title": title[:220],
+                    "date": parsed.date().isoformat(),
+                    "date_kst": parsed.astimezone(KST).strftime("%m-%d"),
+                    "related_symbols": related,
+                    "categories": [name for name in category_names if name],
+                    "impact_score": event.get("impact"),
+                    "source": "CoinMarketCal",
+                }
+            )
+            if len(selected) >= limit:
+                break
+        selected.sort(key=lambda event: event["date"])
+        return selected
 
     def defillama_market_liquidity(self) -> dict[str, Any]:
         tvl_rows = self._json("https://api.llama.fi/v2/historicalChainTvl")
