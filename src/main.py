@@ -272,6 +272,17 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     market_score, regime, market_reasons = market_regime(bitcoin)
 
     try:
+        cmc_metrics = client.coinmarketcap_global_metrics()
+    except Exception as exc:
+        cmc_metrics = None
+        warnings.append(f"CoinMarketCap 시장지표 미수집: {warning_reason(exc)}")
+    try:
+        liquidity = client.defillama_market_liquidity()
+    except Exception as exc:
+        liquidity = None
+        warnings.append(f"DefiLlama 유동성지표 미수집: {warning_reason(exc)}")
+
+    try:
         trending = client.coingecko_trending()
     except Exception as exc:
         trending = {}
@@ -415,6 +426,8 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             "reasons": market_reasons,
             "bitcoin": bitcoin,
             "fear_greed": fear_greed,
+            "coinmarketcap": cmc_metrics,
+            "liquidity": liquidity,
         },
         "recommendations": top,
         "news_issues": news_issues,
@@ -491,6 +504,8 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             {"name": "Coinpan", "url": "https://coinpan.com/free"},
             {"name": "Alternative.me", "url": "https://alternative.me/crypto/fear-and-greed-index/"},
             {"name": "Google News RSS", "url": "https://news.google.com/"},
+            {"name": "CoinMarketCap", "url": "https://coinmarketcap.com/api/documentation/"},
+            {"name": "DefiLlama", "url": "https://api-docs.defillama.com/"},
         ],
         "disclaimer": "정량 지표 기반 참고자료이며 투자 자문이나 수익 보장이 아닙니다. 실제 주문을 실행하지 않습니다.",
     }
