@@ -6,6 +6,22 @@ from src.providers import MarketDataClient
 
 
 class MarketContextTests(unittest.TestCase):
+    def test_fear_and_greed_returns_daily_history_in_date_order(self):
+        client = MarketDataClient()
+        response = {
+            "data": [
+                {"value": "62", "value_classification": "Greed", "timestamp": "1789052400"},
+                {"value": "55", "value_classification": "Neutral", "timestamp": "1788966000"},
+            ]
+        }
+        with patch.object(client, "_json", return_value=response) as mocked:
+            result = client.fear_and_greed()
+        self.assertEqual(result["value"], 62)
+        self.assertEqual(result["previous"], 55)
+        self.assertEqual([point["value"] for point in result["history"]], [55, 62])
+        self.assertLess(result["history"][0]["date"], result["history"][1]["date"])
+        self.assertEqual(mocked.call_args.kwargs["params"]["limit"], 30)
+
     @patch.dict(os.environ, {"COINMARKETCAL_API_KEY": "test-key"}, clear=False)
     def test_coinmarketcal_events_filters_related_coins(self):
         client = MarketDataClient()
