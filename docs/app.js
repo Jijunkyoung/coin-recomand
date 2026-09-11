@@ -7,6 +7,8 @@ let detailPlot = null;
 let detailFrame = null;
 let detailHoverIndex = null;
 let altRankings = [];
+let sentimentHistory = [];
+let sentimentPlot = null;
 
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 const EMAIL_STORAGE_KEY = "coin-signal-email-recipients";
@@ -61,6 +63,42 @@ function drawLine(canvas, values, color = "#4d8dff") {
   const gradient = ctx.createLinearGradient(0, 0, 0, height); gradient.addColorStop(0, `${color}55`); gradient.addColorStop(1, `${color}00`);
   ctx.beginPath(); ctx.moveTo(points[0][0], height); points.forEach(([x,y]) => ctx.lineTo(x,y)); ctx.lineTo(points.at(-1)[0], height); ctx.fillStyle = gradient; ctx.fill();
   ctx.beginPath(); points.forEach(([x,y],i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y)); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+}
+
+function drawSentimentChart(history, hoverIndex = null) {
+  const canvas = $("#sentimentChart");
+  if (!canvas || !history?.length) return;
+  const ratio = window.devicePixelRatio || 1;
+  const width = Math.max(260, Math.floor(canvas.clientWidth || 320));
+  const height = Math.max(150, Math.floor(canvas.clientHeight || 180));
+  const pixelWidth = Math.round(width * ratio), pixelHeight = Math.round(height * ratio);
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
+  const ctx = canvas.getContext("2d"); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); ctx.clearRect(0, 0, width, height);
+  const pad = { left: 34, right: 12, top: 12, bottom: 27 }, plotWidth = width - 46, plotHeight = height - 39;
+  const x = index => pad.left + index * plotWidth / Math.max(1, history.length - 1);
+  const y = value => pad.top + (100 - value) / 100 * plotHeight;
+  ctx.font = "10px system-ui"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  [75, 50, 25].forEach(level => {
+    const lineY = y(level); ctx.beginPath(); ctx.moveTo(pad.left, lineY); ctx.lineTo(width - pad.right, lineY);
+    ctx.strokeStyle = level === 50 ? "rgba(255,191,71,.24)" : "rgba(143,162,189,.14)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = "#7f93af"; ctx.fillText(String(level), pad.left - 7, lineY);
+  });
+  const points = history.map((point, index) => [x(index), y(Number(point.value))]);
+  const gradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
+  gradient.addColorStop(0, "rgba(79,224,155,.28)"); gradient.addColorStop(.5, "rgba(255,191,71,.13)"); gradient.addColorStop(1, "rgba(255,107,120,.03)");
+  ctx.beginPath(); ctx.moveTo(points[0][0], height - pad.bottom); points.forEach(point => ctx.lineTo(point[0], point[1])); ctx.lineTo(points.at(-1)[0], height - pad.bottom); ctx.closePath(); ctx.fillStyle = gradient; ctx.fill();
+  ctx.beginPath(); points.forEach((point, index) => index ? ctx.lineTo(point[0], point[1]) : ctx.moveTo(point[0], point[1]));
+  ctx.strokeStyle = "#ffbf47"; ctx.lineWidth = 2.2; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
+  const latest = points.at(-1); ctx.beginPath(); ctx.arc(latest[0], latest[1], 3.5, 0, Math.PI * 2); ctx.fillStyle = "#fff1bd"; ctx.fill();
+  const labels = [0, Math.floor((history.length - 1) / 2), history.length - 1];
+  ctx.fillStyle = "#7f93af"; ctx.textBaseline = "bottom";
+  labels.forEach((index, position) => { ctx.textAlign = position === 0 ? "left" : position === 2 ? "right" : "center"; ctx.fillText(history[index].date.slice(5), x(index), height - 3); });
+  if (hoverIndex != null && history[hoverIndex]) {
+    const point = points[hoverIndex]; ctx.beginPath(); ctx.moveTo(point[0], pad.top); ctx.lineTo(point[0], height - pad.bottom);
+    ctx.strokeStyle = "rgba(237,244,255,.3)"; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(point[0], point[1], 4, 0, Math.PI * 2); ctx.fillStyle = "#edf4ff"; ctx.fill();
+  }
+  sentimentPlot = { history, pad, width };
 }
 
 function compact(value) {
@@ -370,6 +408,14 @@ function render(report) {
   altRankings = report.alt_rankings?.length ? report.alt_rankings : report.recommendations.map((coin, index) => ({ ...coin, rank: index + 1 }));
   $("#altSearchOptions").innerHTML = altRankings.map(coin => `<option value="${escapeHTML(coin.symbol)}">${escapeHTML(coin.name)} · ${escapeHTML(coin.english_name || "")}</option>`).join("");
   const fear = market.fear_greed; $("#fearValue").textContent = fear.value ?? "—"; $("#fearClass").textContent = fear.classification; $("#fearGauge").style.left = `${fear.value ?? 50}%`;
+  sentimentHistory = fear.history || [];
+  if (sentimentHistory.length) {
+    const change = Number(sentimentHistory.at(-1).value) - Number(sentimentHistory[0].value);
+    $("#fearChange").textContent = `30일 ${change > 0 ? "+" : ""}${change}p`;
+    requestAnimationFrame(() => drawSentimentChart(sentimentHistory));
+  } else {
+    $("#fearChange").textContent = "이력 미수집";
+  }
   renderMethodology(report.methodology);
   const warnings = report.data_quality.warnings || [], notices = report.data_quality.notices || [];
   $("#qualityText").textContent = warnings.length ? "일부 보조자료 미수집" : "데이터 정상";
@@ -408,7 +454,19 @@ $("#detailChart").addEventListener("pointermove", event => {
   tooltip.style.left = `${Math.max(8, Math.min(rect.width - 234, localX + 13))}px`; tooltip.style.top = "18px";
 });
 $("#detailChart").addEventListener("pointerleave", () => { $("#chartTooltip").hidden = true; scheduleDetailedChart(); });
-window.addEventListener("resize", () => { if ($("#chartDialog").open) scheduleDetailedChart(); });
+$("#sentimentChart").addEventListener("pointermove", event => {
+  if (!sentimentPlot) return;
+  const rect = event.currentTarget.getBoundingClientRect(), localX = event.clientX - rect.left;
+  const plotWidth = sentimentPlot.width - sentimentPlot.pad.left - sentimentPlot.pad.right;
+  const ratioX = (localX - sentimentPlot.pad.left) / Math.max(1, plotWidth);
+  const index = Math.max(0, Math.min(sentimentPlot.history.length - 1, Math.round(ratioX * (sentimentPlot.history.length - 1))));
+  drawSentimentChart(sentimentHistory, index);
+  const point = sentimentPlot.history[index], tooltip = $("#sentimentTooltip");
+  tooltip.innerHTML = `<strong>${escapeHTML(point.date)}</strong><span>지수 ${escapeHTML(point.value)} · ${escapeHTML(point.classification || "분류 없음")}</span>`;
+  tooltip.hidden = false; tooltip.style.left = `${Math.max(7, Math.min(rect.width - 154, localX + 10))}px`; tooltip.style.top = "9px";
+});
+$("#sentimentChart").addEventListener("pointerleave", () => { $("#sentimentTooltip").hidden = true; drawSentimentChart(sentimentHistory); });
+window.addEventListener("resize", () => { if ($("#chartDialog").open) scheduleDetailedChart(); if (sentimentHistory.length) drawSentimentChart(sentimentHistory); });
 
 $("#emailSettingsButton").addEventListener("click", openEmailSettings);
 $("#emailDialogClose").addEventListener("click", () => $("#emailDialog").close());
