@@ -49,6 +49,8 @@ class MainAnalysisTests(unittest.TestCase):
             def upbit_daily_candles(self, market, _count): return candles if market == "KRW-BTC" else candles[:2]
             def bitcoin_mvrv_z(self): return 1.2
             def fear_and_greed(self): return {"value": 50, "classification": "Neutral", "previous": 48}
+            def coinmarketcap_global_metrics(self): return None
+            def defillama_market_liquidity(self): return None
             def coingecko_trending(self): return {}
             def reddit_mentions(self, _aliases): return None, 0
             def dcinside_mentions(self, _aliases, _pages): return {}, 0
@@ -72,6 +74,8 @@ class MainAnalysisTests(unittest.TestCase):
             def upbit_daily_candles(self, _market, _count): return candles
             def bitcoin_mvrv_z(self): return 1.2
             def fear_and_greed(self): return {"value": 50, "classification": "Neutral", "previous": 48}
+            def coinmarketcap_global_metrics(self): return {"btc_dominance": 55.5, "source": "CoinMarketCap"}
+            def defillama_market_liquidity(self): return {"defi_tvl_usd": 100, "defi_tvl_change_7d": 2.5, "source": "DefiLlama"}
             def coingecko_trending(self): return {"XRP": 3}
             def reddit_mentions(self, _aliases): return {"XRP": 1}, 20
             def dcinside_mentions(self, _aliases, _pages): return {"XRP": 2}, 40
@@ -91,6 +95,8 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(coin["development"]["status"], "공개 GitHub 없음")
         self.assertEqual(coin["tokenomics"]["circulating_ratio"], 80.0)
         self.assertEqual(report["news_issues"][0]["related_symbols"], ["XRP"])
+        self.assertEqual(report["market"]["coinmarketcap"]["btc_dominance"], 55.5)
+        self.assertEqual(report["market"]["liquidity"]["defi_tvl_change_7d"], 2.5)
         self.assertEqual(report["methodology"]["groups"][0]["range"], "원점수 -18 ~ +22")
 
 
