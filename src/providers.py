@@ -156,6 +156,99 @@ class MarketDataClient:
             headers=self._coingecko_headers(),
         )
 
+    @staticmethod
+    def _percent_change(current: float | None, previous: float | None) -> float | None:
+        if current is None or previous in (None, 0):
+            return None
+        return round((current / previous - 1) * 100, 2)
+
+    @staticmethod
+    def _nested_number(value: Any, *paths: tuple[str, ...]) -> float | None:
+        for path in paths:
+            current = value
+            for key in path:
+                if not isinstance(current, dict):
+                    current = None
+                    break
+                current = current.get(key)
+            try:
+                if current is not None:
+                    return float(current)
+            except (TypeError, ValueError):
+                continue
+        return None
+
+    def coinmarketcap_global_metrics(self) -> dict[str, Any] | None:
+        key = next(
+            (os.getenv(name, "").strip() for name in ("COINMARKETCAP_API_KEY", "CMC_API_KEY", "CMC_PRO_API_KEY") if os.getenv(name, "").strip()),
+            "",
+        )
+        if not key:
+            return None
+        response = self._json(
+            "https://pro-api.coinmarketcap.com/v1/global-metrics/quotes/latest",
+            params={"convert": "USD"},
+            headers={"X-CMC_PRO_API_KEY": key, "Accept": "application/json"},
+        )
+        data = response.get("data", {}) if isinstance(response, dict) else {}
+        quote = (data.get("quote") or {}).get("USD") or {}
+        return {
+            "btc_dominance": round(float(data["btc_dominance"]), 2) if data.get("btc_dominance") is not None else None,
+            "eth_dominance": round(float(data["eth_dominance"]), 2) if data.get("eth_dominance") is not None else None,
+            "total_market_cap_usd": round(float(quote["total_market_cap"])) if quote.get("total_market_cap") is not None else None,
+            "total_volume_24h_usd": round(float(quote["total_volume_24h"])) if quote.get("total_volume_24h") is not None else None,
+            "altcoin_market_cap_usd": round(float(quote["altcoin_market_cap"])) if quote.get("altcoin_market_cap") is not None else None,
+            "last_updated": data.get("last_updated"),
+            "source": "CoinMarketCap",
+        }
+
+    def defillama_market_liquidity(self) -> dict[str, Any]:
+        tvl_rows = self._json("https://api.llama.fi/v2/historicalChainTvl")
+        stablecoin_rows = self._json("https://stablecoins.llama.fi/stablecoincharts/all")
+
+        def dated_values(rows: Any, value_getter: Any) -> list[tuple[int, float]]:
+            values: list[tuple[int, float]] = []
+            for row in rows if isinstance(rows, list) else []:
+                try:
+                    timestamp = int(row.get("date") or 0)
+                    value = value_getter(row)
+                    if timestamp and value is not None and value > 0:
+                        values.append((timestamp, float(value)))
+                except (TypeError, ValueError):
+                    continue
+            return sorted(values)
+
+        tvl_values = dated_values(tvl_rows, lambda row: self._nested_number(row, ("tvl",)))
+        stable_values = dated_values(
+            stablecoin_rows,
+            lambda row: self._nested_number(
+                row,
+                ("totalCirculatingUSD", "peggedUSD"),
+                ("totalCirculating", "peggedUSD"),
+                ("totalCirculatingUSD",),
+            ),
+        )
+
+        def summarize(values: list[tuple[int, float]]) -> tuple[float | None, float | None]:
+            if not values:
+                return None, None
+            latest_time, latest = values[-1]
+            target = latest_time - 7 * 86400
+            previous = min(values, key=lambda item: abs(item[0] - target))[1]
+            return round(latest), self._percent_change(latest, previous)
+
+        tvl, tvl_change = summarize(tvl_values)
+        stablecoins, stablecoin_change = summarize(stable_values)
+        if tvl is None and stablecoins is None:
+            raise DataProviderError("DefiLlama 유동성 데이터가 비어 있습니다.")
+        return {
+            "defi_tvl_usd": tvl,
+            "defi_tvl_change_7d": tvl_change,
+            "stablecoin_supply_usd": stablecoins,
+            "stablecoin_supply_change_7d": stablecoin_change,
+            "source": "DefiLlama",
+        }
+
     def crypto_news(self, symbols: list[str] | None = None, limit: int = 7) -> list[dict[str, Any]]:
         """Collect and classify recent Korean crypto headlines without an API key."""
         symbol_terms = [symbol.upper() for symbol in (symbols or []) if re.fullmatch(r"[A-Z0-9]{2,10}", symbol.upper())]
