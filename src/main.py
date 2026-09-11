@@ -272,11 +272,6 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     market_score, regime, market_reasons = market_regime(bitcoin)
 
     try:
-        cmc_metrics = client.coinmarketcap_global_metrics()
-    except Exception as exc:
-        cmc_metrics = None
-        warnings.append(f"CoinMarketCap 시장지표 미수집: {warning_reason(exc)}")
-    try:
         liquidity = client.defillama_market_liquidity()
     except Exception as exc:
         liquidity = None
@@ -408,6 +403,14 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     except Exception as exc:
         news_issues = []
         warnings.append(f"주요 코인 이슈 미수집: {warning_reason(exc)}")
+    try:
+        upcoming_events = client.coinmarketcal_events(["BTC", "ETH", *(coin["symbol"] for coin in top)], limit=8)
+        if upcoming_events is None:
+            warnings.append("CoinMarketCal 일정 미수집: COINMARKETCAL_API_KEY Secret 미인식")
+            upcoming_events = []
+    except Exception as exc:
+        upcoming_events = []
+        warnings.append(f"CoinMarketCal 일정 미수집: {warning_reason(exc)}")
     ranking_fields = (
         "rank", "market", "symbol", "name", "english_name", "score", "decision", "analysis_scope", "reasons", "risks",
         "price", "ema20", "ema50", "rsi", "macd_histogram", "return_7d", "return_30d", "volume_ratio",
@@ -426,11 +429,11 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             "reasons": market_reasons,
             "bitcoin": bitcoin,
             "fear_greed": fear_greed,
-            "coinmarketcap": cmc_metrics,
             "liquidity": liquidity,
         },
         "recommendations": top,
         "news_issues": news_issues,
+        "upcoming_events": upcoming_events,
         "alt_rankings": alt_rankings,
         "screened": len(analyzed),
         "methodology": {
@@ -504,7 +507,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             {"name": "Coinpan", "url": "https://coinpan.com/free"},
             {"name": "Alternative.me", "url": "https://alternative.me/crypto/fear-and-greed-index/"},
             {"name": "Google News RSS", "url": "https://news.google.com/"},
-            {"name": "CoinMarketCap", "url": "https://coinmarketcap.com/api/documentation/"},
+            {"name": "CoinMarketCal", "url": "https://coinmarketcal.com/developer"},
             {"name": "DefiLlama", "url": "https://api-docs.defillama.com/"},
         ],
         "disclaimer": "정량 지표 기반 참고자료이며 투자 자문이나 수익 보장이 아닙니다. 실제 주문을 실행하지 않습니다.",
