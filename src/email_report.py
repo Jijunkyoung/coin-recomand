@@ -46,6 +46,30 @@ def build_email_html(report: dict[str, Any]) -> str:
     mvrv_source = market["bitcoin"].get("mvrv_source")
     if mvrv_source:
         mvrv_text += f" ({mvrv_source})"
+    cmc = market.get("coinmarketcap") or {}
+    liquidity = market.get("liquidity") or {}
+
+    def money(value: Any) -> str:
+        if value is None:
+            return "미수집"
+        number = float(value)
+        if abs(number) >= 1_000_000_000_000:
+            return f"${number / 1_000_000_000_000:.2f}T"
+        if abs(number) >= 1_000_000_000:
+            return f"${number / 1_000_000_000:.1f}B"
+        return f"${number:,.0f}"
+
+    def pct(value: Any) -> str:
+        return "미수집" if value is None else f"{float(value):+.2f}%"
+
+    market_context = (
+        "<div style='margin-top:12px;padding:14px;background:#f8fafc;border-radius:10px'>"
+        "<strong>시장 보조지표</strong><br>"
+        f"BTC 도미넌스 {cmc.get('btc_dominance', '미수집')}% · 전체 시총 {money(cmc.get('total_market_cap_usd'))}<br>"
+        f"DeFi TVL {money(liquidity.get('defi_tvl_usd'))} ({pct(liquidity.get('defi_tvl_change_7d'))}, 7일) · "
+        f"스테이블코인 공급 {money(liquidity.get('stablecoin_supply_usd'))} ({pct(liquidity.get('stablecoin_supply_change_7d'))}, 7일)"
+        "</div>"
+    )
     issue_rows = []
     for issue in report.get("news_issues", [])[:7]:
         symbols = ", ".join(issue.get("related_symbols") or []) or "시장 전체"
@@ -71,6 +95,7 @@ def build_email_html(report: dict[str, Any]) -> str:
         <strong>비트코인 시장 국면: {html.escape(market['regime'])} · {market['score']}점</strong><br>
         BTC ₩{market['bitcoin']['price']:,.0f} · MVRV Z {mvrv_text}
       </div>
+      {market_context}
       {warning}
       <h2 style="font-size:19px">알트코인 우선순위</h2>
       <table style="width:100%;border-collapse:collapse" border="1" cellpadding="8">
