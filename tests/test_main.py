@@ -89,7 +89,8 @@ class MainAnalysisTests(unittest.TestCase):
         coin = report["recommendations"][0]
         self.assertEqual(report["alt_rankings"][0]["rank"], 1)
         self.assertEqual(report["alt_rankings"][0]["symbol"], "XRP")
-        self.assertNotIn("history", report["alt_rankings"][0])
+        self.assertEqual(len(report["alt_rankings"][0]["history"]), 60)
+        self.assertEqual(len(report["alt_rankings"][0]["sparkline"]), 30)
         self.assertEqual(coin["community_total"], 6)
         self.assertEqual(coin["community_sources"], 3)
         self.assertEqual(coin["development"]["status"], "공개 GitHub 없음")
