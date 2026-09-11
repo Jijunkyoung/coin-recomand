@@ -9,6 +9,12 @@ let detailHoverIndex = null;
 let altRankings = [];
 let sentimentHistory = [];
 let sentimentPlot = null;
+let currentReport = null;
+let liveSocket = null;
+let liveReconnectTimer = null;
+let liveApplyTimer = null;
+let liveCodeKey = "";
+const liveTickerBuffer = new Map();
 
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 const EMAIL_STORAGE_KEY = "coin-signal-email-recipients";
@@ -159,6 +165,126 @@ function macdValues(values, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) 
   const line = values.map((_, index) => fast[index] - slow[index]);
   const signal = emaValues(line, signalPeriod);
   return { line, signal, histogram: line.map((value, index) => value - signal[index]) };
+}
+
+function liveTechnicalScore(metrics) {
+  let points = 0;
+  if (metrics.ema20 != null && metrics.ema50 != null) {
+    if (metrics.price > metrics.ema20 && metrics.ema20 > metrics.ema50) points += 8;
+    else if (metrics.price < metrics.ema20 && metrics.ema20 < metrics.ema50) points -= 10;
+  }
+  if (metrics.rsi != null) {
+    if (metrics.rsi >= 45 && metrics.rsi <= 65) points += 4;
+    else if (metrics.rsi >= 75) points -= 7;
+    else if (metrics.rsi < 35) points -= 3;
+  }
+  points += metrics.macd_histogram == null ? 0 : metrics.macd_histogram > 0 ? 4 : -3;
+  if (metrics.return_7d != null && metrics.return_30d != null) {
+    if (metrics.return_7d > 0 && metrics.return_7d <= 15 && metrics.return_30d > 3 && metrics.return_30d <= 35) points += 6;
+    if (metrics.return_7d > 25 || metrics.return_30d > 60) points -= 8;
+  }
+  const bounded = Math.max(-18, Math.min(22, points));
+  return Math.round((bounded + 18) / 40 * 100);
+}
+
+function updateCoinWithLivePrice(coin, ticker) {
+  if (!coin || !ticker?.trade_price) return coin;
+  const price = Number(ticker.trade_price), today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  const rows = historyFor(coin).map(row => ({ ...row }));
+  if (!rows.length) return coin;
+  const last = rows.at(-1);
+  if (last.date === today) {
+    last.price = price; last.high = Math.max(Number(last.high ?? price), price); last.low = Math.min(Number(last.low ?? price), price);
+  } else {
+    rows.push({ date: today, open: price, high: price, low: price, price, volume: Number(ticker.acc_trade_price_24h) || 0 });
+    if (rows.length > 120) rows.shift();
+  }
+  const prices = rows.map(row => Number(row.price)), ema20 = emaValues(prices, 20), ema50 = emaValues(prices, 50);
+  const rsi14 = rsiValues(prices), macd = macdValues(prices);
+  const change = days => prices.length > days && prices.at(-days - 1) ? (price / prices.at(-days - 1) - 1) * 100 : null;
+  Object.assign(coin, {
+    price, history: rows, sparkline: prices.slice(-30), ema20: ema20.at(-1), ema50: ema50.at(-1),
+    rsi: [...rsi14].reverse().find(value => value != null), macd: macd.line.at(-1), macd_signal: macd.signal.at(-1),
+    macd_histogram: macd.histogram.at(-1), return_7d: change(7), return_30d: change(30),
+    trade_value_24h: Number(ticker.acc_trade_price_24h) || coin.trade_value_24h,
+  });
+  coin.live_technical_score = liveTechnicalScore(coin);
+  return coin;
+}
+
+function renderLiveRankings() {
+  const ranked = [...altRankings].map(coin => {
+    if (coin.live_technical_score == null) coin.live_technical_score = liveTechnicalScore(coin);
+    return coin;
+  }).sort((a, b) => (b.live_technical_score - a.live_technical_score) || ((b.trade_value_24h || 0) - (a.trade_value_24h || 0)));
+  ranked.forEach((coin, index) => { coin.live_rank = index + 1; });
+  $("#liveRankingGrid").innerHTML = ranked.slice(0, 10).map(coin => `
+    <button type="button" class="live-rank-card" data-live-symbol="${escapeHTML(coin.symbol)}" aria-label="${escapeHTML(coin.name)} 상세차트 열기">
+      <span class="live-rank-number">#${coin.live_rank}</span><span class="live-rank-name"><strong>${escapeHTML(coin.name)}</strong><small>${escapeHTML(coin.symbol)} · ₩${fmt(coin.price, 4)}</small></span>
+      <span class="live-rank-metrics"><small>RSI ${fmt(coin.rsi, 1)}</small><small>MACD ${fmt(coin.macd_histogram, 4)}</small></span><strong class="live-rank-score">${coin.live_technical_score}<small>/100</small></strong>
+    </button>`).join("");
+  $("#liveRankingGrid").querySelectorAll("[data-live-symbol]").forEach(button => button.addEventListener("click", () => {
+    const coin = altRankings.find(item => item.symbol === button.dataset.liveSymbol); if (coin) openDetailChart(coin);
+  }));
+}
+
+function renderRecommendationCards() {
+  if (!currentReport) return;
+  const list = $("#recommendations"); list.innerHTML = "";
+  currentReport.recommendations.forEach((coin, index) => {
+    const liveCoin = altRankings.find(item => item.symbol === coin.symbol);
+    if (liveCoin) Object.assign(coin, { price: liveCoin.price, history: liveCoin.history, sparkline: liveCoin.sparkline, ema20: liveCoin.ema20, ema50: liveCoin.ema50, rsi: liveCoin.rsi, macd_histogram: liveCoin.macd_histogram, return_7d: liveCoin.return_7d, return_30d: liveCoin.return_30d });
+    list.appendChild(renderCoin(coin, index));
+  });
+}
+
+function setLiveStatus(label, state = "connecting") {
+  $("#liveStatus").textContent = label;
+  $("#liveDot").className = `live-dot ${state}`;
+}
+
+function applyLiveMarket() {
+  if (!currentReport || !liveTickerBuffer.size) return;
+  altRankings.forEach(coin => updateCoinWithLivePrice(coin, liveTickerBuffer.get(coin.market || `KRW-${coin.symbol}`)));
+  const bitcoin = currentReport.market.bitcoin;
+  updateCoinWithLivePrice(bitcoin, liveTickerBuffer.get("KRW-BTC"));
+  $("#btcPrice").textContent = `₩${fmt(bitcoin.price, 0)}`; $("#btcRsi").textContent = fmt(bitcoin.rsi); $("#btcReturn").textContent = pct(bitcoin.return_30d);
+  drawLine($("#btcChart"), bitcoin.sparkline, "#4d8dff");
+  renderLiveRankings(); renderRecommendationCards();
+  const search = $("#altSearchInput").value.trim(); if (search && !$("#altSearchResult .search-empty")) searchAltcoin(search);
+  if (detailCoin) { const liveCoin = detailCoin.symbol === "BTC" ? bitcoin : altRankings.find(item => item.symbol === detailCoin.symbol); if (liveCoin) detailCoin = liveCoin; if ($("#chartDialog").open) { $("#chartPrice").textContent = `현재 ₩${fmt(detailCoin.price, 4)} · 30일 ${pct(detailCoin.return_30d)}`; scheduleDetailedChart(); } }
+  const updated = new Date().toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  $("#liveUpdatedAt").textContent = `${updated} 반영`; setLiveStatus("1분 기술순위 정상", "connected");
+}
+
+function scheduleLiveApply() {
+  if (liveApplyTimer) clearTimeout(liveApplyTimer);
+  const delay = 60000 - Date.now() % 60000;
+  liveApplyTimer = setTimeout(() => { applyLiveMarket(); scheduleLiveApply(); }, delay);
+}
+
+function startLiveMarket(codes) {
+  if (!("WebSocket" in window) || !codes.length) { setLiveStatus("실시간 기능 미지원", "error"); return; }
+  const codeKey = [...codes].sort().join(",");
+  if (liveSocket && liveCodeKey === codeKey && liveSocket.readyState <= WebSocket.OPEN) return;
+  if (liveSocket) { liveSocket.intentionalClose = true; liveSocket.close(); }
+  liveCodeKey = codeKey;
+  clearTimeout(liveReconnectTimer); setLiveStatus("업비트 연결 중", "connecting");
+  const socket = new WebSocket("wss://api.upbit.com/websocket/v1"); liveSocket = socket;
+  socket.binaryType = "arraybuffer";
+  socket.addEventListener("open", () => {
+    socket.send(JSON.stringify([{ ticket: `coin-recomand-${Date.now()}` }, { type: "ticker", codes, isOnlyRealtime: true }, { format: "DEFAULT" }]));
+    setLiveStatus("시세 수신 중", "connected"); scheduleLiveApply();
+  });
+  socket.addEventListener("message", event => {
+    try {
+      const text = typeof event.data === "string" ? event.data : new TextDecoder().decode(event.data);
+      const ticker = JSON.parse(text); if (ticker.code) liveTickerBuffer.set(ticker.code, ticker);
+    } catch { setLiveStatus("시세 해석 오류", "error"); }
+  });
+  socket.addEventListener("error", () => setLiveStatus("실시간 연결 오류", "error"));
+  socket.addEventListener("close", () => { if (socket.intentionalClose) return; setLiveStatus("재연결 대기 중", "connecting"); liveSocket = null; liveReconnectTimer = setTimeout(() => startLiveMarket(codes), 5000); });
+  setTimeout(applyLiveMarket, 3000);
 }
 
 function drawDetailedChart(crossIndex = null) {
@@ -358,7 +484,7 @@ function renderAltSearchResult(coin) {
   result.innerHTML = `
     <article class="search-result-card">
       <div class="search-result-top">
-        <div><span class="search-rank">전체 분석 #${escapeHTML(coin.rank)}</span><h3>${escapeHTML(coin.name)} <small>${escapeHTML(coin.symbol)}</small></h3><p>${escapeHTML(coin.english_name || "")} · 현재가 ₩${fmt(coin.price, 4)}</p></div>
+        <div><span class="search-rank">종합 #${escapeHTML(coin.rank)}${coin.live_rank ? ` · 실시간 기술 #${escapeHTML(coin.live_rank)}` : ""}</span><h3>${escapeHTML(coin.name)} <small>${escapeHTML(coin.symbol)}</small></h3><p>${escapeHTML(coin.english_name || "")} · 현재가 ₩${fmt(coin.price, 4)}</p></div>
         <div class="search-score"><span class="decision ${decisionClass}">${escapeHTML(coin.decision)}</span><strong>${escapeHTML(coin.score)}</strong><small>/ 100점</small></div>
       </div>
       <div class="search-score-track"><i style="width:${Math.max(0, Math.min(100, Number(coin.score) || 0))}%"></i></div>
@@ -395,17 +521,18 @@ function searchAltcoin(query) {
 }
 
 function render(report) {
+  currentReport = report;
   const { market } = report, btc = market.bitcoin;
   $("#generatedAt").textContent = report.generated_at_kst;
   $("#qualityDot").style.background = report.data_quality.status === "정상" ? "var(--green)" : "var(--amber)";
   $("#marketTitle").textContent = `${market.regime} 국면`; $("#marketSummary").textContent = market.regime === "상승" ? "추세가 우호적입니다. 후보별 과열 여부를 확인하세요." : market.regime === "하락" ? "신규 매수보다 현금 비중과 손실 제한을 우선합니다." : "방향 확인 전 강한 종목만 선별적으로 관찰합니다.";
   $("#marketScore").textContent = market.score; $("#scoreRing").style.background = `conic-gradient(${market.regime === "하락" ? "var(--red)" : market.regime === "상승" ? "var(--green)" : "var(--blue)"} ${market.score * 3.6}deg, var(--line) 0)`;
   $("#marketReasons").innerHTML = market.reasons.map(x => `<p>${x}</p>`).join("");
-  btc.symbol = "BTC"; btc.name = "비트코인";
+  btc.symbol = "BTC"; btc.name = "비트코인"; btc.market = "KRW-BTC";
   $("#btcPrice").textContent = `₩${fmt(btc.price,0)}`; $("#mvrv").textContent = fmt(btc.mvrv_z,2); $("#mvrvLabel").textContent = btc.mvrv_source ? `MVRV Z · ${btc.mvrv_source}` : "MVRV Z"; $("#btcRsi").textContent = fmt(btc.rsi); $("#btcReturn").textContent = pct(btc.return_30d); $("#btcVolume").textContent = btc.volume_ratio == null ? "—" : `${fmt(btc.volume_ratio,2)}×`; drawLine($("#btcChart"), btc.sparkline, "#4d8dff");
   const btcCard = $("#btcDetailCard"); btcCard.onclick = () => openDetailChart(btc); btcCard.onkeydown = event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDetailChart(btc); } };
-  $("#screenedCount").textContent = report.screened; const list = $("#recommendations"); list.innerHTML = ""; report.recommendations.forEach((coin, i) => list.appendChild(renderCoin(coin, i)));
   altRankings = report.alt_rankings?.length ? report.alt_rankings : report.recommendations.map((coin, index) => ({ ...coin, rank: index + 1 }));
+  $("#screenedCount").textContent = report.screened; renderRecommendationCards(); renderLiveRankings();
   $("#altSearchOptions").innerHTML = altRankings.map(coin => `<option value="${escapeHTML(coin.symbol)}">${escapeHTML(coin.name)} · ${escapeHTML(coin.english_name || "")}</option>`).join("");
   const fear = market.fear_greed; $("#fearValue").textContent = fear.value ?? "—"; $("#fearClass").textContent = fear.classification; $("#fearGauge").style.left = `${fear.value ?? 50}%`;
   sentimentHistory = fear.history || [];
@@ -427,6 +554,7 @@ function render(report) {
   $("#qualityNoteNotices").innerHTML = notices.length ? `<h3>분석 제외·참고</h3><ul>${notices.map(item => `<li>${escapeHTML(item)}</li>`).join("")}</ul>` : "";
   $("#warnings").innerHTML = (warnings.length ? warnings.map(x => `<p>• ${escapeHTML(x)}</p>`).join("") : `<p class="ok">모든 핵심 데이터가 정상 수집됐습니다.</p>`) + notices.map(x => `<p class="notice">참고 · ${escapeHTML(x)}</p>`).join("");
   $("#sources").innerHTML = report.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener">${s.name}</a>`).join(""); $("#disclaimer").textContent = report.disclaimer;
+  startLiveMarket(["KRW-BTC", ...altRankings.map(coin => coin.market || `KRW-${coin.symbol}`)]);
 }
 
 $("#altSearchForm").addEventListener("submit", event => { event.preventDefault(); searchAltcoin($("#altSearchInput").value); });
@@ -493,4 +621,15 @@ $("#copyEmailSecret").addEventListener("click", async () => {
   }
 });
 
-fetch(`data/latest.json?v=${Date.now()}`).then(response => { if (!response.ok) throw new Error("분석 파일을 읽지 못했습니다."); return response.json(); }).then(render).catch(error => { $("#recommendations").innerHTML = `<div class="error-card">${error.message} 잠시 후 다시 시도하거나 GitHub Actions 실행 상태를 확인하세요.</div>`; $("#qualityText").textContent = "데이터 오류"; });
+async function loadLatestReport() {
+  try {
+    const response = await fetch(`data/latest.json?v=${Date.now()}`); if (!response.ok) throw new Error("분석 파일을 읽지 못했습니다.");
+    const report = await response.json(); if (!currentReport || report.generated_at !== currentReport.generated_at) render(report);
+  } catch (error) {
+    if (!currentReport) $("#recommendations").innerHTML = `<div class="error-card">${error.message} 잠시 후 다시 시도하거나 GitHub Actions 실행 상태를 확인하세요.</div>`;
+    $("#qualityText").textContent = currentReport ? "새 종합자료 확인 지연" : "데이터 오류";
+  }
+}
+
+loadLatestReport();
+setInterval(loadLatestReport, 5 * 60 * 1000);
