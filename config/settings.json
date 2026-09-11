@@ -9,5 +9,5 @@
     "PROS": "prosper-2"
   },
   "excluded_symbols": ["BTC", "USDT", "USDC", "DAI", "BUSD", "FDUSD", "TUSD"],
-  "schedule_note": "매일 07:30 KST"
+  "schedule_note": "종합분석 매시간, 이메일 매일 07:30 KST"
 }
