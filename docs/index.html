@@ -115,19 +115,19 @@
         <button type="button" data-days="all">전체</button>
       </div>
       <div class="detail-chart-wrap">
-        <canvas id="detailChart" height="500" aria-label="선택한 코인의 일봉 캔들, 볼린저밴드, 거래대금 및 RSI 상세차트"></canvas>
+        <canvas id="detailChart" height="620" aria-label="선택한 코인의 일봉 캔들, 볼린저밴드, 거래대금, MACD 및 RSI 상세차트"></canvas>
         <div id="chartTooltip" class="chart-tooltip" hidden></div>
       </div>
-      <div class="chart-legend"><span><i class="legend-up"></i>상승봉</span><span><i class="legend-down"></i>하락봉</span><span><i class="legend-band"></i>볼린저밴드</span><span><i class="legend-ema20"></i>EMA20</span><span><i class="legend-ema50"></i>EMA50</span><span><i class="legend-volume"></i>거래대금</span><span><i class="legend-rsi"></i>RSI(14)</span></div>
+      <div class="chart-legend"><span><i class="legend-up"></i>상승봉</span><span><i class="legend-down"></i>하락봉</span><span><i class="legend-band"></i>볼린저밴드</span><span><i class="legend-ema20"></i>EMA20</span><span><i class="legend-ema50"></i>EMA50</span><span><i class="legend-volume"></i>거래대금</span><span><i class="legend-macd"></i>MACD</span><span><i class="legend-signal"></i>Signal</span><span><i class="legend-hist"></i>Histogram</span><span><i class="legend-rsi"></i>RSI(14)</span></div>
       <div class="detail-stats" id="detailStats"></div>
-      <p class="dialog-note">일봉 기준입니다. 볼린저밴드는 20일·2표준편차, RSI는 14일 기준이며 당일 봉은 아직 확정되지 않을 수 있습니다.</p>
+      <p class="dialog-note">일봉 기준입니다. 볼린저밴드는 20일·2표준편차, MACD는 12·26·9 EMA, RSI는 14일 기준이며 당일 봉은 아직 확정되지 않을 수 있습니다.</p>
     </div>
   </dialog>
 
   <dialog id="emailDialog" class="email-dialog" aria-labelledby="emailDialogTitle">
     <div class="email-dialog-shell">
       <div class="dialog-head">
-        <div><span class="eyebrow">DAILY EMAIL REPORT</span><h2 id="emailDialogTitle">메일 수신 설정</h2><p>매일 오전 8시(KST) 최신 분석 보고서를 발송합니다.</p></div>
+        <div><span class="eyebrow">DAILY EMAIL REPORT</span><h2 id="emailDialogTitle">메일 수신 설정</h2><p>매일 오전 7시 30분(KST) 최신 분석 보고서를 발송합니다.</p></div>
         <button type="button" class="dialog-close" id="emailDialogClose" aria-label="메일 설정 닫기">×</button>
       </div>
       <label for="emailRecipients">보고서를 받을 이메일 주소</label>
