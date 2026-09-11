@@ -6,22 +6,21 @@ from src.providers import MarketDataClient
 
 
 class MarketContextTests(unittest.TestCase):
-    @patch.dict(os.environ, {"CMC_API_KEY": "test-key"}, clear=False)
-    def test_coinmarketcap_global_metrics_accepts_secret_alias(self):
+    @patch.dict(os.environ, {"COINMARKETCAL_API_KEY": "test-key"}, clear=False)
+    def test_coinmarketcal_events_filters_related_coins(self):
         client = MarketDataClient()
         response = {
-            "data": {
-                "btc_dominance": 55.123,
-                "eth_dominance": 12.456,
-                "last_updated": "2026-09-11T00:00:00Z",
-                "quote": {"USD": {"total_market_cap": 2_500_000_000_000, "total_volume_24h": 100_000_000_000, "altcoin_market_cap": 1_100_000_000_000}},
-            }
+            "data": [
+                {"id": "1", "title": "XRP Upgrade", "date": "2026-09-13T00:00:00Z", "coins": [{"symbol": "XRP"}]},
+                {"id": "2", "title": "ADA Event", "date": "2026-09-14T00:00:00Z", "coins": [{"symbol": "ADA"}]},
+            ]
         }
         with patch.object(client, "_json", return_value=response) as mocked:
-            result = client.coinmarketcap_global_metrics()
-        self.assertEqual(result["btc_dominance"], 55.12)
-        self.assertEqual(result["total_market_cap_usd"], 2_500_000_000_000)
-        self.assertEqual(mocked.call_args.kwargs["headers"]["X-CMC_PRO_API_KEY"], "test-key")
+            from datetime import datetime, timezone
+            result = client.coinmarketcal_events(["BTC", "XRP"], now=datetime(2026, 9, 11, tzinfo=timezone.utc))
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["related_symbols"], ["XRP"])
+        self.assertEqual(mocked.call_args.kwargs["headers"]["x-api-key"], "test-key")
 
     def test_defillama_market_liquidity_calculates_seven_day_change(self):
         client = MarketDataClient()
