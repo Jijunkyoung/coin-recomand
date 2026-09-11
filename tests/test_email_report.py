@@ -15,7 +15,11 @@ class EmailReportTests(unittest.TestCase):
     def test_email_contains_news_issue_and_escaped_link(self):
         report = {
             "generated_at_kst": "2026-09-11 07:30 KST",
-            "market": {"regime": "중립", "score": 50, "bitcoin": {"price": 100, "mvrv_z": 1.2}},
+            "market": {
+                "regime": "중립", "score": 50, "bitcoin": {"price": 100, "mvrv_z": 1.2},
+                "coinmarketcap": {"btc_dominance": 55.2, "total_market_cap_usd": 2_500_000_000_000},
+                "liquidity": {"defi_tvl_usd": 100_000_000_000, "defi_tvl_change_7d": 2.5, "stablecoin_supply_usd": 200_000_000_000, "stablecoin_supply_change_7d": -0.2},
+            },
             "recommendations": [],
             "news_issues": [{
                 "title": "BTC 주요 이슈", "source": "테스트 뉴스", "url": "https://example.com/?a=1&b=2",
@@ -27,6 +31,8 @@ class EmailReportTests(unittest.TestCase):
         self.assertIn("최근 24시간 주요 코인 이슈", result)
         self.assertIn("BTC 주요 이슈", result)
         self.assertIn("a=1&amp;b=2", result)
+        self.assertIn("BTC 도미넌스 55.2%", result)
+        self.assertIn("DeFi TVL", result)
 
 
 if __name__ == "__main__":
