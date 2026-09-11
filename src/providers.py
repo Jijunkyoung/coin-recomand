@@ -134,12 +134,26 @@ class MarketDataClient:
         return list(reversed(data))
 
     def fear_and_greed(self) -> dict[str, Any]:
-        data = self._json("https://api.alternative.me/fng/", params={"limit": 2, "format": "json"})
+        data = self._json("https://api.alternative.me/fng/", params={"limit": 30, "format": "json"})
         latest = data["data"][0]
+        history = []
+        for item in reversed(data.get("data", [])):
+            try:
+                recorded_at = datetime.fromtimestamp(int(item["timestamp"]), tz=timezone.utc).astimezone(KST)
+                history.append(
+                    {
+                        "date": recorded_at.date().isoformat(),
+                        "value": int(item["value"]),
+                        "classification": item.get("value_classification", ""),
+                    }
+                )
+            except (KeyError, TypeError, ValueError, OverflowError):
+                continue
         return {
             "value": int(latest["value"]),
             "classification": latest["value_classification"],
             "previous": int(data["data"][1]["value"]) if len(data["data"]) > 1 else None,
+            "history": history,
         }
 
     def coingecko_trending(self) -> dict[str, int]:
