@@ -17,7 +17,6 @@ class EmailReportTests(unittest.TestCase):
             "generated_at_kst": "2026-09-11 07:30 KST",
             "market": {
                 "regime": "중립", "score": 50, "bitcoin": {"price": 100, "mvrv_z": 1.2},
-                "coinmarketcap": {"btc_dominance": 55.2, "total_market_cap_usd": 2_500_000_000_000},
                 "liquidity": {"defi_tvl_usd": 100_000_000_000, "defi_tvl_change_7d": 2.5, "stablecoin_supply_usd": 200_000_000_000, "stablecoin_supply_change_7d": -0.2},
             },
             "recommendations": [],
@@ -26,13 +25,15 @@ class EmailReportTests(unittest.TestCase):
                 "published_at_kst": "09-11 07:00", "category": "ETF·기관", "impact": "호재 가능",
                 "related_symbols": ["BTC"],
             }],
+            "upcoming_events": [{"title": "XRP 네트워크 업그레이드", "date_kst": "09-13", "related_symbols": ["XRP"], "categories": ["Release"], "impact_score": None}],
         }
         result = build_email_html(report)
         self.assertIn("최근 24시간 주요 코인 이슈", result)
         self.assertIn("BTC 주요 이슈", result)
         self.assertIn("a=1&amp;b=2", result)
-        self.assertIn("BTC 도미넌스 55.2%", result)
         self.assertIn("DeFi TVL", result)
+        self.assertIn("향후 7일 주요 일정", result)
+        self.assertIn("XRP 네트워크 업그레이드", result)
 
 
 if __name__ == "__main__":
