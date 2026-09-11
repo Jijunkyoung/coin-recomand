@@ -7,7 +7,7 @@
 ## 분석 항목
 
 - 비트코인: Blockchain.com 공개 MVRV·시가총액 기반 MVRV Z-Score, EMA20/EMA50 추세, RSI, MACD, 거래량 비율, 7일·30일 수익률
-- 시장 심리: Alternative.me Crypto Fear & Greed Index
+- 시장 심리: Alternative.me Crypto Fear & Greed Index 현재값과 최근 30일 일별 꺾은선 추이
 - 알트코인: RSI, MACD, EMA 추세, 7일·30일 모멘텀, 거래량 변화, 변동성, 유동성
 - 전체 분석 대상 검색: 종목명·심볼로 순위, 100점 환산 점수, 판정, 가감 근거, 커뮤니티·개발·언락 정보와 상세차트 조회
 - 커뮤니티: CoinGecko 인기 검색 + Reddit·디시인사이드 비트코인 갤러리·코인판 한국시간 당일 게시글 언급 노출도
