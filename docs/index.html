@@ -82,6 +82,11 @@
         <div class="section-head compact"><div><span class="eyebrow">SENTIMENT</span><h2>시장 심리</h2></div><strong id="fearValue" class="sentiment-number">—</strong></div>
         <div class="gauge"><span id="fearGauge"></span></div>
         <div class="gauge-labels"><span>극단적 공포</span><strong id="fearClass">—</strong><span>극단적 탐욕</span></div>
+        <div class="sentiment-chart-wrap">
+          <canvas id="sentimentChart" height="180" aria-label="최근 30일 공포 탐욕 지수 일별 꺾은선 그래프"></canvas>
+          <div id="sentimentTooltip" class="sentiment-tooltip" hidden></div>
+        </div>
+        <div class="sentiment-chart-foot"><span>최근 30일 일별 추이</span><strong id="fearChange">—</strong></div>
       </article>
       <article class="panel data-panel">
         <span class="eyebrow">DATA HEALTH</span><h2>데이터 상태</h2>
