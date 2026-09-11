@@ -56,9 +56,17 @@
 
     <section class="section-block" aria-labelledby="recommendTitle">
       <div class="section-head">
-        <div><span class="eyebrow">ALTCOIN PRIORITY</span><h2 id="recommendTitle">알트코인 우선순위</h2></div>
-        <p><strong id="screenedCount">—</strong>개 유동성 상위 종목 분석</p>
+        <div><span class="eyebrow">COMPOSITE PRIORITY · HOURLY</span><h2 id="recommendTitle">종합 추천 우선순위</h2></div>
+        <p><strong id="screenedCount">—</strong>개 종목 · 매시간 종합 갱신</p>
       </div>
+      <article class="live-ranking-panel" aria-labelledby="liveRankingTitle">
+        <div class="live-ranking-head">
+          <div><span class="eyebrow">LIVE TECHNICAL RANKING · 1 MIN</span><h2 id="liveRankingTitle">실시간 기술지표 순위</h2></div>
+          <div class="live-connection"><span id="liveDot" class="live-dot"></span><strong id="liveStatus">실시간 연결 준비 중</strong><time id="liveUpdatedAt">—</time></div>
+        </div>
+        <p class="live-ranking-note">업비트 실시간 가격을 반영해 일봉 EMA20·EMA50, RSI(14), MACD, 7일·30일 수익률을 1분마다 다시 계산한 순위입니다. 커뮤니티·개발·언락은 아래 종합순위에서 매시간 반영합니다.</p>
+        <div id="liveRankingGrid" class="live-ranking-grid" aria-live="polite"><p class="live-ranking-empty">실시간 시세를 연결하고 있습니다.</p></div>
+      </article>
       <div id="recommendations" class="recommend-grid" aria-live="polite"></div>
       <section class="alt-search-panel" aria-labelledby="altSearchTitle">
         <div class="alt-search-head">
