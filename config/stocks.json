@@ -1,0 +1,52 @@
+{
+  "history_days": 120,
+  "recommendation_count": 5,
+  "us": {
+    "benchmark": {"symbol": "SPY", "name": "S&P 500 ETF", "exchange": "AMS"},
+    "universe": [
+      {"symbol": "AAPL", "name": "애플", "exchange": "NAS"},
+      {"symbol": "MSFT", "name": "마이크로소프트", "exchange": "NAS"},
+      {"symbol": "NVDA", "name": "엔비디아", "exchange": "NAS"},
+      {"symbol": "AMZN", "name": "아마존", "exchange": "NAS"},
+      {"symbol": "GOOGL", "name": "알파벳", "exchange": "NAS"},
+      {"symbol": "META", "name": "메타", "exchange": "NAS"},
+      {"symbol": "TSLA", "name": "테슬라", "exchange": "NAS"},
+      {"symbol": "AVGO", "name": "브로드컴", "exchange": "NAS"},
+      {"symbol": "AMD", "name": "AMD", "exchange": "NAS"},
+      {"symbol": "PLTR", "name": "팔란티어", "exchange": "NAS"},
+      {"symbol": "JPM", "name": "JP모건", "exchange": "NYS"},
+      {"symbol": "LLY", "name": "일라이릴리", "exchange": "NYS"},
+      {"symbol": "COST", "name": "코스트코", "exchange": "NAS"},
+      {"symbol": "WMT", "name": "월마트", "exchange": "NYS"},
+      {"symbol": "XOM", "name": "엑슨모빌", "exchange": "NYS"},
+      {"symbol": "NFLX", "name": "넷플릭스", "exchange": "NAS"},
+      {"symbol": "COIN", "name": "코인베이스", "exchange": "NAS"},
+      {"symbol": "ARM", "name": "Arm", "exchange": "NAS"}
+    ]
+  },
+  "kr": {
+    "benchmark": {"symbol": "069500", "name": "KODEX 200", "exchange": "KRX"},
+    "universe": [
+      {"symbol": "005930", "name": "삼성전자", "exchange": "KRX"},
+      {"symbol": "000660", "name": "SK하이닉스", "exchange": "KRX"},
+      {"symbol": "373220", "name": "LG에너지솔루션", "exchange": "KRX"},
+      {"symbol": "207940", "name": "삼성바이오로직스", "exchange": "KRX"},
+      {"symbol": "005380", "name": "현대차", "exchange": "KRX"},
+      {"symbol": "000270", "name": "기아", "exchange": "KRX"},
+      {"symbol": "035420", "name": "NAVER", "exchange": "KRX"},
+      {"symbol": "035720", "name": "카카오", "exchange": "KRX"},
+      {"symbol": "012450", "name": "한화에어로스페이스", "exchange": "KRX"},
+      {"symbol": "034020", "name": "두산에너빌리티", "exchange": "KRX"},
+      {"symbol": "329180", "name": "HD현대중공업", "exchange": "KRX"},
+      {"symbol": "267270", "name": "HD현대건설기계", "exchange": "KRX"},
+      {"symbol": "042670", "name": "HD현대인프라코어", "exchange": "KRX"},
+      {"symbol": "068270", "name": "셀트리온", "exchange": "KRX"},
+      {"symbol": "105560", "name": "KB금융", "exchange": "KRX"},
+      {"symbol": "055550", "name": "신한지주", "exchange": "KRX"},
+      {"symbol": "005490", "name": "POSCO홀딩스", "exchange": "KRX"},
+      {"symbol": "247540", "name": "에코프로비엠", "exchange": "KRX"},
+      {"symbol": "006400", "name": "삼성SDI", "exchange": "KRX"},
+      {"symbol": "042660", "name": "한화오션", "exchange": "KRX"}
+    ]
+  }
+}

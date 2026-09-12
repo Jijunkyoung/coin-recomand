@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "market": "kr",
+  "market_name": "국내주식",
+  "currency": "KRW",
+  "generated_at": "2026-09-12T12:34:36.184766+00:00",
+  "generated_at_kst": "2026-09-12 21:34 KST",
+  "configured": false,
+  "recommendations": [],
+  "rankings": [],
+  "warnings": [
+    "KIS_APP_KEY·KIS_APP_SECRET을 GitHub Secret에 등록하면 분석이 시작됩니다."
+  ],
+  "status": "설정 필요",
+  "regime": "미수집",
+  "market_score": null
+}

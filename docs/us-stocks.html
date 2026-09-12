@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="미국주식 기술지표 분석 및 추천 대시보드">
+  <title>미국주식 · Market Signal Desk</title>
+  <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="stock.css">
+</head>
+<body data-stock-market="us">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark stock-mark">S</span><div><strong>Market Signal Desk</strong><span>US Stock Research</span></div></div>
+    <div class="timestamp"><span id="stockStatus" class="stock-status">데이터 확인 중</span><time id="generatedAt">—</time></div>
+  </header>
+  <nav class="market-nav" aria-label="시장 페이지"><a href="index.html">코인</a><a href="us-stocks.html" class="active" aria-current="page">미국주식</a><a href="kr-stocks.html">국내주식</a></nav>
+  <main class="stock-main">
+    <section id="setupPanel" class="stock-setup" hidden></section>
+    <section class="market-grid">
+      <article class="regime-card"><span class="eyebrow">US MARKET REGIME</span><div class="regime-row"><div><h1 id="marketTitle">미국 시장 분석 중</h1><p id="marketSummary">한국투자증권 데이터를 불러오고 있습니다.</p></div><div id="scoreRing" class="score-ring"><strong id="marketScore">—</strong><span>/ 100</span></div></div><div id="marketReasons" class="reason-list"></div></article>
+      <article id="benchmarkCard" class="btc-card clickable-card" role="button" tabindex="0"><div class="card-heading"><span id="benchmarkSymbol">SPY</span><strong id="benchmarkPrice">—</strong></div><canvas id="benchmarkChart" height="120"></canvas><div id="benchmarkMetrics" class="metric-strip"></div><span class="detail-hint">상세차트 보기 ↗</span></article>
+    </section>
+    <section class="section-block"><div class="section-head"><div><span class="eyebrow">COMPOSITE PRIORITY · HOURLY</span><h2>미국주식 추천 우선순위</h2></div><p><strong id="screenedCount">—</strong>개 종목 분석</p></div><div id="recommendations" class="recommend-grid"></div></section>
+    <section class="stock-ranking-section"><div class="section-head"><div><span class="eyebrow">FULL RANKING</span><h2>전체 기술지표 순위</h2></div><p>종목을 누르면 상세차트가 열립니다.</p></div><div id="rankingList" class="stock-ranking-list"></div></section>
+    <section class="alt-search-panel"><div class="alt-search-head"><div><span class="eyebrow">STOCK LOOKUP</span><h2>미국주식 검색</h2></div><p>종목명 또는 티커로 점수와 기술지표를 확인하세요.</p></div><form id="stockSearchForm" class="alt-search-form"><input id="stockSearchInput" type="search" list="stockSearchOptions" placeholder="예: 엔비디아, NVDA"><datalist id="stockSearchOptions"></datalist><button>검색</button></form><div id="stockSearchResult" class="alt-search-result"><p class="search-empty">검색할 종목을 입력해 주세요.</p></div></section>
+    <section class="lower-grid stock-lower"><article class="panel"><span class="eyebrow">SCORING METHODOLOGY</span><h2>판정 원칙</h2><p id="methodologyIntro" class="methodology-intro"></p><ul id="methodologyItems" class="plain-list"></ul><p id="methodologyDecision" class="methodology-note"></p></article><article class="panel data-panel"><span class="eyebrow">DATA HEALTH</span><h2>데이터 상태</h2><div id="warnings" class="warning-list"></div><div id="sources" class="source-links"></div></article></section>
+  </main>
+  <dialog id="stockChartDialog" class="chart-dialog"><div class="dialog-shell"><div class="dialog-head"><div><span id="chartSymbol" class="eyebrow">DETAIL CHART</span><h2 id="chartTitle">상세차트</h2><p id="chartPrice">—</p></div><button id="chartClose" class="dialog-close" aria-label="닫기">×</button></div><div id="periodTabs" class="period-tabs"><button data-days="30" class="active">30일</button><button data-days="60">60일</button><button data-days="90">90일</button><button data-days="all">전체</button></div><div class="detail-chart-wrap"><canvas id="detailChart" height="620"></canvas><div id="chartTooltip" class="chart-tooltip" hidden></div></div><div class="chart-legend"><span><i class="legend-up"></i>상승봉</span><span><i class="legend-down"></i>하락봉</span><span><i class="legend-band"></i>볼린저밴드</span><span><i class="legend-ema20"></i>EMA20</span><span><i class="legend-ema50"></i>EMA50</span><span><i class="legend-volume"></i>거래량</span><span><i class="legend-macd"></i>MACD</span><span><i class="legend-signal"></i>Signal</span><span><i class="legend-rsi"></i>RSI</span></div><div id="detailStats" class="detail-stats"></div><p class="dialog-note">일봉 기준 기술지표입니다. 당일 봉은 장 마감 전 확정되지 않을 수 있습니다.</p></div></dialog>
+  <footer><p id="disclaimer">정량 지표 기반 참고자료이며 투자 자문이 아닙니다.</p></footer>
+  <script src="stock.js"></script>
+</body></html>

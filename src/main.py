@@ -14,6 +14,7 @@ from .email_report import send_email
 from .indicators import annualized_volatility, ema, macd, pct_change, rsi, volume_ratio
 from .providers import MarketDataClient
 from .scoring import alt_score, market_regime, recommendation_label
+from .stock_analysis import generate_stock_reports
 
 KST = timezone(timedelta(hours=9))
 
@@ -529,9 +530,10 @@ def main() -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"분석 결과 저장: {output} ({len(report['recommendations'])}개 후보)")
+    stock_reports = generate_stock_reports(output_dir=output.parent)
     should_send = args.send_email or os.getenv("SEND_EMAIL", "").lower() in {"1", "true", "yes"}
     if should_send:
-        send_email(report)
+        send_email(report, stock_reports)
 
 
 if __name__ == "__main__":

@@ -26,7 +26,36 @@ def parse_recipients(value: str) -> list[str]:
     return recipients
 
 
-def build_email_html(report: dict[str, Any]) -> str:
+def _stock_email_section(stock_reports: dict[str, dict[str, Any]] | None) -> str:
+    if not stock_reports:
+        return ""
+    sections = []
+    for market in ("us", "kr"):
+        stock_report = stock_reports.get(market) or {}
+        rows = []
+        for stock in stock_report.get("recommendations") or []:
+            rows.append(
+                "<tr>"
+                f"<td>{html.escape(str(stock.get('name', '')))} ({html.escape(str(stock.get('symbol', '')))})</td>"
+                f"<td>{stock.get('score', '—')}</td><td>{html.escape(str(stock.get('decision', '—')))}</td>"
+                f"<td>{stock.get('rsi', '—')}</td><td>{stock.get('return_30d', '—')}%</td>"
+                "</tr>"
+            )
+        market_name = html.escape(str(stock_report.get("market_name", market)))
+        if rows:
+            status = f"{html.escape(str(stock_report.get('regime', '—')))} 국면 · 시장점수 {stock_report.get('market_score', '—')}"
+            sections.append(
+                f"<h2 style='font-size:19px;margin-top:28px'>{market_name} 추천</h2>"
+                f"<p>{status}</p><table style='width:100%;border-collapse:collapse' border='1' cellpadding='8'>"
+                f"<thead><tr><th>종목</th><th>점수</th><th>판정</th><th>RSI</th><th>30일</th></tr></thead><tbody>{''.join(rows)}</tbody></table>"
+            )
+        else:
+            warning = (stock_report.get("warnings") or ["데이터 미수집"])[0]
+            sections.append(f"<h2 style='font-size:19px;margin-top:28px'>{market_name}</h2><p>{html.escape(str(warning))}</p>")
+    return "".join(sections)
+
+
+def build_email_html(report: dict[str, Any], stock_reports: dict[str, dict[str, Any]] | None = None) -> str:
     market = report["market"]
     rows = []
     for coin in report["recommendations"]:
@@ -102,6 +131,7 @@ def build_email_html(report: dict[str, Any]) -> str:
         if event_rows
         else "<p style='color:#64748b'>향후 7일 안에 선별된 관련 일정이 없습니다.</p>"
     )
+    stock_section = _stock_email_section(stock_reports)
     return f"""
     <div style="font-family:Arial,'Noto Sans KR',sans-serif;max-width:760px;margin:auto;color:#172033">
       <h1 style="font-size:24px">코인 시장 분석 보고서</h1>
@@ -122,12 +152,13 @@ def build_email_html(report: dict[str, Any]) -> str:
       <h2 style="font-size:19px">최근 24시간 주요 코인 이슈</h2>
       <p style="font-size:12px;color:#64748b">제목의 핵심어를 기준으로 분류한 참고용 영향 방향이며, 원문 확인이 필요합니다.</p>
       {issues_html}
+      {stock_section}
       <p style="font-size:12px;color:#64748b">본 보고서는 정량 지표 기반 참고자료이며 투자 자문이나 수익 보장이 아닙니다. 실제 주문을 실행하지 않습니다.</p>
     </div>
     """
 
 
-def send_email(report: dict[str, Any]) -> bool:
+def send_email(report: dict[str, Any], stock_reports: dict[str, dict[str, Any]] | None = None) -> bool:
     required = {
         "SMTP_HOST": os.getenv("SMTP_HOST", "").strip(),
         "SMTP_USERNAME": os.getenv("SMTP_USERNAME", "").strip(),
@@ -144,11 +175,11 @@ def send_email(report: dict[str, Any]) -> bool:
         print("유효한 수신 이메일 주소가 없어 발송을 건너뜁니다.")
         return False
     message = EmailMessage()
-    message["Subject"] = f"[{report['market']['regime']}] 코인 분석 {report['generated_at_kst'][:10]}"
+    message["Subject"] = f"[{report['market']['regime']}] 코인·주식 분석 {report['generated_at_kst'][:10]}"
     message["From"] = sender
     message["To"] = ", ".join(recipients)
     message.set_content("HTML을 지원하는 메일 앱에서 보고서를 확인해 주세요.")
-    message.add_alternative(build_email_html(report), subtype="html")
+    message.add_alternative(build_email_html(report, stock_reports), subtype="html")
     if port == 465:
         with smtplib.SMTP_SSL(required["SMTP_HOST"], port, timeout=30) as smtp:
             smtp.login(required["SMTP_USERNAME"], required["SMTP_PASSWORD"])

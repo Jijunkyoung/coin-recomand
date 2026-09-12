@@ -2,6 +2,8 @@
 
 비트코인 시장 국면과 업비트 KRW 알트코인을 분석해 분할매수 후보를 선별하고, 1분 기술순위·매시간 종합순위·매일 이메일 보고서를 제공하는 프로그램입니다.
 
+상단 메뉴에서 코인·미국주식·국내주식을 전환할 수 있습니다. 주식 페이지는 한국투자증권 Open API의 일봉으로 EMA20·EMA50, RSI, MACD, 거래량, 모멘텀, 변동성과 대표지수 국면을 평가하고 종목 검색 및 상세 캔들차트를 제공합니다.
+
 > 이 프로젝트의 결과는 정량 지표 기반 참고자료이며 수익을 보장하는 투자 자문이 아닙니다. 실제 주문은 실행하지 않습니다.
 
 ## 분석 항목
@@ -46,6 +48,17 @@ python -m http.server 8000 --directory docs
 | `SMTP_PASSWORD` | SMTP 비밀번호 | Google 2단계 인증 후 만든 앱 비밀번호 |
 | `EMAIL_FROM` | 발신 주소(선택) | 미설정 시 SMTP 계정 |
 | `EMAIL_TO` | 수신 주소, 여러 개는 쉼표·세미콜론·줄바꿈 구분 | `me@example.com,team@example.com` |
+| `KIS_APP_KEY` | 한국투자증권 Open API App Key | KIS Developers에서 발급 |
+| `KIS_APP_SECRET` | 한국투자증권 Open API App Secret | KIS Developers에서 발급 |
+
+### 미국·국내주식 최초 설정
+
+1. 한국투자증권 계좌를 준비하고 [KIS Developers](https://apiportal.koreainvestment.com/)에서 Open API 서비스를 신청합니다.
+2. 발급된 App Key와 App Secret을 저장소 **Settings → Secrets and variables → Actions → New repository secret**에서 각각 `KIS_APP_KEY`, `KIS_APP_SECRET`으로 등록합니다.
+3. 저장소 **Actions → Analyze, email and deploy → Run workflow**를 한 번 실행합니다.
+4. 배포가 끝나면 상단 `미국주식`, `국내주식` 메뉴에서 결과를 확인합니다.
+
+키는 GitHub Actions 서버에서 시세 조회에만 사용되고 정적 페이지나 분석 JSON에는 포함되지 않습니다. 이 프로젝트는 주문 API를 호출하지 않습니다. 키가 없을 때 주식 페이지는 임의 가격을 표시하지 않고 설정 절차를 안내합니다.
 
 Reddit 언급 수는 선택 기능입니다. 사용하려면 Reddit의 script 앱을 만든 뒤 `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`을 추가하세요. 세 커뮤니티 모두 한국시간 당일 작성된 게시물만 반영합니다. 디시인사이드 비트코인 갤러리와 코인판은 별도 키 없이 게시글 제목을 표본 수집하며, 사이트 접근이 제한되면 0회로 간주하지 않고 `미수집`으로 표시합니다.
 

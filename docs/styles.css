@@ -67,6 +67,10 @@ canvas { width: 100%; display: block; }.btc-card canvas { height: 120px; margin:
 .decision-rules .plain-list li + li { margin-top: 0; }
 .methodology-note { margin: 14px 0 0; color: var(--muted); font-size: .77rem; }
 footer { border-top:1px solid var(--line); padding:20px; color:var(--muted); text-align:center; font-size:.78rem; }
+.market-nav { width: min(100% - 32px,1440px); display:flex; gap:8px; margin:16px auto 0; }
+.market-nav a { min-width:96px; padding:9px 15px; border:1px solid var(--line); border-radius:999px; color:var(--muted); background:rgba(255,255,255,.025); font-size:.82rem; font-weight:800; text-align:center; text-decoration:none; }
+.market-nav a:hover,.market-nav a:focus-visible { border-color:var(--blue); color:var(--text); outline:none; }
+.market-nav a.active { border-color:#518cff; color:white; background:linear-gradient(135deg,#347cff,#235ab4); }
 .error-card { grid-column:1/-1; padding:28px; border:1px solid var(--red); border-radius:14px; color:#ffc2c7; background:rgba(255,107,120,.07); }
 .clickable-card { position: relative; cursor: pointer; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
 .clickable-card:hover { transform: translateY(-3px); border-color: #3e67a5; box-shadow: 0 20px 55px rgba(0,0,0,.28); }

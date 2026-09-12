@@ -35,6 +35,20 @@ class EmailReportTests(unittest.TestCase):
         self.assertIn("향후 7일 주요 일정", result)
         self.assertIn("XRP 네트워크 업그레이드", result)
 
+    def test_email_contains_stock_recommendations(self):
+        report = {
+            "generated_at_kst": "2026-09-12 07:30 KST",
+            "market": {"regime": "중립", "score": 50, "bitcoin": {"price": 100, "mvrv_z": 1.2}, "liquidity": {}},
+            "recommendations": [], "news_issues": [], "upcoming_events": [],
+        }
+        stocks = {"us": {"market_name": "미국주식", "regime": "상승", "market_score": 80,
+                         "recommendations": [{"name": "애플", "symbol": "AAPL", "score": 82, "decision": "분할매수 후보", "rsi": 58, "return_30d": 9}]},
+                  "kr": {"market_name": "국내주식", "warnings": ["설정 필요"], "recommendations": []}}
+        result = build_email_html(report, stocks)
+        self.assertIn("미국주식 추천", result)
+        self.assertIn("애플", result)
+        self.assertIn("국내주식", result)
+
 
 if __name__ == "__main__":
     unittest.main()
