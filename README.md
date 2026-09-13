@@ -11,6 +11,7 @@
 - 비트코인: Blockchain.com 공개 MVRV·시가총액 기반 MVRV Z-Score, EMA20/EMA50 추세, RSI, MACD, 거래량 비율, 7일·30일 수익률
 - 시장 심리: Alternative.me Crypto Fear & Greed Index 현재값과 최근 30일 일별 꺾은선 추이
 - 알트코인: RSI, MACD, EMA 추세, 7일·30일 모멘텀, 거래량 변화, 변동성, 유동성
+- 추천·검색 결과: 현재가 옆에 전일 종가 대비 일간 등락률 표시
 - 전체 분석 대상 검색: 종목명·심볼로 순위, 100점 환산 점수, 판정, 가감 근거, 커뮤니티·개발·언락 정보와 상세차트 조회
 - 커뮤니티: CoinGecko 인기 검색 + Reddit·디시인사이드 비트코인 갤러리·코인판 한국시간 당일 게시글 언급 노출도
 - 프로젝트: 공식 GitHub 최근 30일 커밋·릴리스로 개발 진척 확인
@@ -36,7 +37,7 @@ python -m http.server 8000 --directory docs
 
 ## GitHub Actions 설정
 
-워크플로는 매시간 종합 분석·GitHub Pages 배포를 수행하고, 한국시간 오전 7시 30분 예약 또는 사용자가 직접 수동 실행했을 때만 이메일을 발송합니다. 코드 변경에 따른 자동 배포에서는 이메일을 보내지 않습니다. 저장소의 **Settings → Pages → Source**를 `GitHub Actions`로 지정하세요.
+워크플로는 매시간 종합 분석·GitHub Pages 배포를 수행하고, 한국시간 오전 7시 30분 예약 또는 사용자가 직접 수동 실행했을 때만 대시보드형 코인·주식 통합 이메일을 발송합니다. 코드 변경에 따른 자동 배포에서는 이메일을 보내지 않습니다. 저장소의 **Settings → Pages → Source**를 `GitHub Actions`로 지정하세요.
 
 이메일을 사용하려면 **Settings → Secrets and variables → Actions**에 아래 Repository secrets를 등록합니다.
 

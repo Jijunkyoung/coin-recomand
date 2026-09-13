@@ -215,6 +215,7 @@ def technical_metrics(candles: list[dict[str, Any]]) -> dict[str, Any]:
         "macd": round_or_none(macd_line),
         "macd_signal": round_or_none(signal),
         "macd_histogram": round_or_none(histogram),
+        "return_1d": round_or_none(pct_change(closes, 1)),
         "return_7d": round_or_none(pct_change(closes, 7)),
         "return_30d": round_or_none(pct_change(closes, 30)),
         "volume_ratio": round_or_none(volume_ratio(volumes)),
@@ -414,7 +415,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         warnings.append(f"CoinMarketCal 일정 미수집: {warning_reason(exc)}")
     ranking_fields = (
         "rank", "market", "symbol", "name", "english_name", "score", "decision", "analysis_scope", "reasons", "risks",
-        "price", "ema20", "ema50", "rsi", "macd_histogram", "return_7d", "return_30d", "volume_ratio",
+        "price", "ema20", "ema50", "rsi", "macd_histogram", "return_1d", "return_7d", "return_30d", "volume_ratio",
         "volatility", "trending_rank", "community_mentions", "community_total", "community_sources",
         "community_exposure_rate", "trade_value_24h", "development", "tokenomics", "coingecko_id", "sparkline", "history",
     )

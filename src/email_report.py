@@ -26,134 +26,117 @@ def parse_recipients(value: str) -> list[str]:
     return recipients
 
 
+def _pct(value: Any, digits: int = 1) -> str:
+    return "—" if value is None else f"{float(value):+.{digits}f}%"
+
+
+def _change_badge(value: Any) -> str:
+    color = "#ff7b88" if value is not None and float(value) >= 0 else "#78aaff"
+    return f"<span style='margin-left:6px;color:{color};font-weight:800'>{_pct(value)}</span>"
+
+
+def _asset_card(asset: dict[str, Any], currency: str, rank: int) -> str:
+    price = float(asset.get("price") or 0)
+    price_text = f"${price:,.2f}" if currency == "USD" else f"₩{price:,.0f}"
+    reasons = asset.get("reasons") or ["점수 기준 상위 종목"]
+    risks = asset.get("risks") or ["뚜렷한 정량 위험 신호 없음"]
+    reason_text = " · ".join(html.escape(str(item)) for item in reasons[:3])
+    risk_text = " · ".join(html.escape(str(item)) for item in risks[:2])
+    decision = html.escape(str(asset.get("decision", "관찰")))
+    decision_color = "#4fe09b" if asset.get("decision") == "분할매수 후보" else "#ffbf47" if asset.get("decision") == "관찰" else "#ff7b88"
+    volume_text = "—" if asset.get("volume_ratio") is None else f"{float(asset['volume_ratio']):.2f}×"
+    return (
+        "<div style='margin:0 0 10px;padding:16px;border:1px solid #263a59;border-radius:12px;background:#0d1d33'>"
+        "<table role='presentation' style='width:100%;border-collapse:collapse'><tr>"
+        f"<td><span style='color:#78aaff;font-size:11px;font-weight:800'>#{rank}</span><br>"
+        f"<strong style='font-size:17px;color:#f1f6ff'>{html.escape(str(asset.get('name', '')))}</strong> "
+        f"<span style='font-size:11px;color:#8fa4bf'>{html.escape(str(asset.get('symbol', '')))}</span><br>"
+        f"<span style='font-size:13px;color:#c6d4e7'>{price_text}{_change_badge(asset.get('return_1d'))}</span></td>"
+        f"<td style='text-align:right'><span style='color:{decision_color};font-size:11px;font-weight:800'>{decision}</span><br>"
+        f"<strong style='font-size:28px;color:#eaf2ff'>{asset.get('score', '—')}</strong><span style='color:#7f93af'> / 100</span></td>"
+        "</tr></table>"
+        "<table role='presentation' style='width:100%;margin-top:12px;border-collapse:separate;border-spacing:4px'><tr>"
+        f"<td style='padding:8px;background:#132743;border-radius:7px;color:#9eb1ca;font-size:11px'>RSI<br><b style='color:#eef5ff'>{asset.get('rsi', '—')}</b></td>"
+        f"<td style='padding:8px;background:#132743;border-radius:7px;color:#9eb1ca;font-size:11px'>7일<br><b style='color:#eef5ff'>{_pct(asset.get('return_7d'))}</b></td>"
+        f"<td style='padding:8px;background:#132743;border-radius:7px;color:#9eb1ca;font-size:11px'>30일<br><b style='color:#eef5ff'>{_pct(asset.get('return_30d'))}</b></td>"
+        f"<td style='padding:8px;background:#132743;border-radius:7px;color:#9eb1ca;font-size:11px'>거래량<br><b style='color:#eef5ff'>{volume_text}</b></td>"
+        "</tr></table>"
+        f"<p style='margin:10px 0 0;color:#b9c9dc;font-size:12px;line-height:1.55'><b style='color:#65deb1'>선정</b> {reason_text}</p>"
+        f"<p style='margin:4px 0 0;color:#b9c9dc;font-size:12px;line-height:1.55'><b style='color:#ff8791'>위험</b> {risk_text}</p>"
+        "</div>"
+    )
+
+
 def _stock_email_section(stock_reports: dict[str, dict[str, Any]] | None) -> str:
     if not stock_reports:
         return ""
     sections = []
     for market in ("us", "kr"):
         stock_report = stock_reports.get(market) or {}
-        rows = []
-        for stock in stock_report.get("recommendations") or []:
-            rows.append(
-                "<tr>"
-                f"<td>{html.escape(str(stock.get('name', '')))} ({html.escape(str(stock.get('symbol', '')))})</td>"
-                f"<td>{stock.get('score', '—')}</td><td>{html.escape(str(stock.get('decision', '—')))}</td>"
-                f"<td>{stock.get('rsi', '—')}</td><td>{stock.get('return_30d', '—')}%</td>"
-                "</tr>"
-            )
         market_name = html.escape(str(stock_report.get("market_name", market)))
-        if rows:
-            status = f"{html.escape(str(stock_report.get('regime', '—')))} 국면 · 시장점수 {stock_report.get('market_score', '—')}"
+        assets = stock_report.get("recommendations") or []
+        if assets:
+            cards = "".join(_asset_card(stock, stock_report.get("currency", "KRW"), rank) for rank, stock in enumerate(assets, 1))
             sections.append(
-                f"<h2 style='font-size:19px;margin-top:28px'>{market_name} 추천</h2>"
-                f"<p>{status}</p><table style='width:100%;border-collapse:collapse' border='1' cellpadding='8'>"
-                f"<thead><tr><th>종목</th><th>점수</th><th>판정</th><th>RSI</th><th>30일</th></tr></thead><tbody>{''.join(rows)}</tbody></table>"
+                f"<div style='margin-top:28px'><p style='margin:0;color:#6fa6ff;font-size:11px;font-weight:800;letter-spacing:1px'>STOCK PRIORITY</p>"
+                f"<h2 style='margin:5px 0 6px;color:#f1f6ff;font-size:20px'>{market_name} 추천</h2>"
+                f"<p style='margin:0 0 12px;color:#93a8c2;font-size:12px'>{html.escape(str(stock_report.get('regime', '—')))} 국면 · 시장점수 {stock_report.get('market_score', '—')}</p>{cards}</div>"
             )
         else:
             warning = (stock_report.get("warnings") or ["데이터 미수집"])[0]
-            sections.append(f"<h2 style='font-size:19px;margin-top:28px'>{market_name}</h2><p>{html.escape(str(warning))}</p>")
+            sections.append(f"<div style='margin-top:24px;padding:14px;border:1px solid #6d5a29;border-radius:10px;background:#282211;color:#ffd77b'><b>{market_name}</b><br><span style='font-size:12px'>{html.escape(str(warning))}</span></div>")
     return "".join(sections)
 
 
 def build_email_html(report: dict[str, Any], stock_reports: dict[str, dict[str, Any]] | None = None) -> str:
     market = report["market"]
-    rows = []
-    for coin in report["recommendations"]:
-        reasons = coin["reasons"][:3] if coin["reasons"] else ["점수 기준 상위 종목"]
-        risks = coin["risks"][:3] if coin["risks"] else ["뚜렷한 정량 위험 신호 없음"]
-        rows.append(
-            "<tr>"
-            f"<td>{html.escape(coin['name'])} ({html.escape(coin['symbol'])})</td>"
-            f"<td>{coin['score']}</td><td>{html.escape(coin['decision'])}</td>"
-            f"<td>{'<br>'.join(html.escape(reason) for reason in reasons)}</td>"
-            f"<td>{'<br>'.join(html.escape(risk) for risk in risks)}</td>"
-            "</tr>"
-        )
-    warning = "<p style='color:#b45309'>하락장에서는 신규 매수 후보를 표시하지 않습니다.</p>" if market["regime"] == "하락" else ""
-    mvrv = market["bitcoin"].get("mvrv_z")
+    bitcoin = market["bitcoin"]
+    mvrv = bitcoin.get("mvrv_z")
     mvrv_text = f"{mvrv:.2f}" if mvrv is not None else "미수집"
-    mvrv_source = market["bitcoin"].get("mvrv_source")
-    if mvrv_source:
-        mvrv_text += f" ({mvrv_source})"
+    coin_cards = "".join(_asset_card(coin, "KRW", rank) for rank, coin in enumerate(report.get("recommendations", []), 1))
     liquidity = market.get("liquidity") or {}
 
     def money(value: Any) -> str:
-        if value is None:
-            return "미수집"
+        if value is None: return "미수집"
         number = float(value)
-        if abs(number) >= 1_000_000_000_000:
-            return f"${number / 1_000_000_000_000:.2f}T"
-        if abs(number) >= 1_000_000_000:
-            return f"${number / 1_000_000_000:.1f}B"
-        return f"${number:,.0f}"
+        return f"${number / 1_000_000_000_000:.2f}T" if abs(number) >= 1_000_000_000_000 else f"${number / 1_000_000_000:.1f}B" if abs(number) >= 1_000_000_000 else f"${number:,.0f}"
 
-    def pct(value: Any) -> str:
-        return "미수집" if value is None else f"{float(value):+.2f}%"
-
-    market_context = (
-        "<div style='margin-top:12px;padding:14px;background:#f8fafc;border-radius:10px'>"
-        "<strong>시장 보조지표</strong><br>"
-        f"DeFi TVL {money(liquidity.get('defi_tvl_usd'))} ({pct(liquidity.get('defi_tvl_change_7d'))}, 7일) · "
-        f"스테이블코인 공급 {money(liquidity.get('stablecoin_supply_usd'))} ({pct(liquidity.get('stablecoin_supply_change_7d'))}, 7일)"
-        "</div>"
-    )
+    event_rows = []
+    for event in report.get("upcoming_events", [])[:8]:
+        symbols = ", ".join(event.get("related_symbols") or [])
+        event_rows.append(f"<div style='padding:11px 0;border-bottom:1px solid #223650'><b style='color:#eaf2ff'>{html.escape(event.get('date_kst', ''))} · {html.escape(event.get('title', '일정'))}</b><br><span style='color:#8fa4bf;font-size:11px'>관련: {html.escape(symbols)}</span></div>")
+    events_html = "".join(event_rows) or "<p style='color:#8fa4bf;font-size:12px'>향후 7일 안에 선별된 일정이 없습니다.</p>"
     issue_rows = []
     for issue in report.get("news_issues", [])[:7]:
         symbols = ", ".join(issue.get("related_symbols") or []) or "시장 전체"
         issue_rows.append(
-            "<li style='margin:0 0 12px'>"
-            f"<a href='{html.escape(issue.get('url', ''), quote=True)}' style='color:#1d4ed8;text-decoration:none'>"
-            f"<strong>{html.escape(issue.get('title', '제목 없음'))}</strong></a><br>"
-            f"<span style='font-size:12px;color:#64748b'>{html.escape(issue.get('published_at_kst', ''))} KST · "
-            f"{html.escape(issue.get('source', '출처 미상'))} · {html.escape(issue.get('category', '시장'))} · "
-            f"{html.escape(issue.get('impact', '중립·혼재'))} · 관련: {html.escape(symbols)}</span>"
-            "</li>"
+            f"<div style='padding:11px 0;border-bottom:1px solid #223650'><a href='{html.escape(issue.get('url', ''), quote=True)}' style='color:#9bc0ff;text-decoration:none'><b>{html.escape(issue.get('title', '제목 없음'))}</b></a><br>"
+            f"<span style='color:#8fa4bf;font-size:11px'>{html.escape(issue.get('published_at_kst', ''))} KST · {html.escape(issue.get('source', '출처 미상'))} · {html.escape(issue.get('impact', '중립·혼재'))} · {html.escape(symbols)}</span></div>"
         )
-    issues_html = (
-        f"<ul style='padding-left:20px'>{''.join(issue_rows)}</ul>"
-        if issue_rows
-        else "<p style='color:#64748b'>최근 24시간 주요 이슈를 수집하지 못했거나 선별된 기사가 없습니다.</p>"
-    )
-    event_rows = []
-    for event in report.get("upcoming_events", [])[:8]:
-        symbols = ", ".join(event.get("related_symbols") or [])
-        categories = ", ".join(event.get("categories") or []) or "분류 미제공"
-        impact = event.get("impact_score")
-        impact_text = f" · 영향점수 {impact}" if impact is not None else ""
-        event_rows.append(
-            "<li style='margin:0 0 10px'>"
-            f"<strong>{html.escape(event.get('date_kst', ''))} · {html.escape(event.get('title', '일정'))}</strong><br>"
-            f"<span style='font-size:12px;color:#64748b'>관련: {html.escape(symbols)} · {html.escape(categories)}{html.escape(impact_text)}</span>"
-            "</li>"
-        )
-    events_html = (
-        f"<ul style='padding-left:20px'>{''.join(event_rows)}</ul>"
-        if event_rows
-        else "<p style='color:#64748b'>향후 7일 안에 선별된 관련 일정이 없습니다.</p>"
-    )
+    issues_html = "".join(issue_rows) or "<p style='color:#8fa4bf;font-size:12px'>최근 24시간 선별된 주요 이슈가 없습니다.</p>"
     stock_section = _stock_email_section(stock_reports)
     return f"""
-    <div style="font-family:Arial,'Noto Sans KR',sans-serif;max-width:760px;margin:auto;color:#172033">
-      <h1 style="font-size:24px">코인 시장 분석 보고서</h1>
-      <p>{html.escape(report['generated_at_kst'])} 기준</p>
-      <div style="padding:18px;background:#eef4ff;border-radius:12px">
-        <strong>비트코인 시장 국면: {html.escape(market['regime'])} · {market['score']}점</strong><br>
-        BTC ₩{market['bitcoin']['price']:,.0f} · MVRV Z {mvrv_text}
+    <div style="margin:0;padding:24px 10px;background:#06101f;font-family:Arial,'Noto Sans KR',sans-serif;color:#eaf2ff">
+      <div style="max-width:760px;margin:auto">
+        <p style="margin:0;color:#6fa6ff;font-size:11px;font-weight:800;letter-spacing:1.3px">MARKET SIGNAL DESK</p>
+        <h1 style="margin:6px 0 4px;font-size:27px;color:#f5f8ff">오늘의 코인·주식 분석</h1>
+        <p style="margin:0 0 18px;color:#8398b4;font-size:12px">{html.escape(report['generated_at_kst'])} 기준 · 매일 오전 7시 30분</p>
+        <div style="padding:20px;border:1px solid #31517f;border-radius:15px;background:linear-gradient(135deg,#122b4b,#0a192d)">
+          <table role="presentation" style="width:100%;border-collapse:collapse"><tr><td>
+            <span style="color:#8fa4bf;font-size:11px">BITCOIN MARKET REGIME</span><br><strong style="font-size:24px;color:#f1f6ff">{html.escape(market['regime'])} 국면</strong>
+          </td><td style="text-align:right"><strong style="font-size:30px;color:#64e0b0">{market['score']}</strong><span style="color:#8fa4bf"> / 100</span></td></tr></table>
+          <p style="margin:13px 0 0;color:#c5d4e6;font-size:13px">BTC <b>₩{bitcoin['price']:,.0f}</b>{_change_badge(bitcoin.get('return_1d'))} · MVRV Z {mvrv_text} · RSI {bitcoin.get('rsi', '—')}</p>
+        </div>
+        <table role="presentation" style="width:100%;margin-top:10px;border-collapse:separate;border-spacing:5px"><tr>
+          <td style="padding:11px;background:#0d1d33;border-radius:9px;color:#8fa4bf;font-size:11px">DeFi TVL<br><b style="color:#eaf2ff">{money(liquidity.get('defi_tvl_usd'))}</b> {_pct(liquidity.get('defi_tvl_change_7d'))}</td>
+          <td style="padding:11px;background:#0d1d33;border-radius:9px;color:#8fa4bf;font-size:11px">스테이블코인 공급<br><b style="color:#eaf2ff">{money(liquidity.get('stablecoin_supply_usd'))}</b> {_pct(liquidity.get('stablecoin_supply_change_7d'))}</td>
+        </tr></table>
+        <div style="margin-top:28px"><p style="margin:0;color:#6fa6ff;font-size:11px;font-weight:800;letter-spacing:1px">ALTCOIN PRIORITY</p><h2 style="margin:5px 0 12px;font-size:20px">추천 알트코인</h2>{coin_cards or '<p style="color:#8fa4bf">표시할 추천 종목이 없습니다.</p>'}</div>
+        {stock_section}
+        <div style="margin-top:28px;padding:17px;border:1px solid #263a59;border-radius:12px;background:#0d1d33"><h2 style="margin:0 0 8px;font-size:18px">향후 7일 주요 일정</h2>{events_html}</div>
+        <div style="margin-top:12px;padding:17px;border:1px solid #263a59;border-radius:12px;background:#0d1d33"><h2 style="margin:0 0 4px;font-size:18px">최근 24시간 주요 코인 이슈</h2><p style="margin:0 0 6px;color:#8398b4;font-size:11px">제목 기반 영향 분류이므로 원문 확인이 필요합니다.</p>{issues_html}</div>
+        <p style="margin:20px 4px 0;color:#70849e;font-size:11px;line-height:1.5">정량 지표 기반 연구용 참고자료이며 투자 자문이나 수익 보장이 아닙니다. 실제 주문은 실행하지 않습니다.</p>
       </div>
-      {market_context}
-      {warning}
-      <h2 style="font-size:19px">알트코인 우선순위</h2>
-      <table style="width:100%;border-collapse:collapse" border="1" cellpadding="8">
-        <thead><tr><th>종목</th><th>점수</th><th>판정</th><th>호재·선정 근거</th><th>악재·위험</th></tr></thead>
-        <tbody>{''.join(rows)}</tbody>
-      </table>
-      <h2 style="font-size:19px">향후 7일 주요 일정</h2>
-      {events_html}
-      <h2 style="font-size:19px">최근 24시간 주요 코인 이슈</h2>
-      <p style="font-size:12px;color:#64748b">제목의 핵심어를 기준으로 분류한 참고용 영향 방향이며, 원문 확인이 필요합니다.</p>
-      {issues_html}
-      {stock_section}
-      <p style="font-size:12px;color:#64748b">본 보고서는 정량 지표 기반 참고자료이며 투자 자문이나 수익 보장이 아닙니다. 실제 주문을 실행하지 않습니다.</p>
     </div>
     """
 

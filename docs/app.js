@@ -205,7 +205,7 @@ function updateCoinWithLivePrice(coin, ticker) {
   Object.assign(coin, {
     price, history: rows, sparkline: prices.slice(-30), ema20: ema20.at(-1), ema50: ema50.at(-1),
     rsi: [...rsi14].reverse().find(value => value != null), macd: macd.line.at(-1), macd_signal: macd.signal.at(-1),
-    macd_histogram: macd.histogram.at(-1), return_7d: change(7), return_30d: change(30),
+    macd_histogram: macd.histogram.at(-1), return_1d: change(1), return_7d: change(7), return_30d: change(30),
     trade_value_24h: Number(ticker.acc_trade_price_24h) || coin.trade_value_24h,
   });
   coin.live_technical_score = liveTechnicalScore(coin);
@@ -220,7 +220,7 @@ function renderLiveRankings() {
   ranked.forEach((coin, index) => { coin.live_rank = index + 1; });
   $("#liveRankingGrid").innerHTML = ranked.slice(0, 10).map(coin => `
     <button type="button" class="live-rank-card" data-live-symbol="${escapeHTML(coin.symbol)}" aria-label="${escapeHTML(coin.name)} 상세차트 열기">
-      <span class="live-rank-number">#${coin.live_rank}</span><span class="live-rank-name"><strong>${escapeHTML(coin.name)}</strong><small>${escapeHTML(coin.symbol)} · ₩${fmt(coin.price, 4)}</small></span>
+      <span class="live-rank-number">#${coin.live_rank}</span><span class="live-rank-name"><strong>${escapeHTML(coin.name)}</strong><small>${escapeHTML(coin.symbol)} · ₩${fmt(coin.price, 4)} <i class="price-change ${Number(coin.return_1d) >= 0 ? "up" : "down"}">${pct(coin.return_1d)}</i></small></span>
       <span class="live-rank-metrics"><small>RSI ${fmt(coin.rsi, 1)}</small><small>MACD ${fmt(coin.macd_histogram, 4)}</small></span><strong class="live-rank-score">${coin.live_technical_score}<small>/100</small></strong>
     </button>`).join("");
   $("#liveRankingGrid").querySelectorAll("[data-live-symbol]").forEach(button => button.addEventListener("click", () => {
@@ -233,7 +233,7 @@ function renderRecommendationCards() {
   const list = $("#recommendations"); list.innerHTML = "";
   currentReport.recommendations.forEach((coin, index) => {
     const liveCoin = altRankings.find(item => item.symbol === coin.symbol);
-    if (liveCoin) Object.assign(coin, { price: liveCoin.price, history: liveCoin.history, sparkline: liveCoin.sparkline, ema20: liveCoin.ema20, ema50: liveCoin.ema50, rsi: liveCoin.rsi, macd_histogram: liveCoin.macd_histogram, return_7d: liveCoin.return_7d, return_30d: liveCoin.return_30d });
+    if (liveCoin) Object.assign(coin, { price: liveCoin.price, history: liveCoin.history, sparkline: liveCoin.sparkline, ema20: liveCoin.ema20, ema50: liveCoin.ema50, rsi: liveCoin.rsi, macd_histogram: liveCoin.macd_histogram, return_1d: liveCoin.return_1d, return_7d: liveCoin.return_7d, return_30d: liveCoin.return_30d });
     list.appendChild(renderCoin(coin, index));
   });
 }
@@ -451,7 +451,7 @@ function renderCoin(coin, index) {
   const card = $(".coin-card", node); card.setAttribute("aria-label", `${coin.name} 상세차트 열기`);
   card.addEventListener("click", () => openDetailChart(coin));
   card.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDetailChart(coin); } });
-  $(".rank", node).textContent = `#${index + 1}`; $("h3", node).textContent = coin.name; $(".ticker", node).textContent = `${coin.symbol} · ₩${fmt(coin.price, 4)}`;
+  $(".rank", node).textContent = `#${index + 1}`; $("h3", node).textContent = coin.name; $(".ticker", node).innerHTML = `${escapeHTML(coin.symbol)} · ₩${fmt(coin.price, 4)} <span class="price-change ${Number(coin.return_1d) >= 0 ? "up" : "down"}">${pct(coin.return_1d)}</span>`;
   const decision = $(".decision", node); decision.textContent = coin.decision; decision.classList.add(coin.decision === "분할매수 후보" ? "buy" : coin.decision === "보류" ? "hold" : "watch");
   $(".coin-score strong", node).textContent = coin.score; $(".score-bar i", node).style.width = `${coin.score}%`;
   const communityText = coin.community_sources ? `${coin.community_total || 0}회 · ${coin.community_sources}곳` : coin.trending_rank ? `인기 ${coin.trending_rank}위` : "미수집";
@@ -484,7 +484,7 @@ function renderAltSearchResult(coin) {
   result.innerHTML = `
     <article class="search-result-card">
       <div class="search-result-top">
-        <div><span class="search-rank">종합 #${escapeHTML(coin.rank)}${coin.live_rank ? ` · 실시간 기술 #${escapeHTML(coin.live_rank)}` : ""}</span><h3>${escapeHTML(coin.name)} <small>${escapeHTML(coin.symbol)}</small></h3><p>${escapeHTML(coin.english_name || "")} · 현재가 ₩${fmt(coin.price, 4)}</p></div>
+        <div><span class="search-rank">종합 #${escapeHTML(coin.rank)}${coin.live_rank ? ` · 실시간 기술 #${escapeHTML(coin.live_rank)}` : ""}</span><h3>${escapeHTML(coin.name)} <small>${escapeHTML(coin.symbol)}</small></h3><p>${escapeHTML(coin.english_name || "")} · 현재가 ₩${fmt(coin.price, 4)} <span class="price-change ${Number(coin.return_1d) >= 0 ? "up" : "down"}">${pct(coin.return_1d)}</span></p></div>
         <div class="search-score"><span class="decision ${decisionClass}">${escapeHTML(coin.decision)}</span><strong>${escapeHTML(coin.score)}</strong><small>/ 100점</small></div>
       </div>
       <div class="search-score-track"><i style="width:${Math.max(0, Math.min(100, Number(coin.score) || 0))}%"></i></div>

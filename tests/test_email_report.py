@@ -48,6 +48,8 @@ class EmailReportTests(unittest.TestCase):
         self.assertIn("미국주식 추천", result)
         self.assertIn("애플", result)
         self.assertIn("국내주식", result)
+        self.assertIn("MARKET SIGNAL DESK", result)
+        self.assertIn("오늘의 코인·주식 분석", result)
 
 
 if __name__ == "__main__":

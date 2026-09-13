@@ -28,6 +28,7 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(result["history"][0]["high"], 102)
         self.assertEqual(result["history"][0]["low"], 98)
         self.assertIn("volume", result["history"][0])
+        self.assertAlmostEqual(result["return_1d"], (159 / 158 - 1) * 100, places=2)
 
     def test_short_history_error_explains_available_days(self):
         with self.assertRaisesRegex(InsufficientHistoryError, r"59일/최소 60일"):

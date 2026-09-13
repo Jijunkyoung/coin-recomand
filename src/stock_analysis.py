@@ -126,7 +126,7 @@ def technical_metrics(history: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "price": closes[-1], "ema20": _round(ema(closes, 20)), "ema50": _round(ema(closes, 50)),
         "rsi": _round(rsi(closes)), "macd": _round(macd_line, 4), "macd_signal": _round(signal, 4),
-        "macd_histogram": _round(histogram, 4), "return_7d": _round(pct_change(closes, 7)),
+        "macd_histogram": _round(histogram, 4), "return_1d": _round(pct_change(closes, 1)), "return_7d": _round(pct_change(closes, 7)),
         "return_30d": _round(pct_change(closes, 30)), "volume_ratio": _round(volume_ratio(volumes)),
         "volatility": _round(annualized_volatility(closes)), "sparkline": [_round(value, 4) for value in closes[-30:]],
         "history": history,

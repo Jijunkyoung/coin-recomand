@@ -32,6 +32,7 @@ class StockAnalysisTests(unittest.TestCase):
         self.assertEqual(len(report["rankings"][0]["history"]), 60)
         self.assertGreaterEqual(report["rankings"][0]["score"], 0)
         self.assertLessEqual(report["rankings"][0]["score"], 100)
+        self.assertIsNotNone(report["rankings"][0]["return_1d"])
 
     def test_unconfigured_client_returns_setup_report(self):
         client = FakeKisClient()
