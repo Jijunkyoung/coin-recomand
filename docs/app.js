@@ -10,15 +10,71 @@ let altRankings = [];
 let sentimentHistory = [];
 let sentimentPlot = null;
 let currentReport = null;
+let activeRecommendationPeriod = "hourly";
 let liveSocket = null;
 let liveReconnectTimer = null;
 let liveApplyTimer = null;
 let liveCodeKey = "";
 const liveTickerBuffer = new Map();
+const recommendationPeriodMeta = {
+  hourly: { label: "시간별", returnKey: null, note: "개 종목 · 매시간 수집한 종합점수 순위" },
+  daily: { label: "일별", returnKey: "return_1d", note: "개 종목 · 종합점수에 일간 흐름을 ±6점 이내 반영" },
+  weekly: { label: "주간별", returnKey: "return_7d", note: "개 종목 · 종합점수에 7일 흐름을 ±6점 이내 반영" },
+};
 
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]);
 const EMAIL_STORAGE_KEY = "coin-signal-email-recipients";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function dailyChangeMarkup(value) {
+  const direction = value == null ? "" : Number(value) >= 0 ? "up" : "down";
+  return `<span class="price-change ${direction}">일간 ${pct(value)}</span>`;
+}
+
+function timeframeScore(coin, period) {
+  const base = Math.max(0, Math.min(100, Math.round(Number(coin.score) || 0)));
+  if (period === "hourly") return base;
+  const value = Number(coin[recommendationPeriodMeta[period].returnKey]);
+  if (!Number.isFinite(value)) return base;
+  let adjustment = 0;
+  if (period === "daily") {
+    if (value < -10 || value > 15) adjustment = -6;
+    else if (value < -3) adjustment = -4;
+    else if (value < 0) adjustment = -2;
+    else if (value === 0) adjustment = 0;
+    else if (value <= 5) adjustment = 4;
+    else if (value <= 10) adjustment = 2;
+    else adjustment = -2;
+  } else {
+    if (value < -20 || value > 30) adjustment = -6;
+    else if (value < -7) adjustment = -4;
+    else if (value < 0) adjustment = -2;
+    else if (value === 0) adjustment = 0;
+    else if (value <= 12) adjustment = 4;
+    else if (value <= 20) adjustment = 2;
+    else adjustment = -2;
+  }
+  return Math.max(0, Math.min(100, base + adjustment));
+}
+
+function decisionForScore(score) {
+  const regime = currentReport?.market?.regime;
+  if (regime === "하락") return score >= 71 ? "관찰" : "보류";
+  return score >= (regime === "중립" ? 94 : 87) ? "분할매수 후보" : score >= 68 ? "관찰" : "보류";
+}
+
+function recommendationView(coin, period) {
+  const score = timeframeScore(coin, period), adjustment = score - Number(coin.score || 0);
+  if (period === "hourly") return { ...coin, score, decision: decisionForScore(score) };
+  const label = period === "daily" ? "일간" : "7일";
+  const message = `${label} 수익률 ${pct(coin[recommendationPeriodMeta[period].returnKey])}에 따른 기간별 순위 보정 ${adjustment > 0 ? "+" : ""}${adjustment}점입니다.`;
+  return {
+    ...coin, score, decision: decisionForScore(score),
+    reasons: adjustment > 0 ? [message, ...(coin.reasons || [])] : coin.reasons,
+    risks: adjustment < 0 ? [message, ...(coin.risks || [])] : coin.risks,
+  };
+}
+
 
 function parseEmailRecipients(value) {
   const seen = new Set();
@@ -205,7 +261,7 @@ function updateCoinWithLivePrice(coin, ticker) {
   Object.assign(coin, {
     price, history: rows, sparkline: prices.slice(-30), ema20: ema20.at(-1), ema50: ema50.at(-1),
     rsi: [...rsi14].reverse().find(value => value != null), macd: macd.line.at(-1), macd_signal: macd.signal.at(-1),
-    macd_histogram: macd.histogram.at(-1), return_1d: change(1), return_7d: change(7), return_30d: change(30),
+    macd_histogram: macd.histogram.at(-1), return_1d: Number.isFinite(Number(ticker.signed_change_rate)) ? Number(ticker.signed_change_rate) * 100 : change(1), return_7d: change(7), return_30d: change(30),
     trade_value_24h: Number(ticker.acc_trade_price_24h) || coin.trade_value_24h,
   });
   coin.live_technical_score = liveTechnicalScore(coin);
@@ -231,11 +287,15 @@ function renderLiveRankings() {
 function renderRecommendationCards() {
   if (!currentReport) return;
   const list = $("#recommendations"); list.innerHTML = "";
-  currentReport.recommendations.forEach((coin, index) => {
-    const liveCoin = altRankings.find(item => item.symbol === coin.symbol);
-    if (liveCoin) Object.assign(coin, { price: liveCoin.price, history: liveCoin.history, sparkline: liveCoin.sparkline, ema20: liveCoin.ema20, ema50: liveCoin.ema50, rsi: liveCoin.rsi, macd_histogram: liveCoin.macd_histogram, return_1d: liveCoin.return_1d, return_7d: liveCoin.return_7d, return_30d: liveCoin.return_30d });
-    list.appendChild(renderCoin(coin, index));
-  });
+  const count = currentReport.recommendations.length || 5;
+  const eligible = altRankings.filter(coin => coin.recommendation_eligible);
+  const pool = eligible.length ? eligible : altRankings;
+  const ranked = pool.map(coin => recommendationView(coin, activeRecommendationPeriod))
+    .sort((a, b) => (b.score - a.score) || ((b.trade_value_24h || 0) - (a.trade_value_24h || 0)))
+    .slice(0, count);
+  ranked.forEach((coin, index) => list.appendChild(renderCoin(coin, index)));
+  const meta = recommendationPeriodMeta[activeRecommendationPeriod];
+  $("#recommendPeriodNote").innerHTML = `<strong id="screenedCount">${currentReport.screened}</strong>${meta.note}`;
 }
 
 function setLiveStatus(label, state = "connecting") {
@@ -252,7 +312,7 @@ function applyLiveMarket() {
   drawLine($("#btcChart"), bitcoin.sparkline, "#4d8dff");
   renderLiveRankings(); renderRecommendationCards();
   const search = $("#altSearchInput").value.trim(); if (search && !$("#altSearchResult .search-empty")) searchAltcoin(search);
-  if (detailCoin) { const liveCoin = detailCoin.symbol === "BTC" ? bitcoin : altRankings.find(item => item.symbol === detailCoin.symbol); if (liveCoin) detailCoin = liveCoin; if ($("#chartDialog").open) { $("#chartPrice").textContent = `현재 ₩${fmt(detailCoin.price, 4)} · 30일 ${pct(detailCoin.return_30d)}`; scheduleDetailedChart(); } }
+  if (detailCoin) { const liveCoin = detailCoin.symbol === "BTC" ? bitcoin : altRankings.find(item => item.symbol === detailCoin.symbol); if (liveCoin) detailCoin = liveCoin; if ($("#chartDialog").open) { $("#chartPrice").innerHTML = `현재 ₩${fmt(detailCoin.price, 4)} · ${dailyChangeMarkup(detailCoin.return_1d)}`; scheduleDetailedChart(); } }
   const updated = new Date().toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", second: "2-digit" });
   $("#liveUpdatedAt").textContent = `${updated} 반영`; setLiveStatus("1분 기술순위 정상", "connected");
 }
@@ -422,7 +482,7 @@ function openDetailChart(coin) {
   detailCoin = coin; detailDays = 30;
   $("#chartSymbol").textContent = `${coin.symbol || "BTC"} / KRW · DAILY`;
   $("#chartTitle").textContent = `${coin.name || "비트코인"} 상세차트`;
-  $("#chartPrice").textContent = `현재 ₩${fmt(coin.price, 4)} · 30일 ${pct(coin.return_30d)}`;
+  $("#chartPrice").innerHTML = `현재 ₩${fmt(coin.price, 4)} · ${dailyChangeMarkup(coin.return_1d)}`;
   $("#periodTabs").querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.days === "30"));
   const dialog = $("#chartDialog"); dialog.showModal();
   requestAnimationFrame(() => scheduleDetailedChart());
@@ -532,7 +592,7 @@ function render(report) {
   $("#btcPrice").textContent = `₩${fmt(btc.price,0)}`; $("#mvrv").textContent = fmt(btc.mvrv_z,2); $("#mvrvLabel").textContent = btc.mvrv_source ? `MVRV Z · ${btc.mvrv_source}` : "MVRV Z"; $("#btcRsi").textContent = fmt(btc.rsi); $("#btcReturn").textContent = pct(btc.return_30d); $("#btcVolume").textContent = btc.volume_ratio == null ? "—" : `${fmt(btc.volume_ratio,2)}×`; drawLine($("#btcChart"), btc.sparkline, "#4d8dff");
   const btcCard = $("#btcDetailCard"); btcCard.onclick = () => openDetailChart(btc); btcCard.onkeydown = event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openDetailChart(btc); } };
   altRankings = report.alt_rankings?.length ? report.alt_rankings : report.recommendations.map((coin, index) => ({ ...coin, rank: index + 1 }));
-  $("#screenedCount").textContent = report.screened; renderRecommendationCards(); renderLiveRankings();
+  renderRecommendationCards(); renderLiveRankings();
   $("#altSearchOptions").innerHTML = altRankings.map(coin => `<option value="${escapeHTML(coin.symbol)}">${escapeHTML(coin.name)} · ${escapeHTML(coin.english_name || "")}</option>`).join("");
   const fear = market.fear_greed; $("#fearValue").textContent = fear.value ?? "—"; $("#fearClass").textContent = fear.classification; $("#fearGauge").style.left = `${fear.value ?? 50}%`;
   sentimentHistory = fear.history || [];
@@ -558,6 +618,15 @@ function render(report) {
 }
 
 $("#altSearchForm").addEventListener("submit", event => { event.preventDefault(); searchAltcoin($("#altSearchInput").value); });
+$("#recommendPeriodTabs").addEventListener("click", event => {
+  const button = event.target.closest("button[data-period]");
+  if (!button || button.dataset.period === activeRecommendationPeriod) return;
+  activeRecommendationPeriod = button.dataset.period;
+  $("#recommendPeriodTabs").querySelectorAll("button").forEach(item => {
+    const selected = item === button; item.classList.toggle("active", selected); item.setAttribute("aria-selected", String(selected));
+  });
+  renderRecommendationCards();
+});
 $("#dataQualityButton").addEventListener("click", event => { event.stopPropagation(); toggleQualityNote(); });
 $("#dataQualityNote").addEventListener("click", event => event.stopPropagation());
 document.addEventListener("click", () => toggleQualityNote(false));

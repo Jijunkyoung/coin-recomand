@@ -6,6 +6,50 @@ from typing import Any
 ALT_RAW_MAX_SCORE = 77
 
 
+def timeframe_score(base_score: int, period_return: float | None, timeframe: str) -> int:
+    """Apply a small, bounded momentum adjustment to the composite score.
+
+    The hourly view is the unmodified composite score. Daily and weekly views
+    deliberately use only a +/-6 point adjustment so correlated price signals
+    cannot overwhelm community, development, unlock and market-regime factors.
+    """
+    base = max(0, min(100, round(base_score)))
+    if timeframe == "hourly" or period_return is None:
+        return base
+    if timeframe == "daily":
+        if period_return < -10 or period_return > 15:
+            adjustment = -6
+        elif period_return < -3:
+            adjustment = -4
+        elif period_return < 0:
+            adjustment = -2
+        elif period_return == 0:
+            adjustment = 0
+        elif period_return <= 5:
+            adjustment = 4
+        elif period_return <= 10:
+            adjustment = 2
+        else:
+            adjustment = -2
+    elif timeframe == "weekly":
+        if period_return < -20 or period_return > 30:
+            adjustment = -6
+        elif period_return < -7:
+            adjustment = -4
+        elif period_return < 0:
+            adjustment = -2
+        elif period_return == 0:
+            adjustment = 0
+        elif period_return <= 12:
+            adjustment = 4
+        elif period_return <= 20:
+            adjustment = 2
+        else:
+            adjustment = -2
+    else:
+        raise ValueError(f"지원하지 않는 추천 기간: {timeframe}")
+    return max(0, min(100, base + adjustment))
+
 def normalize_alt_score(raw_score: float) -> int:
     bounded = max(0, min(ALT_RAW_MAX_SCORE, raw_score))
     return round(bounded / ALT_RAW_MAX_SCORE * 100)

@@ -1,9 +1,16 @@
 import unittest
 
-from src.scoring import ALT_RAW_MAX_SCORE, alt_score, market_regime, normalize_alt_score, recommendation_label
+from src.scoring import ALT_RAW_MAX_SCORE, alt_score, market_regime, normalize_alt_score, recommendation_label, timeframe_score
 
 
 class ScoringTests(unittest.TestCase):
+    def test_timeframe_score_keeps_hourly_and_bounds_momentum_adjustment(self):
+        self.assertEqual(timeframe_score(72, 4, "hourly"), 72)
+        self.assertEqual(timeframe_score(72, 4, "daily"), 76)
+        self.assertEqual(timeframe_score(72, 18, "daily"), 66)
+        self.assertEqual(timeframe_score(72, 10, "weekly"), 76)
+        self.assertEqual(timeframe_score(98, 4, "daily"), 100)
+
     def test_bull_market(self):
         score, regime, reasons = market_regime({"price": 120, "ema20": 110, "ema50": 100, "return_30d": 12, "volume_ratio": 1.4, "mvrv_z": 1.5, "fear_greed": 55})
         self.assertEqual(regime, "상승")

@@ -13,7 +13,7 @@ from typing import Any
 from .email_report import send_email
 from .indicators import annualized_volatility, ema, macd, pct_change, rsi, volume_ratio
 from .providers import MarketDataClient
-from .scoring import alt_score, market_regime, recommendation_label
+from .scoring import alt_score, market_regime, recommendation_label, timeframe_score
 from .stock_analysis import generate_stock_reports
 
 KST = timezone(timedelta(hours=9))
@@ -358,6 +358,8 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         time.sleep(0.12)
     analyzed.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
     enriched = analyzed[: settings.get("fundamental_candidate_count", 12)]
+    for coin in enriched:
+        coin["recommendation_eligible"] = True
     try:
         coingecko_coins = client.coingecko_coin_list()
     except Exception as exc:
@@ -398,6 +400,11 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     analyzed.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
     for rank, coin in enumerate(analyzed, start=1):
         coin["rank"] = rank
+        coin["timeframe_scores"] = {
+            "hourly": timeframe_score(coin["score"], None, "hourly"),
+            "daily": timeframe_score(coin["score"], coin.get("return_1d"), "daily"),
+            "weekly": timeframe_score(coin["score"], coin.get("return_7d"), "weekly"),
+        }
     enriched.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
     top = enriched[: settings["recommendation_count"]]
     try:
@@ -414,9 +421,9 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         upcoming_events = []
         warnings.append(f"CoinMarketCal 일정 미수집: {warning_reason(exc)}")
     ranking_fields = (
-        "rank", "market", "symbol", "name", "english_name", "score", "decision", "analysis_scope", "reasons", "risks",
+        "rank", "market", "symbol", "name", "english_name", "score", "decision", "analysis_scope", "recommendation_eligible", "reasons", "risks",
         "price", "ema20", "ema50", "rsi", "macd_histogram", "return_1d", "return_7d", "return_30d", "volume_ratio",
-        "volatility", "trending_rank", "community_mentions", "community_total", "community_sources",
+        "volatility", "trending_rank", "community_mentions", "community_total", "community_sources", "timeframe_scores",
         "community_exposure_rate", "trade_value_24h", "development", "tokenomics", "coingecko_id", "sparkline", "history",
     )
     alt_rankings = [{field: coin.get(field) for field in ranking_fields} for coin in analyzed]
