@@ -51,7 +51,7 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          SEND_EMAIL: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule == '30 22 * * *') }}
+          SEND_EMAIL: true # one-time immediate report; reverted after this run
         run: python -m src.main --output docs/data/latest.json
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
