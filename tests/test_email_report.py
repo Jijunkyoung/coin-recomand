@@ -26,6 +26,12 @@ class EmailReportTests(unittest.TestCase):
                 "related_symbols": ["BTC"],
             }],
             "upcoming_events": [{"title": "XRP 네트워크 업그레이드", "date_kst": "09-13", "related_symbols": ["XRP"], "categories": ["Release"], "impact_score": None}],
+            "major_events": [{
+                "title": "미국 CLARITY 법안 관련 표결 일정", "importance": "매우 높음", "status": "확인 필요",
+                "date": "2026-09-16", "days_until": 5, "related_symbols": ["BTC", "ETH"],
+                "summary": "공식 표결 단계를 확인해야 합니다.", "source": "Congress.gov",
+                "source_url": "https://www.congress.gov/bill/119th-congress/house-bill/3633",
+            }],
         }
         result = build_email_html(report)
         self.assertIn("최근 24시간 주요 코인 이슈", result)
@@ -34,6 +40,9 @@ class EmailReportTests(unittest.TestCase):
         self.assertIn("DeFi TVL", result)
         self.assertIn("향후 7일 주요 일정", result)
         self.assertIn("XRP 네트워크 업그레이드", result)
+        self.assertIn("주요 시장 이벤트", result)
+        self.assertIn("미국 CLARITY 법안 관련 표결 일정", result)
+        self.assertIn("결과 확인 전에는 추천 점수에 가산하지 않고", result)
 
     def test_email_contains_stock_recommendations(self):
         report = {

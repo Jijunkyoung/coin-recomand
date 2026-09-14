@@ -261,6 +261,7 @@ class MarketDataClient:
                     "categories": [name for name in category_names if name],
                     "impact_score": event.get("impact"),
                     "source": "CoinMarketCal",
+                    "source_url": str(event.get("proof") or event.get("source") or event.get("url") or ""),
                 }
             )
             if len(selected) >= limit:

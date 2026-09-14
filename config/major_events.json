@@ -1,0 +1,22 @@
+{
+  "events": [
+    {
+      "id": "clarity-act-related-vote-2026-09-16",
+      "title": "미국 CLARITY 법안 관련 표결 일정",
+      "event_type": "법안·규제",
+      "importance": "매우 높음",
+      "status": "확인 필요",
+      "verification": "표결 단계·시각 공식 세부일정 확인 필요",
+      "date": "2026-09-16",
+      "time_kst": null,
+      "related_symbols": ["BTC", "ETH"],
+      "summary": "디지털자산 시장구조 법안 관련 수요일 일정입니다. 본회의 최종투표인지 위원회 표결·마크업인지 공식 공지에서 다시 확인해야 합니다.",
+      "bull_case": "진전 또는 통과 시 미국 규제 불확실성 완화와 기관 참여 확대 기대",
+      "bear_case": "부결·연기 또는 규제 강화 조항 부각 시 단기 변동성 확대 가능",
+      "source": "Congress.gov",
+      "source_url": "https://www.congress.gov/bill/119th-congress/house-bill/3633",
+      "official_source": true,
+      "last_verified": "2026-09-14"
+    }
+  ]
+}

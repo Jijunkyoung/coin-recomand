@@ -67,6 +67,48 @@ def _asset_card(asset: dict[str, Any], currency: str, rank: int) -> str:
     )
 
 
+def _major_event_section(events: list[dict[str, Any]]) -> str:
+    if not events:
+        return (
+            "<div style='margin-top:16px;padding:17px;border:1px solid #263a59;border-radius:12px;background:#0d1d33'>"
+            "<h2 style='margin:0 0 6px;font-size:18px'>주요 시장 이벤트</h2>"
+            "<p style='margin:0;color:#8fa4bf;font-size:12px'>현재 선별된 고영향 일정이 없습니다.</p></div>"
+        )
+    rows = []
+    for event in events[:5]:
+        importance = str(event.get("importance", "보통"))
+        border = "#ff805d" if importance == "매우 높음" else "#e9b949"
+        days = event.get("days_until")
+        dday = "일정 확인" if days is None else "D-DAY" if int(days) == 0 else f"D-{int(days)}" if int(days) > 0 else f"D+{abs(int(days))}"
+        symbols = " · ".join(event.get("related_symbols") or []) or "시장 전체"
+        source_url = str(event.get("source_url") or "")
+        source_name = html.escape(str(event.get("source") or "출처 미상"))
+        source = (
+            f"<a href='{html.escape(source_url, quote=True)}' style='color:#9bc0ff;text-decoration:none'>{source_name} ↗</a>"
+            if re.match(r"^https?://", source_url, re.IGNORECASE)
+            else source_name
+        )
+        rows.append(
+            f"<div style='margin-top:10px;padding:14px;border-left:3px solid {border};border-radius:8px;background:#10223b'>"
+            f"<p style='margin:0 0 6px;color:#a9bad0;font-size:11px'><b style='color:{border}'>{html.escape(importance)}</b> · "
+            f"{html.escape(str(event.get('status', '확인 필요')))} · {html.escape(dday)} · {html.escape(str(event.get('date') or '일정 확인 중'))} · {html.escape(str(event.get('time_kst') or '시각 미정'))} KST</p>"
+            f"<h3 style='margin:0 0 6px;color:#f1f6ff;font-size:15px'>{html.escape(str(event.get('title', '시장 일정')))}</h3>"
+            f"<p style='margin:0;color:#b9c9dc;font-size:12px;line-height:1.55'>{html.escape(str(event.get('summary') or '시장 영향을 확인 중입니다.'))}</p>"
+            f"<p style='margin:7px 0 0;color:#8fa4bf;font-size:11px'>관련 {html.escape(symbols)} · {source}</p>"
+            f"<p style='margin:7px 0 0;color:#75dcae;font-size:11px'><b>긍정</b> {html.escape(str(event.get('bull_case') or '긍정적 결과 시 시장심리 개선 가능'))}</p>"
+            f"<p style='margin:3px 0 0;color:#ff9ba4;font-size:11px'><b>부정</b> {html.escape(str(event.get('bear_case') or '부정적 결과 시 변동성 확대 가능'))}</p>"
+            "</div>"
+        )
+    return (
+        "<div style='margin-top:16px;padding:17px;border:1px solid #375b87;border-radius:12px;background:#0d1d33'>"
+        "<p style='margin:0;color:#6fa6ff;font-size:11px;font-weight:800;letter-spacing:1px'>MARKET MOVING EVENTS</p>"
+        "<h2 style='margin:5px 0 3px;font-size:18px'>주요 시장 이벤트</h2>"
+        "<p style='margin:0;color:#8398b4;font-size:11px'>공식 결과 확인 전에는 추천 점수에 가산하지 않고 변동성 위험으로만 관리합니다.</p>"
+        + "".join(rows)
+        + "</div>"
+    )
+
+
 def _stock_email_section(stock_reports: dict[str, dict[str, Any]] | None) -> str:
     if not stock_reports:
         return ""
@@ -114,6 +156,7 @@ def build_email_html(report: dict[str, Any], stock_reports: dict[str, dict[str, 
             f"<span style='color:#8fa4bf;font-size:11px'>{html.escape(issue.get('published_at_kst', ''))} KST · {html.escape(issue.get('source', '출처 미상'))} · {html.escape(issue.get('impact', '중립·혼재'))} · {html.escape(symbols)}</span></div>"
         )
     issues_html = "".join(issue_rows) or "<p style='color:#8fa4bf;font-size:12px'>최근 24시간 선별된 주요 이슈가 없습니다.</p>"
+    major_event_section = _major_event_section(report.get("major_events") or [])
     stock_section = _stock_email_section(stock_reports)
     return f"""
     <div style="margin:0;padding:24px 10px;background:#06101f;font-family:Arial,'Noto Sans KR',sans-serif;color:#eaf2ff">
@@ -131,6 +174,7 @@ def build_email_html(report: dict[str, Any], stock_reports: dict[str, dict[str, 
           <td style="padding:11px;background:#0d1d33;border-radius:9px;color:#8fa4bf;font-size:11px">DeFi TVL<br><b style="color:#eaf2ff">{money(liquidity.get('defi_tvl_usd'))}</b> {_pct(liquidity.get('defi_tvl_change_7d'))}</td>
           <td style="padding:11px;background:#0d1d33;border-radius:9px;color:#8fa4bf;font-size:11px">스테이블코인 공급<br><b style="color:#eaf2ff">{money(liquidity.get('stablecoin_supply_usd'))}</b> {_pct(liquidity.get('stablecoin_supply_change_7d'))}</td>
         </tr></table>
+        {major_event_section}
         <div style="margin-top:28px"><p style="margin:0;color:#6fa6ff;font-size:11px;font-weight:800;letter-spacing:1px">ALTCOIN PRIORITY</p><h2 style="margin:5px 0 12px;font-size:20px">추천 알트코인</h2>{coin_cards or '<p style="color:#8fa4bf">표시할 추천 종목이 없습니다.</p>'}</div>
         {stock_section}
         <div style="margin-top:28px;padding:17px;border:1px solid #263a59;border-radius:12px;background:#0d1d33"><h2 style="margin:0 0 8px;font-size:18px">향후 7일 주요 일정</h2>{events_html}</div>

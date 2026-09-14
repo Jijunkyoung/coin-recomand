@@ -12,6 +12,7 @@ from typing import Any
 
 from .email_report import send_email
 from .indicators import annualized_volatility, ema, macd, pct_change, rsi, volume_ratio
+from .major_events import build_major_events, load_manual_events
 from .providers import MarketDataClient
 from .scoring import alt_score, market_regime, recommendation_label, timeframe_score
 from .stock_analysis import generate_stock_reports
@@ -420,6 +421,12 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     except Exception as exc:
         upcoming_events = []
         warnings.append(f"CoinMarketCal 일정 미수집: {warning_reason(exc)}")
+    try:
+        manual_events = load_manual_events(settings.get("major_events_file", "config/major_events.json"))
+        major_events = build_major_events(upcoming_events, news_issues, manual_events)
+    except Exception as exc:
+        major_events = []
+        warnings.append(f"주요 시장 이벤트 구성 실패: {warning_reason(exc)}")
     ranking_fields = (
         "rank", "market", "symbol", "name", "english_name", "score", "decision", "analysis_scope", "recommendation_eligible", "reasons", "risks",
         "price", "ema20", "ema50", "rsi", "macd_histogram", "return_1d", "return_7d", "return_30d", "volume_ratio",
@@ -429,7 +436,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     alt_rankings = [{field: coin.get(field) for field in ranking_fields} for coin in analyzed]
     now = datetime.now(timezone.utc)
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "generated_at": now.isoformat(),
         "generated_at_kst": now.astimezone(KST).strftime("%Y-%m-%d %H:%M KST"),
         "market": {
@@ -443,6 +450,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         "recommendations": top,
         "news_issues": news_issues,
         "upcoming_events": upcoming_events,
+        "major_events": major_events,
         "alt_rankings": alt_rankings,
         "screened": len(analyzed),
         "methodology": {
@@ -502,7 +510,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                 "중립 국면: 94점 이상 분할매수 후보 / 68~93점 관찰 / 67점 이하 보류",
                 "하락 국면: 71점 이상 관찰 / 70점 이하 보류",
             ],
-            "execution": "실제 주문은 실행하지 않으며, 분할매수 후보도 손절·비중·호재 출처를 다시 확인하는 연구용 신호입니다.",
+            "execution": "실제 주문은 실행하지 않으며, 주요 이벤트는 결과 확인 전 점수에 가산하지 않습니다. 분할매수 후보도 손절·비중·호재 출처를 다시 확인하는 연구용 신호입니다.",
         },
         "data_quality": {"status": "주의" if warnings else "정상", "warnings": warnings, "notices": notices},
         "sources": [
@@ -518,6 +526,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             {"name": "Google News RSS", "url": "https://news.google.com/"},
             {"name": "CoinMarketCal", "url": "https://coinmarketcal.com/developer"},
             {"name": "DefiLlama", "url": "https://api-docs.defillama.com/"},
+            {"name": "Congress.gov", "url": "https://www.congress.gov/"},
         ],
         "disclaimer": "정량 지표 기반 참고자료이며 투자 자문이나 수익 보장이 아닙니다. 실제 주문을 실행하지 않습니다.",
     }

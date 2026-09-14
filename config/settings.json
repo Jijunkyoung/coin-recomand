@@ -5,6 +5,7 @@
   "upbit_candle_days": 120,
   "community_pages": 2,
   "fundamental_candidate_count": 25,
+  "major_events_file": "config/major_events.json",
   "coingecko_id_overrides": {
     "PROS": "prosper-2"
   },

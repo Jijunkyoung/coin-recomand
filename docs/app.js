@@ -10,6 +10,8 @@ let altRankings = [];
 let sentimentHistory = [];
 let sentimentPlot = null;
 let currentReport = null;
+let majorEvents = [];
+let activeMajorEventFilter = "all";
 let activeRecommendationPeriod = "hourly";
 let liveSocket = null;
 let liveReconnectTimer = null;
@@ -109,6 +111,59 @@ function toggleQualityNote(forceOpen) {
   const open = forceOpen ?? note.hidden;
   note.hidden = !open;
   button.setAttribute("aria-expanded", String(open));
+}
+
+function eventDday(daysUntil) {
+  if (daysUntil == null) return "일정 확인";
+  const days = Number(daysUntil);
+  if (days === 0) return "D-DAY";
+  return days > 0 ? `D-${days}` : `D+${Math.abs(days)}`;
+}
+
+function eventIsVisible(event) {
+  if (activeMajorEventFilter === "soon") {
+    const days = Number(event.days_until);
+    return Number.isFinite(days) && days >= 0 && days <= 7;
+  }
+  if (activeMajorEventFilter === "verify") {
+    return event.status === "확인 필요" || String(event.verification || "").includes("확인 필요");
+  }
+  return true;
+}
+
+function safeExternalURL(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["http:", "https:"].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function renderMajorEvents() {
+  const grid = $("#majorEventsGrid");
+  const visible = majorEvents.filter(eventIsVisible);
+  $("#majorEventCount").textContent = `${visible.length}/${majorEvents.length}건 표시`;
+  if (!visible.length) {
+    grid.innerHTML = `<p class="major-event-empty">조건에 맞는 주요 이벤트가 없습니다.</p>`;
+    return;
+  }
+  grid.innerHTML = visible.map(event => {
+    const importanceClass = event.importance === "매우 높음" ? "critical" : event.importance === "높음" ? "high" : "";
+    const sourceURL = safeExternalURL(event.source_url);
+    const source = sourceURL
+      ? `<a class="major-event-source" href="${escapeHTML(sourceURL)}" target="_blank" rel="noopener">${escapeHTML(event.source || "출처 확인")} ↗</a>`
+      : `<span class="major-event-source">${escapeHTML(event.source || "출처 미상")}</span>`;
+    const symbols = event.related_symbols?.length ? event.related_symbols.join(" · ") : "시장 전체";
+    return `<article class="major-event-card ${importanceClass}">
+      <div class="major-event-top"><div class="major-event-badges"><span class="major-event-badge importance">${escapeHTML(event.importance || "보통")}</span><span class="major-event-badge status">${escapeHTML(event.status || "확인 필요")}</span><span class="major-event-badge">${escapeHTML(event.event_type || "시장 일정")}</span></div><strong class="major-event-dday">${escapeHTML(eventDday(event.days_until))}</strong></div>
+      <h3>${escapeHTML(event.title || "제목 없는 일정")}</h3>
+      <p class="major-event-date">${escapeHTML(event.date || "일정 확인 중")} · ${escapeHTML(event.time_kst || "시각 미정")} KST · ${escapeHTML(symbols)}</p>
+      <p class="major-event-summary">${escapeHTML(event.summary || "시장 영향을 확인 중입니다.")}</p>
+      <div class="major-event-scenarios"><p><b>긍정 시나리오</b>${escapeHTML(event.bull_case || "긍정적 결과 시 시장심리 개선 가능")}</p><p><b>부정 시나리오</b>${escapeHTML(event.bear_case || "부정적 결과 시 변동성 확대 가능")}</p></div>
+      <div class="major-event-foot"><span>${escapeHTML(event.verification || "세부 일정 확인 필요")}${event.last_verified ? ` · 확인 ${escapeHTML(event.last_verified)}` : ""}</span>${source}</div>
+    </article>`;
+  }).join("");
 }
 
 function drawLine(canvas, values, color = "#4d8dff") {
@@ -582,6 +637,8 @@ function searchAltcoin(query) {
 
 function render(report) {
   currentReport = report;
+  majorEvents = report.major_events || [];
+  renderMajorEvents();
   const { market } = report, btc = market.bitcoin;
   $("#generatedAt").textContent = report.generated_at_kst;
   $("#qualityDot").style.background = report.data_quality.status === "정상" ? "var(--green)" : "var(--amber)";
@@ -618,6 +675,17 @@ function render(report) {
 }
 
 $("#altSearchForm").addEventListener("submit", event => { event.preventDefault(); searchAltcoin($("#altSearchInput").value); });
+$("#majorEventFilters").addEventListener("click", event => {
+  const button = event.target.closest("button[data-event-filter]");
+  if (!button || button.dataset.eventFilter === activeMajorEventFilter) return;
+  activeMajorEventFilter = button.dataset.eventFilter;
+  $("#majorEventFilters").querySelectorAll("button").forEach(item => {
+    const selected = item === button;
+    item.classList.toggle("active", selected);
+    item.setAttribute("aria-selected", String(selected));
+  });
+  renderMajorEvents();
+});
 $("#recommendPeriodTabs").addEventListener("click", event => {
   const button = event.target.closest("button[data-period]");
   if (!button || button.dataset.period === activeRecommendationPeriod) return;

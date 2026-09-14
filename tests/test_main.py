@@ -102,6 +102,7 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(report["news_issues"][0]["related_symbols"], ["XRP"])
         self.assertEqual(report["market"]["liquidity"]["defi_tvl_change_7d"], 2.5)
         self.assertEqual(report["upcoming_events"][0]["related_symbols"], ["XRP"])
+        self.assertIn("major_events", report)
         self.assertEqual(report["methodology"]["groups"][0]["range"], "원점수 -18 ~ +22")
 
 
