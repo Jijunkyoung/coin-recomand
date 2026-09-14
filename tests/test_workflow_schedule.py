@@ -8,7 +8,8 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn('cron: "17 0-21,23 * * *"', workflow)
         self.assertIn('cron: "30 22 * * *"', workflow)
         self.assertIn("github.event.schedule == '30 22 * * *'", workflow)
-        self.assertIn("github.event_name == 'workflow_dispatch'", workflow)
+        self.assertIn("github.event_name == 'workflow_dispatch' && inputs.send_email", workflow)
+        self.assertIn("default: false", workflow)
 
 
 if __name__ == "__main__":
