@@ -167,13 +167,13 @@
         <button type="button" id="saveEmailRecipients" class="secondary-button">브라우저 목록만 저장</button>
         <button type="button" id="copyEmailSecret" class="primary-button">EMAIL_TO 값 복사</button>
         <a href="https://github.com/Jijunkyoung/coin-recomand/settings/secrets/actions" target="_blank" rel="noopener" class="secret-link">실제 발송주소 변경</a>
-        <a id="testEmailButton" href="https://github.com/Jijunkyoung/coin-recomand/actions/workflows/analyze-and-deploy.yml" target="_blank" rel="noopener" class="test-email-link">테스트 메일 보내기</a>
+        <a id="testEmailButton" href="https://github.com/Jijunkyoung/coin-recomand/actions/workflows/analyze-and-deploy.yml" target="_blank" rel="noopener" class="test-email-link">테스트 발송 화면 열기</a>
       </div>
       <div class="secret-guide">
         <strong>실제 발송주소 변경 방법</strong>
         <ol><li>새 주소 입력 후 <b>EMAIL_TO 값 복사</b></li><li><b>실제 발송주소 변경</b>에서 기존 <code>EMAIL_TO</code> 선택</li><li><b>Update secret</b> → 복사한 주소 붙여넣기 → <b>Save changes</b></li><li>테스트 메일로 적용 여부 확인</li></ol>
       </div>
-      <div class="test-email-guide"><strong>테스트 발송</strong><p>입력란이 아니라 현재 GitHub <code>EMAIL_TO</code> Secret으로 발송됩니다. <b>테스트 메일 보내기</b> → <b>Run workflow</b> → <b>메일 발송</b> 체크 → 초록색 <b>Run workflow</b> 순서로 실행하세요.</p></div>
+      <div class="test-email-guide"><strong>테스트 발송</strong><p><b>버튼을 누르는 것만으로는 메일이 발송되지 않습니다.</b> 입력란이 아니라 현재 GitHub <code>EMAIL_TO</code> Secret으로 발송됩니다. <b>테스트 발송 화면 열기</b> → <b>Run workflow</b> → <b>메일 발송</b> 체크 → 초록색 <b>Run workflow</b> 순서로 실행하세요.</p></div>
       <p id="emailSettingsStatus" class="email-settings-status" aria-live="polite"></p>
     </div>
   </dialog>
