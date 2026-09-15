@@ -16,6 +16,11 @@ class MemberAuthTests(unittest.TestCase):
             self.assertIn('src="auth.js"', page)
             self.assertIn('href="auth.css"', page)
 
+    def test_logged_in_header_has_logout_action(self):
+        script = (ROOT / "docs/auth.js").read_text(encoding="utf-8")
+        self.assertIn('id="logoutTop"', script)
+        self.assertIn('client.auth.signOut()', script)
+
     def test_rls_is_limited_to_authenticated_owner(self):
         sql = (ROOT / "supabase/migrations/20260915_user_preferences.sql").read_text(encoding="utf-8")
         self.assertIn("enable row level security", sql.lower())

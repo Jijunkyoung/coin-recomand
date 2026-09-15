@@ -74,9 +74,10 @@
     const selected = profile?.sector_ids || []; $("#profileSectors").querySelectorAll("input").forEach(input => input.checked = selected.includes(input.value));
   }
   function renderActions() {
-    if (user) actions.innerHTML = `<span class="auth-user" title="${escapeHTML(user.email)}">${escapeHTML(user.email)}</span><button type="button" class="auth-button primary" id="profileOpen">내 설정</button>`;
+    if (user) actions.innerHTML = `<span class="auth-user" title="${escapeHTML(user.email)}">${escapeHTML(user.email)}</span><button type="button" class="auth-button primary" id="profileOpen">내 설정</button><button type="button" class="auth-button logout" id="logoutTop">로그아웃</button>`;
     else actions.innerHTML = `<button type="button" class="auth-button" id="loginOpen">로그인</button><button type="button" class="auth-button primary" id="signupOpen">회원가입</button>`;
     $("#loginOpen")?.addEventListener("click", () => openDialog("login")); $("#signupOpen")?.addEventListener("click", () => openDialog("signup")); $("#profileOpen")?.addEventListener("click", () => openDialog("profile"));
+    $("#logoutTop")?.addEventListener("click", async event => { const button=event.currentTarget; button.disabled=true; button.textContent="로그아웃 중"; const { error }=await client.auth.signOut(); if(error){button.disabled=false;button.textContent="로그아웃";status(error.message,true);openDialog("profile");} });
   }
   function openDialog(mode) {
     $("#authConfigNote").hidden = configured;
