@@ -2,7 +2,7 @@
 
 비트코인 시장 국면과 업비트 KRW 알트코인을 분석해 분할매수 후보를 선별하고, 1분 기술순위·매시간 종합순위·매일 이메일 보고서를 제공하는 프로그램입니다.
 
-상단 메뉴에서 코인·미국주식·국내주식을 전환할 수 있습니다. 주식 페이지는 한국투자증권 Open API의 일봉으로 EMA20·EMA50, RSI, MACD, 거래량, 모멘텀, 변동성과 대표지수 국면을 평가하고 종목 검색 및 상세 캔들차트를 제공합니다.
+상단 메뉴에서 코인·미국주식·국내주식을 전환할 수 있습니다. 주식 페이지는 보유종목의 최근 주요뉴스와 사용자가 선택한 섹터만 수집합니다. 선택 섹터 종목은 한국투자증권 Open API의 일봉으로 EMA20·EMA50, RSI, MACD, 거래량, 모멘텀, 변동성과 대표지수 국면을 평가하고 종목 검색 및 상세 캔들차트를 제공합니다.
 
 > 이 프로젝트의 결과는 정량 지표 기반 참고자료이며 수익을 보장하는 투자 자문이 아닙니다. 실제 주문은 실행하지 않습니다.
 
@@ -38,7 +38,7 @@ python -m http.server 8000 --directory docs
 
 ## GitHub Actions 설정
 
-워크플로는 매시간 종합 분석·GitHub Pages 배포를 수행하고, 한국시간 오전 7시 30분 예약 또는 사용자가 직접 수동 실행했을 때만 대시보드형 코인·주식 통합 이메일을 발송합니다. 코드 변경에 따른 자동 배포에서는 이메일을 보내지 않습니다. 저장소의 **Settings → Pages → Source**를 `GitHub Actions`로 지정하세요.
+워크플로는 매시간 종합 분석·GitHub Pages 배포를 수행하고, 한국시간 오전 7시 30분 예약 또는 사용자가 직접 수동 실행했을 때만 코인 보고서와 맞춤 주식 보고서를 각 수신주소로 분리 발송합니다. 코드 변경에 따른 자동 배포에서는 이메일을 보내지 않습니다. 저장소의 **Settings → Pages → Source**를 `GitHub Actions`로 지정하세요.
 
 이메일을 사용하려면 **Settings → Secrets and variables → Actions**에 아래 Repository secrets를 등록합니다.
 
@@ -49,16 +49,22 @@ python -m http.server 8000 --directory docs
 | `SMTP_USERNAME` | SMTP 로그인 계정 | 보내는 Gmail 주소 |
 | `SMTP_PASSWORD` | SMTP 비밀번호 | Google 2단계 인증 후 만든 앱 비밀번호 |
 | `EMAIL_FROM` | 발신 주소(선택) | 미설정 시 SMTP 계정 |
-| `EMAIL_TO` | 수신 주소, 여러 개는 쉼표·세미콜론·줄바꿈 구분 | `me@example.com,team@example.com` |
+| `EMAIL_TO` | 코인 보고서 수신주소, 복수 주소 지원 | `coin@example.com` |
+| `STOCK_EMAIL_TO` | 주식 보고서 수신주소, 복수 주소 지원 | `stock@example.com` |
 | `KIS_APP_KEY` | 한국투자증권 Open API App Key | KIS Developers에서 발급 |
 | `KIS_APP_SECRET` | 한국투자증권 Open API App Secret | KIS Developers에서 발급 |
+| `STOCK_HOLDINGS_US` | 미국 보유종목 뉴스 대상 | `AAPL\|애플,NVDA\|엔비디아` |
+| `STOCK_HOLDINGS_KR` | 국내 보유종목 뉴스 대상 | `005930\|삼성전자,000660\|SK하이닉스` |
+| `STOCK_SECTORS` | 분석·뉴스를 수집할 섹터 ID | `defense,semiconductor,energy` |
 
 ### 미국·국내주식 최초 설정
 
 1. 한국투자증권 계좌를 준비하고 [KIS Developers](https://apiportal.koreainvestment.com/)에서 Open API 서비스를 신청합니다.
 2. 발급된 App Key와 App Secret을 저장소 **Settings → Secrets and variables → Actions → New repository secret**에서 각각 `KIS_APP_KEY`, `KIS_APP_SECRET`으로 등록합니다.
-3. 저장소 **Actions → Analyze, email and deploy → Run workflow**를 한 번 실행합니다.
-4. 배포가 끝나면 상단 `미국주식`, `국내주식` 메뉴에서 결과를 확인합니다.
+3. 미국주식 또는 국내주식 페이지의 `맞춤 수집 설정`에서 보유종목과 섹터 체크박스, 주식 메일주소를 입력합니다.
+4. 화면에서 복사한 값을 `STOCK_HOLDINGS_US`, `STOCK_HOLDINGS_KR`, `STOCK_SECTORS`, `STOCK_EMAIL_TO` Secret에 각각 저장합니다.
+5. 저장소 **Actions → Analyze, email and deploy → Run workflow**를 한 번 실행합니다.
+6. 배포가 끝나면 상단 `미국주식`, `국내주식` 메뉴에서 결과를 확인합니다.
 
 키는 GitHub Actions 서버에서 시세 조회에만 사용되고 정적 페이지나 분석 JSON에는 포함되지 않습니다. 이 프로젝트는 주문 API를 호출하지 않습니다. 키가 없을 때 주식 페이지는 임의 가격을 표시하지 않고 설정 절차를 안내합니다.
 
@@ -76,7 +82,7 @@ CoinMarketCal 예정 이벤트를 사용하려면 GitHub Secret에 `COINMARKETCA
 
 대시보드의 `전체`, `7일 이내`, `확인 필요` 버튼으로 일정을 걸러볼 수 있으며, 오전 7시 30분 메일에도 중요 이벤트 최대 5건을 먼저 강조합니다. 뉴스에서 발견한 일정은 공식 단계·시각이 불명확할 수 있어 기본적으로 `확인 필요`로 표시합니다. 일정이 있다는 사실만으로 코인 점수를 올리지 않으며, 공식 결과가 확인되기 전까지 변동성·위험 관리 정보로만 사용합니다.
 
-예약 워크플로는 매시간 종합자료를 새로 생성하되, 매일 오전 7시 30분(KST) 실행에서만 `EMAIL_TO`에 등록된 모든 주소로 보고서를 발송합니다. GitHub Actions 대기 및 분석 시간 때문에 실제 반영·수신은 보통 예약 시각보다 몇 분 늦을 수 있습니다. 대시보드의 `메일 수신 설정`에서 복수 주소를 검증·복사한 뒤 GitHub Actions Secret `EMAIL_TO`에 붙여넣을 수 있습니다. 정적 페이지에서는 Secret을 직접 수정할 수 없으므로 최초 등록이나 주소 변경 시 GitHub에서 저장하는 단계가 필요합니다.
+예약 워크플로는 매시간 종합자료를 새로 생성하되, 매일 오전 7시 30분(KST) 실행에서만 코인 보고서는 `EMAIL_TO`, 주식 보고서는 `STOCK_EMAIL_TO`에 등록된 주소로 각각 발송합니다. 주식 메일에는 보유종목·선택 섹터의 최근 24시간 뉴스와 선택 섹터의 기술분석만 포함됩니다. GitHub Actions 대기 및 분석 시간 때문에 실제 수신은 예약 시각보다 몇 분 늦을 수 있습니다. 정적 페이지에서는 Secret을 직접 수정할 수 없으므로 화면에서 만든 값을 복사한 뒤 GitHub에서 저장해야 합니다.
 
 대시보드 입력란과 `브라우저 목록만 저장`은 주소 작성·복사를 돕는 로컬 기능이며 실제 발송 설정을 직접 변경하지 않습니다. 실제 주소는 `EMAIL_TO 값 복사` 후 `실제 발송주소 변경`에서 기존 `EMAIL_TO`의 **Update secret → Save changes** 순서로 수정해야 합니다. `테스트 발송 화면 열기`는 인증정보를 공개 페이지에 노출하지 않고 GitHub Actions 실행 화면만 엽니다. 버튼을 누르는 것만으로는 발송되지 않으며, `Run workflow`에서 `메일 발송`을 체크하고 초록색 `Run workflow`를 눌러야 현재 GitHub Secret에 등록된 주소로 최신 보고서가 한 번 발송됩니다.
 

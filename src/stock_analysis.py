@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import re
 import time
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree as ET
 
 import requests
 
@@ -45,24 +49,35 @@ class KisDataClient:
         return self._token
 
     def _get(self, path: str, tr_id: str, params: dict[str, str]) -> dict[str, Any]:
-        response = self.session.get(
-            f"{self.base_url}{path}",
-            params=params,
-            headers={
-                "content-type": "application/json; charset=utf-8",
-                "authorization": f"Bearer {self._access_token()}",
-                "appkey": self.app_key,
-                "appsecret": self.app_secret,
-                "tr_id": tr_id,
-                "custtype": "P",
-            },
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
-        data = response.json()
-        if str(data.get("rt_cd", "0")) != "0":
-            raise RuntimeError(data.get("msg1") or data.get("msg_cd") or "한국투자증권 API 오류")
-        return data
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                response = self.session.get(
+                    f"{self.base_url}{path}",
+                    params=params,
+                    headers={
+                        "content-type": "application/json; charset=utf-8",
+                        "authorization": f"Bearer {self._access_token()}",
+                        "appkey": self.app_key,
+                        "appsecret": self.app_secret,
+                        "tr_id": tr_id,
+                        "custtype": "P",
+                    },
+                    timeout=self.timeout,
+                )
+                response.raise_for_status()
+                data = response.json()
+                if str(data.get("rt_cd", "0")) != "0":
+                    raise RuntimeError(data.get("msg1") or data.get("msg_cd") or "한국투자증권 API 오류")
+                return data
+            except (requests.RequestException, RuntimeError, ValueError) as exc:
+                last_error = exc
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                retryable = status in {429, 500, 502, 503, 504} or "EGW00201" in str(exc)
+                if not retryable or attempt == 2:
+                    raise
+                time.sleep(1.5 * (attempt + 1))
+        raise RuntimeError("한국투자증권 API 재시도 실패") from last_error
 
     @staticmethod
     def _number(value: Any) -> float:
@@ -72,16 +87,31 @@ class KisDataClient:
     def domestic_daily(self, symbol: str, days: int = 120) -> list[dict[str, Any]]:
         end = datetime.now(KST).strftime("%Y%m%d")
         start = (datetime.now(KST) - timedelta(days=max(180, days * 2))).strftime("%Y%m%d")
-        data = self._get(
-            "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
-            "FHKST03010100",
-            {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": symbol, "FID_INPUT_DATE_1": start,
-             "FID_INPUT_DATE_2": end, "FID_PERIOD_DIV_CODE": "D", "FID_ORG_ADJ_PRC": "0"},
-        )
-        rows = []
-        for item in reversed(data.get("output2") or []):
+        items: list[dict[str, Any]] = []
+        current_end = end
+        for _ in range(3):
+            data = self._get(
+                "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+                "FHKST03010100",
+                {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": symbol, "FID_INPUT_DATE_1": start,
+                 "FID_INPUT_DATE_2": current_end, "FID_PERIOD_DIV_CODE": "D", "FID_ORG_ADJ_PRC": "0"},
+            )
+            page = data.get("output2") or []
+            if not page:
+                break
+            items.extend(page)
+            oldest = str(page[-1].get("stck_bsop_date") or "")
+            if len(page) < 100 or not oldest or oldest <= start:
+                break
+            current_end = (datetime.strptime(oldest, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+            time.sleep(0.15)
+        rows, seen = [], set()
+        for item in sorted(items, key=lambda row: str(row.get("stck_bsop_date") or "")):
             if not item.get("stck_bsop_date") or self._number(item.get("stck_clpr")) <= 0:
                 continue
+            if item["stck_bsop_date"] in seen:
+                continue
+            seen.add(item["stck_bsop_date"])
             rows.append({
                 "date": f"{item['stck_bsop_date'][:4]}-{item['stck_bsop_date'][4:6]}-{item['stck_bsop_date'][6:8]}",
                 "open": self._number(item.get("stck_oprc")), "high": self._number(item.get("stck_hgpr")),
@@ -185,17 +215,130 @@ def market_regime(benchmark: dict[str, Any]) -> tuple[str, int]:
     return ("상승" if points >= 70 else "하락" if points <= 30 else "중립"), points
 
 
-def build_stock_report(market: str, settings: dict[str, Any], client: KisDataClient | None = None) -> dict[str, Any]:
+def parse_sector_selection(value: str, settings: dict[str, Any]) -> list[str]:
+    available = settings.get("sectors") or {}
+    selected, seen = [], set()
+    for raw in re.split(r"[,;\n]+", value or ""):
+        sector_id = raw.strip().lower()
+        if sector_id and sector_id in available and sector_id not in seen:
+            selected.append(sector_id)
+            seen.add(sector_id)
+    return selected
+
+
+def parse_holdings(value: str, market_settings: dict[str, Any]) -> list[dict[str, str]]:
+    """Parse SYMBOL or SYMBOL|display name without publishing the original Secret."""
+    catalog = {
+        str(item["symbol"]).upper(): item
+        for item in [market_settings.get("benchmark") or {}, *(market_settings.get("universe") or [])]
+        if item.get("symbol")
+    }
+    holdings, seen = [], set()
+    for raw in re.split(r"[,;\n]+", value or ""):
+        parts = [part.strip() for part in raw.split("|", 1)]
+        symbol = parts[0].upper() if parts else ""
+        if not symbol or symbol in seen or not re.fullmatch(r"[A-Z0-9.\-]{1,12}", symbol):
+            continue
+        known = catalog.get(symbol) or {}
+        name = parts[1] if len(parts) > 1 and parts[1] else str(known.get("name") or symbol)
+        holdings.append({"symbol": symbol, "name": name})
+        seen.add(symbol)
+    return holdings
+
+
+def selected_universe(market: str, settings: dict[str, Any], sector_ids: list[str]) -> list[dict[str, Any]]:
+    symbols: set[str] = set()
+    for sector_id in sector_ids:
+        symbols.update(str(symbol).upper() for symbol in settings["sectors"][sector_id].get(market, []))
+    return [item for item in settings[market].get("universe", []) if str(item.get("symbol", "")).upper() in symbols]
+
+
+def collect_stock_news(
+    holdings: dict[str, list[dict[str, str]]],
+    sector_ids: list[str],
+    settings: dict[str, Any],
+    limit: int = 14,
+    session: requests.Session | None = None,
+) -> list[dict[str, Any]]:
+    holding_items = [item for market in ("us", "kr") for item in holdings.get(market, [])]
+    sector_items = [(sector_id, settings["sectors"][sector_id]) for sector_id in sector_ids]
+    terms: list[str] = []
+    for item in holding_items:
+        terms.extend([item["name"], item["symbol"]])
+    for _, sector in sector_items:
+        terms.extend(sector.get("news_terms") or [sector.get("label", "")])
+    terms = list(dict.fromkeys(term.strip() for term in terms if term and term.strip()))[:24]
+    if not terms:
+        return []
+    query = "(" + " OR ".join(f'\"{term}\"' for term in terms) + ") (주식 OR 증시 OR 실적 OR 수주 OR 투자) when:1d"
+    response = (session or requests.Session()).get(
+        "https://news.google.com/rss/search",
+        params={"q": query, "hl": "ko", "gl": "KR", "ceid": "KR:ko"},
+        headers={"User-Agent": "Mozilla/5.0 coin-recomand/1.0"},
+        timeout=20,
+    )
+    response.raise_for_status()
+    root, now, seen, issues = ET.fromstring(response.text), datetime.now(timezone.utc), set(), []
+    positive_words = ("수주", "계약", "호실적", "상향", "증가", "성장", "승인", "투자", "신고가")
+    negative_words = ("급락", "하락", "적자", "감소", "소송", "제재", "리콜", "해킹", "중단")
+    for node in root.findall(".//item"):
+        raw_title = " ".join((node.findtext("title") or "").split())
+        link = (node.findtext("link") or "").strip()
+        source_node = node.find("source")
+        source = " ".join(((source_node.text if source_node is not None else "") or "").split()) or "Google News"
+        title = re.sub(rf"\s+-\s+{re.escape(source)}\s*$", "", raw_title, flags=re.IGNORECASE).strip()
+        if not title or not link:
+            continue
+        normalized = re.sub(r"[^0-9a-z가-힣]", "", title.lower())
+        fingerprint = hashlib.sha1(normalized.encode("utf-8")).hexdigest()[:16]
+        if not normalized or fingerprint in seen:
+            continue
+        try:
+            published = parsedate_to_datetime(node.findtext("pubDate") or "").astimezone(timezone.utc)
+        except (TypeError, ValueError):
+            published = now
+        if published < now - timedelta(hours=36):
+            continue
+        lower = title.lower()
+        related_holdings = [item["symbol"] for item in holding_items if item["name"].lower() in lower or re.search(rf"(?<![A-Z0-9]){re.escape(item['symbol'])}(?![A-Z0-9])", title, re.IGNORECASE)]
+        related_sectors = [sector["label"] for _, sector in sector_items if any(str(term).lower() in lower for term in sector.get("news_terms") or [])]
+        if not related_holdings and not related_sectors:
+            continue
+        positive = sum(word in lower for word in positive_words)
+        negative = sum(word in lower for word in negative_words)
+        impact = "악재 가능" if negative > positive else "호재 가능" if positive > negative else "중립·혼재"
+        seen.add(fingerprint)
+        issues.append({
+            "title": title, "url": link, "source": source, "impact": impact,
+            "published_at": published.isoformat(), "published_at_kst": published.astimezone(KST).strftime("%m-%d %H:%M"),
+            "related_holdings": related_holdings, "related_sectors": related_sectors,
+        })
+        if len(issues) >= limit:
+            break
+    return issues
+
+
+def build_stock_report(
+    market: str,
+    settings: dict[str, Any],
+    client: KisDataClient | None = None,
+    universe: list[dict[str, Any]] | None = None,
+    selected_sectors: list[str] | None = None,
+) -> dict[str, Any]:
     if market not in {"us", "kr"}:
         raise ValueError("market은 us 또는 kr이어야 합니다.")
     client = client or KisDataClient()
     now = datetime.now(timezone.utc)
     market_settings = settings[market]
+    selection_mode = universe is not None
+    selected_sectors = selected_sectors if selected_sectors is not None else []
+    sector_options = [{"id": key, "label": value["label"]} for key, value in (settings.get("sectors") or {}).items()]
     base = {
         "schema_version": 1, "market": market, "market_name": "미국주식" if market == "us" else "국내주식",
         "currency": "USD" if market == "us" else "KRW", "generated_at": now.isoformat(),
         "generated_at_kst": now.astimezone(KST).strftime("%Y-%m-%d %H:%M KST"), "configured": client.configured,
-        "recommendations": [], "rankings": [], "warnings": [],
+        "recommendations": [], "rankings": [], "warnings": [], "sector_options": sector_options,
+        "selected_sectors": selected_sectors,
     }
     if not client.configured:
         base.update({"status": "설정 필요", "regime": "미수집", "market_score": None,
@@ -212,7 +355,8 @@ def build_stock_report(market: str, settings: dict[str, Any], client: KisDataCli
                      "warnings": [f"대표지수 분석 실패: {type(exc).__name__} · {exc}"]})
         return base
     rankings = []
-    for item in market_settings["universe"]:
+    analysis_universe = market_settings["universe"] if universe is None else universe
+    for item in analysis_universe:
         try:
             history = client.daily(market, item["symbol"], item["exchange"], days)
             metrics = technical_metrics(history)
@@ -225,8 +369,11 @@ def build_stock_report(market: str, settings: dict[str, Any], client: KisDataCli
         time.sleep(0.12)
     rankings.sort(key=lambda row: row["score"], reverse=True)
     for index, row in enumerate(rankings, 1): row["rank"] = index
+    status = "선택 필요" if selection_mode and not analysis_universe else "정상" if rankings else "오류"
+    if status == "선택 필요":
+        base["warnings"].append("분석할 섹터를 선택한 뒤 STOCK_SECTORS Secret에 저장해 주세요.")
     base.update({
-        "status": "정상" if rankings else "오류", "regime": regime, "market_score": regime_score,
+        "status": status, "regime": regime, "market_score": regime_score,
         "benchmark": benchmark, "rankings": rankings,
         "recommendations": rankings[: int(settings.get("recommendation_count", 5))], "screened": len(rankings),
         "methodology": {
@@ -250,10 +397,29 @@ def generate_stock_reports(settings_path: str | Path = "config/stocks.json", out
     settings, output = load_settings(settings_path), Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     client = KisDataClient()
-    reports = {market: build_stock_report(market, settings, client) for market in ("us", "kr")}
+    sector_ids = parse_sector_selection(os.getenv("STOCK_SECTORS", ""), settings)
+    holdings = {
+        "us": parse_holdings(os.getenv("STOCK_HOLDINGS_US", ""), settings["us"]),
+        "kr": parse_holdings(os.getenv("STOCK_HOLDINGS_KR", ""), settings["kr"]),
+    }
+    reports = {
+        market: build_stock_report(market, settings, client, selected_universe(market, settings, sector_ids), sector_ids)
+        for market in ("us", "kr")
+    }
+    try:
+        news_issues = collect_stock_news(holdings, sector_ids, settings)
+    except Exception as exc:
+        news_issues = []
+        for report in reports.values():
+            report["warnings"].append(f"맞춤 주식뉴스 미수집: {type(exc).__name__}")
     for market, report in reports.items():
         (output / f"stocks-{market}.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"{report['market_name']} 분석 저장: {len(report['rankings'])}개")
+    reports["_mail"] = {
+        "news_issues": news_issues,
+        "holding_counts": {market: len(items) for market, items in holdings.items()},
+        "selected_sector_labels": [settings["sectors"][sector_id]["label"] for sector_id in sector_ids],
+    }
     return reports
 
 

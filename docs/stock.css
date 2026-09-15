@@ -1,5 +1,10 @@
 .stock-mark { background:linear-gradient(135deg,#25b785,#3978ff); }
 .stock-main { margin-top:18px; }
+.stock-sector-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:9px; }
+.stock-sector-options label { display:flex; align-items:center; gap:8px; min-height:42px; margin:0; padding:8px 10px; border:1px solid var(--line); border-radius:9px; background:rgba(255,255,255,.035); color:#c9d8ed; font-size:.82rem; cursor:pointer; }
+.stock-sector-options input { accent-color:#4d8dff; }
+.email-dialog input,.email-dialog textarea { box-sizing:border-box; }
+.email-dialog code { color:var(--cyan); }
 .stock-status { display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:.78rem; font-weight:800; }
 .stock-status::before { width:8px; height:8px; content:""; border-radius:50%; background:var(--amber); box-shadow:0 0 10px currentColor; }
 .stock-status.ok::before { background:var(--green); }.stock-status.error::before { background:var(--red); }
@@ -17,4 +22,4 @@
 .stock-lower .methodology-note { padding:12px 14px; border-left:3px solid var(--blue); background:rgba(77,141,255,.06); }
 @media(max-width:1180px){.stock-ranking-list{grid-template-columns:1fr}}
 @media(max-width:800px){.stock-lower{grid-template-columns:1fr}.stock-rank-row{grid-template-columns:38px minmax(0,1fr) repeat(2,minmax(58px,auto))}.stock-rank-metric:nth-of-type(2),.stock-rank-metric:nth-of-type(3){display:none}}
-@media(max-width:560px){.market-nav{width:calc(100% - 24px);overflow:auto}.market-nav a{min-width:88px}.stock-rank-row{grid-template-columns:34px minmax(0,1fr) 60px}.stock-rank-metric{display:none}.stock-setup{padding:18px 16px}}
+@media(max-width:560px){.market-nav{width:calc(100% - 24px);overflow:auto}.market-nav a{min-width:88px}.stock-rank-row{grid-template-columns:34px minmax(0,1fr) 60px}.stock-rank-metric{display:none}.stock-setup{padding:18px 16px}.stock-sector-options{grid-template-columns:repeat(2,minmax(0,1fr))}}

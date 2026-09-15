@@ -1,6 +1,7 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const market = document.body.dataset.stockMarket;
 let report = null, detailStock = null, detailDays = 30, detailPlot = null, detailFrame = null;
+const sectorFallback = [{id:"defense",label:"방산"},{id:"semiconductor",label:"반도체"},{id:"energy",label:"에너지"},{id:"ai_platform",label:"AI·플랫폼"},{id:"mobility",label:"자동차·모빌리티"},{id:"bio",label:"바이오·헬스케어"},{id:"finance",label:"금융"},{id:"consumer",label:"소비·유통"},{id:"shipbuilding",label:"조선·기계"}];
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const fmt = (value, digits = 2) => value == null || !Number.isFinite(Number(value)) ? "—" : Intl.NumberFormat("ko-KR", {maximumFractionDigits:digits}).format(Number(value));
 const pct = value => value == null ? "—" : `${Number(value) > 0 ? "+" : ""}${fmt(value, 1)}%`;
@@ -38,11 +39,13 @@ function renderSearch(stock){
 
 function showSetup(){
   const panel=$("#setupPanel"); panel.hidden=false; panel.innerHTML=`<h2>주식 데이터 연결을 위한 최초 설정이 필요합니다</h2><p>API 키는 대시보드에 저장하지 않으며 GitHub Actions에서만 사용합니다. 주문 기능은 연결하지 않습니다.</p><ol><li><a href="https://apiportal.koreainvestment.com/" target="_blank" rel="noopener">한국투자증권 Open API</a>에서 API 서비스를 신청합니다.</li><li>GitHub 저장소의 <b>Settings → Secrets and variables → Actions</b>로 이동합니다.</li><li><code>KIS_APP_KEY</code>와 <code>KIS_APP_SECRET</code>을 각각 Repository secret으로 등록합니다.</li><li>Actions에서 <b>Analyze, email and deploy → Run workflow</b>를 한 번 실행합니다.</li></ol>`;
+  if(report?.configured&&report?.selected_sectors?.length){panel.innerHTML=`<h2>선택한 종목의 데이터를 수집하지 못했습니다</h2><p>한국투자증권 API는 연결됐지만 선택 섹터의 시세가 비어 있습니다. 아래 데이터 상태에서 종목별 오류를 확인해 주세요.</p>`;}
+  else if(report?.configured){panel.innerHTML=`<h2>맞춤 수집 범위를 선택해 주세요</h2><p>한국투자증권 API는 연결됐습니다. 위의 <b>맞춤 수집 설정</b>에서 섹터를 선택하고 <code>STOCK_SECTORS</code> Secret에 저장하면 해당 그룹만 분석합니다. 보유종목은 추천 순위가 아니라 맞춤 뉴스 수집에만 사용합니다.</p>`;}
 }
 
 function render(data){
   report=data; $("#generatedAt").textContent=data.generated_at_kst||"—"; $("#stockStatus").textContent=data.status==="정상"?"데이터 정상":data.status; $("#stockStatus").className=`stock-status ${data.status==="정상"?"ok":"error"}`;
-  if(!data.configured||!data.rankings?.length){showSetup(); $("#marketTitle").textContent=`${data.market_name} 설정 필요`; $("#marketSummary").textContent=(data.warnings||[])[0]||"주식 데이터를 아직 수집하지 못했습니다."; $("#recommendations").innerHTML='<div class="error-card">API 설정 후 자동으로 추천 순위가 표시됩니다.</div>'; $("#rankingList").innerHTML='<p class="search-empty">수집된 순위가 없습니다.</p>'; $("#warnings").innerHTML=(data.warnings||[]).map(x=>`<p>• ${escapeHTML(x)}</p>`).join(""); return;}
+  if(!data.configured||!data.rankings?.length){showSetup(); const selected=Boolean(data.selected_sectors?.length); $("#marketTitle").textContent=!data.configured?`${data.market_name} API 설정 필요`:selected?`${data.market_name} 데이터 수집 실패`:`${data.market_name} 수집범위 선택 필요`; $("#marketSummary").textContent=(data.warnings||[])[0]||"주식 데이터를 아직 수집하지 못했습니다."; $("#recommendations").innerHTML=`<div class="error-card">${!data.configured?"API 설정 후 자동으로 추천 순위가 표시됩니다.":selected?"선택 종목의 수집 오류를 데이터 상태에서 확인해 주세요.":"맞춤 수집 설정 후 선택한 섹터의 추천 순위가 표시됩니다."}</div>`; $("#rankingList").innerHTML='<p class="search-empty">수집된 순위가 없습니다.</p>'; $("#warnings").innerHTML=(data.warnings||[]).map(x=>`<p>• ${escapeHTML(x)}</p>`).join(""); return;}
   const benchmark=data.benchmark; $("#marketTitle").textContent=`${data.regime} 국면`; $("#marketSummary").textContent=data.regime==="상승"?"대표지수 추세가 우호적입니다. 종목별 과열 여부를 함께 확인하세요.":data.regime==="하락"?"대표지수가 약세입니다. 신규 매수보다 위험 관리를 우선합니다.":"대표지수 방향이 혼조입니다. 강한 종목만 선별적으로 관찰합니다.";
   $("#marketScore").textContent=data.market_score; $("#scoreRing").style.background=`conic-gradient(${data.regime==="상승"?"var(--green)":data.regime==="하락"?"var(--red)":"var(--blue)"} ${data.market_score*3.6}deg,var(--line) 0)`; $("#marketReasons").innerHTML=`<p>${benchmark.price>benchmark.ema20&&benchmark.ema20>benchmark.ema50?"대표지수 EMA 정배열":"대표지수 EMA 혼조·역배열"}</p><p>30일 수익률 ${pct(benchmark.return_30d)}</p><p>MACD ${benchmark.macd_histogram>0?"상승":"약세"} 모멘텀</p>`;
   $("#benchmarkSymbol").textContent=`${benchmark.name} · ${benchmark.symbol}`; $("#benchmarkPrice").innerHTML=`${currency(benchmark.price)} <span class="price-change ${Number(benchmark.return_1d)>=0?"up":"down"}">${pct(benchmark.return_1d)}</span>`; $("#benchmarkMetrics").innerHTML=metric("일간",pct(benchmark.return_1d))+metric("RSI",fmt(benchmark.rsi,1))+metric("30일",pct(benchmark.return_30d))+metric("EMA20",currency(benchmark.ema20))+metric("EMA50",currency(benchmark.ema50)); drawLine($("#benchmarkChart"),benchmark.sparkline,"#4d8dff"); const openBenchmark=()=>openChart(benchmark); $("#benchmarkCard").onclick=openBenchmark; $("#benchmarkCard").onkeydown=e=>{if(e.key==="Enter"||e.key===" ")openBenchmark()};
@@ -71,5 +74,29 @@ function drawChart(hover=null){
 $("#stockSearchForm").addEventListener("submit",event=>{event.preventDefault();const query=$("#stockSearchInput").value.trim().toLowerCase();if(!query||!report?.rankings)return;const stock=report.rankings.find(x=>x.symbol.toLowerCase()===query||x.name.toLowerCase()===query)||report.rankings.find(x=>x.symbol.toLowerCase().includes(query)||x.name.toLowerCase().includes(query));if(stock)renderSearch(stock);else $("#stockSearchResult").innerHTML=`<p class="search-empty"><strong>${escapeHTML(query)}</strong>을 분석 대상에서 찾지 못했습니다.</p>`});
 $("#chartClose").addEventListener("click",()=>$("#stockChartDialog").close());$("#stockChartDialog").addEventListener("click",e=>{if(e.target===e.currentTarget)e.currentTarget.close()});$("#periodTabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;detailDays=b.dataset.days==="all"?"all":+b.dataset.days;$("#periodTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));scheduleChart()});
 $("#detailChart").addEventListener("pointermove",event=>{if(!detailPlot)return;const rect=event.currentTarget.getBoundingClientRect(),local=event.clientX-rect.left,index=Math.max(0,Math.min(detailPlot.rows.length-1,Math.round((local-detailPlot.pad.left)/(detailPlot.width-detailPlot.pad.left-detailPlot.pad.right)*(detailPlot.rows.length-1)))),row=detailPlot.rows[index],tip=$("#chartTooltip");scheduleChart(index);tip.innerHTML=`<strong>${row.date}</strong><span>시가 ${currency(+row.open)} · 고가 ${currency(+row.high)}</span><span>저가 ${currency(+row.low)} · 종가 ${currency(+row.price)}</span><span>거래량 ${fmt(+row.volume,0)} · RSI ${fmt(detailPlot.rsi[index],1)}</span><span>MACD ${fmt(detailPlot.macd[index],4)} · Signal ${fmt(detailPlot.signal[index],4)}</span>`;tip.hidden=false;tip.style.left=`${Math.max(8,Math.min(rect.width-234,local+13))}px`;tip.style.top="18px"});$("#detailChart").addEventListener("pointerleave",()=>{$("#chartTooltip").hidden=true;scheduleChart()});window.addEventListener("resize",()=>{if($("#stockChartDialog").open)scheduleChart()});
+
+const settingsDialog=$("#stockSettingsDialog"), holdingsKey=`stock-holdings-${market}-v1`, sectorsKey="stock-sectors-v1", emailKey="stock-email-recipients-v1";
+function selectedSectorIds(){return [...$("#stockSectorOptions").querySelectorAll("input:checked")].map(input=>input.value)}
+function setSettingsStatus(message,error=false){const node=$("#stockSettingsStatus");node.textContent=message;node.classList.toggle("error",error)}
+function renderStockSettings(){
+  const options=report?.sector_options?.length?report.sector_options:sectorFallback;
+  const stored=localStorage.getItem(sectorsKey), selected=stored!==null?stored.split(",").filter(Boolean):(report?.selected_sectors||[]);
+  $("#stockSectorOptions").innerHTML=options.map(item=>`<label><input type="checkbox" value="${escapeHTML(item.id)}" ${selected.includes(item.id)?"checked":""}><span>${escapeHTML(item.label)}</span></label>`).join("");
+  $("#stockHoldings").value=localStorage.getItem(holdingsKey)||"";
+  $("#stockEmailRecipients").value=localStorage.getItem(emailKey)||"";
+  setSettingsStatus("화면 저장값은 복사용입니다. 실제 예약 수집은 GitHub Secret을 수정해야 반영됩니다.");
+}
+async function copySetting(value,name){
+  if(!value.trim()){setSettingsStatus(`${name}에 복사할 값이 없습니다.`,true);return}
+  try{await navigator.clipboard.writeText(value.trim());setSettingsStatus(`${name} 값을 복사했습니다. GitHub의 같은 이름 Secret에 저장하세요.`)}catch{setSettingsStatus("클립보드 복사에 실패했습니다. 브라우저 권한을 확인해 주세요.",true)}
+}
+$("#stockSettingsOpen").addEventListener("click",()=>{renderStockSettings();settingsDialog.showModal()});
+$("#stockSettingsClose").addEventListener("click",()=>settingsDialog.close());
+settingsDialog.addEventListener("click",event=>{if(event.target===settingsDialog)settingsDialog.close()});
+$("#saveStockSettings").addEventListener("click",()=>{localStorage.setItem(holdingsKey,$("#stockHoldings").value.trim());localStorage.setItem(sectorsKey,selectedSectorIds().join(","));localStorage.setItem(emailKey,$("#stockEmailRecipients").value.trim());setSettingsStatus("브라우저 설정을 저장했습니다. 예약 실행 반영을 위해 각 값을 GitHub Secret에도 저장하세요.")});
+$("#copyStockHoldings").addEventListener("click",()=>copySetting($("#stockHoldings").value,market==="us"?"STOCK_HOLDINGS_US":"STOCK_HOLDINGS_KR"));
+$("#copyStockSectors").addEventListener("click",()=>copySetting(selectedSectorIds().join(","),"STOCK_SECTORS"));
+$("#copyStockEmail").addEventListener("click",()=>copySetting($("#stockEmailRecipients").value,"STOCK_EMAIL_TO"));
+document.addEventListener("keydown",event=>{if(event.key==="Escape"&&settingsDialog.open)settingsDialog.close()});
 
 fetch(`data/stocks-${market}.json?v=${Date.now()}`).then(response=>{if(!response.ok)throw new Error("주식 분석 파일을 읽지 못했습니다.");return response.json()}).then(render).catch(error=>{$("#stockStatus").textContent="데이터 오류";$("#stockStatus").className="stock-status error";$("#recommendations").innerHTML=`<div class="error-card">${escapeHTML(error.message)}</div>`;showSetup()});

@@ -50,6 +50,9 @@ jobs:
           MOBULA_API_KEY: ${{ secrets.MOBULA_API_KEY }}
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          STOCK_HOLDINGS_US: ${{ secrets.STOCK_HOLDINGS_US }}
+          STOCK_HOLDINGS_KR: ${{ secrets.STOCK_HOLDINGS_KR }}
+          STOCK_SECTORS: ${{ secrets.STOCK_SECTORS }}
           GH_API_TOKEN: ${{ github.token }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -57,6 +60,7 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          STOCK_EMAIL_TO: ${{ secrets.STOCK_EMAIL_TO }}
           TEST_EMAIL: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[send-test-email]') }}
           SEND_EMAIL: ${{ (github.event_name == 'push' && contains(github.event.head_commit.message, '[send-test-email]')) || (github.event_name == 'workflow_dispatch' && inputs.send_email) || (github.event_name == 'schedule' && github.event.schedule == '30 22 * * *') }}
         run: python -m src.main --output docs/data/latest.json

@@ -1,6 +1,9 @@
 import unittest
+from datetime import datetime, timezone
+from email.utils import format_datetime
+from unittest.mock import MagicMock
 
-from src.stock_analysis import build_stock_report, market_regime, stock_score, technical_metrics
+from src.stock_analysis import build_stock_report, collect_stock_news, market_regime, parse_holdings, parse_sector_selection, selected_universe, stock_score, technical_metrics
 
 
 class FakeKisClient:
@@ -50,6 +53,35 @@ class StockAnalysisTests(unittest.TestCase):
         stock_points, reasons, _ = stock_score(metrics, regime)
         self.assertGreater(stock_points, 50)
         self.assertTrue(reasons)
+
+    def test_sector_and_holding_selection(self):
+        self.settings["sectors"] = {
+            "semiconductor": {"label": "반도체", "us": ["AAPL"], "kr": ["005930"]},
+            "energy": {"label": "에너지", "us": [], "kr": []},
+        }
+        self.assertEqual(parse_sector_selection("SEMICONDUCTOR,unknown,energy", self.settings), ["semiconductor", "energy"])
+        self.assertEqual([item["symbol"] for item in selected_universe("kr", self.settings, ["semiconductor"])], ["005930"])
+        holdings = parse_holdings("005930, 000660|하이닉스,invalid symbol", self.settings["kr"])
+        self.assertEqual(holdings, [{"symbol": "005930", "name": "삼성전자"}, {"symbol": "000660", "name": "하이닉스"}])
+
+    def test_empty_explicit_universe_requests_selection(self):
+        self.settings["sectors"] = {"energy": {"label": "에너지", "us": [], "kr": []}}
+        report = build_stock_report("kr", self.settings, FakeKisClient(), universe=[], selected_sectors=[])
+        self.assertEqual(report["status"], "선택 필요")
+        self.assertEqual(report["rankings"], [])
+
+    def test_stock_news_is_limited_to_holdings_and_selected_sectors(self):
+        self.settings["sectors"] = {"semiconductor": {"label": "반도체", "news_terms": ["반도체"], "us": ["AAPL"], "kr": []}}
+        published = format_datetime(datetime.now(timezone.utc))
+        xml = f"""<rss><channel><item><title>애플 반도체 투자 확대 - 테스트뉴스</title><link>https://example.com/a</link><pubDate>{published}</pubDate><source>테스트뉴스</source></item><item><title>무관한 야구 소식 - 테스트뉴스</title><link>https://example.com/b</link><pubDate>{published}</pubDate><source>테스트뉴스</source></item></channel></rss>"""
+        response = MagicMock(text=xml)
+        response.raise_for_status.return_value = None
+        session = MagicMock()
+        session.get.return_value = response
+        result = collect_stock_news({"us": [{"symbol": "AAPL", "name": "애플"}], "kr": []}, ["semiconductor"], self.settings, session=session)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["related_holdings"], ["AAPL"])
+        self.assertEqual(result[0]["related_sectors"], ["반도체"])
 
 
 if __name__ == "__main__":

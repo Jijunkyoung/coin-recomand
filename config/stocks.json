@@ -1,6 +1,17 @@
 {
   "history_days": 120,
   "recommendation_count": 5,
+  "sectors": {
+    "defense": {"label": "방산", "news_terms": ["방산", "방위산업", "국방 수주"], "us": ["PLTR"], "kr": ["012450", "042660"]},
+    "semiconductor": {"label": "반도체", "news_terms": ["반도체", "AI 칩", "메모리 반도체"], "us": ["NVDA", "AVGO", "AMD", "ARM"], "kr": ["005930", "000660"]},
+    "energy": {"label": "에너지", "news_terms": ["에너지주", "원전", "정유", "전력 인프라"], "us": ["XOM"], "kr": ["034020", "373220"]},
+    "ai_platform": {"label": "AI·플랫폼", "news_terms": ["인공지능 주식", "AI 플랫폼", "클라우드"], "us": ["MSFT", "GOOGL", "META", "PLTR"], "kr": ["035420", "035720"]},
+    "mobility": {"label": "자동차·모빌리티", "news_terms": ["자동차주", "전기차", "자율주행"], "us": ["TSLA"], "kr": ["005380", "000270"]},
+    "bio": {"label": "바이오·헬스케어", "news_terms": ["바이오주", "헬스케어주", "신약"], "us": ["LLY"], "kr": ["207940", "068270"]},
+    "finance": {"label": "금융", "news_terms": ["금융주", "은행주", "증권주"], "us": ["JPM"], "kr": ["105560", "055550"]},
+    "consumer": {"label": "소비·유통", "news_terms": ["소비주", "유통주", "소비 경기"], "us": ["AMZN", "COST", "WMT", "NFLX"], "kr": []},
+    "shipbuilding": {"label": "조선·기계", "news_terms": ["조선주", "건설기계", "선박 수주"], "us": [], "kr": ["329180", "267270", "042670", "042660"]}
+  },
   "us": {
     "benchmark": {"symbol": "SPY", "name": "S&P 500 ETF", "exchange": "AMS"},
     "universe": [

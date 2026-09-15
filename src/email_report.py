@@ -37,7 +37,13 @@ def _change_badge(value: Any) -> str:
 
 def email_subject(report: dict[str, Any], test_email: bool = False) -> str:
     prefix = "[테스트] " if test_email else ""
-    return f"{prefix}[{report['market']['regime']}] 코인·주식 분석 {report['generated_at_kst'][:10]}"
+    return f"{prefix}[{report['market']['regime']}] 코인 분석 {report['generated_at_kst'][:10]}"
+
+
+def stock_email_subject(stock_reports: dict[str, dict[str, Any]], test_email: bool = False) -> str:
+    prefix = "[테스트] " if test_email else ""
+    date = next((str(stock_reports.get(market, {}).get("generated_at_kst", ""))[:10] for market in ("us", "kr") if stock_reports.get(market)), "")
+    return f"{prefix}맞춤 주식 브리핑 {date}".strip()
 
 
 def _asset_card(asset: dict[str, Any], currency: str, rank: int) -> str:
@@ -135,6 +141,38 @@ def _stock_email_section(stock_reports: dict[str, dict[str, Any]] | None) -> str
     return "".join(sections)
 
 
+def build_stock_email_html(stock_reports: dict[str, dict[str, Any]]) -> str:
+    mail_context = stock_reports.get("_mail") or {}
+    sectors = " · ".join(mail_context.get("selected_sector_labels") or []) or "선택 없음"
+    holding_counts = mail_context.get("holding_counts") or {}
+    generated_at = next((stock_reports.get(market, {}).get("generated_at_kst") for market in ("us", "kr") if stock_reports.get(market)), "—")
+    news_rows = []
+    for issue in mail_context.get("news_issues") or []:
+        related = [*(issue.get("related_holdings") or []), *(issue.get("related_sectors") or [])]
+        news_rows.append(
+            f"<div style='padding:12px 0;border-bottom:1px solid #d6e0ec'><a href='{html.escape(str(issue.get('url') or ''), quote=True)}' style='color:#1d5fbd;text-decoration:underline'><b>{html.escape(str(issue.get('title') or '제목 없음'))}</b></a><br>"
+            f"<span style='color:#52657d;font-size:11px'>{html.escape(str(issue.get('published_at_kst') or ''))} KST · {html.escape(str(issue.get('source') or '출처 미상'))} · {html.escape(str(issue.get('impact') or '중립·혼재'))} · 관련 {html.escape(' · '.join(related) or '선택 주식')}</span></div>"
+        )
+    news_html = "".join(news_rows) or "<p style='color:#52657d;font-size:12px'>최근 24시간 선별된 맞춤 주식뉴스가 없습니다.</p>"
+    return f"""<!doctype html>
+    <html><head><meta charset="utf-8"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><style>:root{{color-scheme:light only}} body{{margin:0!important;background:#f3f6fb!important;color:#10233f!important}}</style></head>
+    <body bgcolor="#f3f6fb" style="margin:0;background:#f3f6fb;color:#10233f">
+    <div style="margin:0;padding:24px 10px;background:#f3f6fb;font-family:Arial,'Noto Sans KR',sans-serif;color:#10233f">
+      <div style="max-width:760px;margin:auto;background:#f3f6fb;color:#10233f">
+        <p style="margin:0;color:#1d5fbd;font-size:11px;font-weight:800;letter-spacing:1.3px">PERSONAL STOCK DESK</p>
+        <h1 style="margin:6px 0 4px;font-size:27px;color:#10233f">맞춤 주식 브리핑</h1>
+        <p style="margin:0 0 18px;color:#52657d;font-size:12px">{html.escape(str(generated_at))} 기준 · 매일 오전 7시 30분</p>
+        <div style="padding:18px;border:1px solid #b9cbe0;border-radius:14px;background:#eaf2ff;color:#10233f">
+          <p style="margin:0 0 7px;color:#52657d;font-size:11px">선택 섹터</p><strong style="color:#10233f">{html.escape(sectors)}</strong>
+          <p style="margin:10px 0 0;color:#263b55;font-size:12px">보유종목 뉴스 대상: 미국 {int(holding_counts.get('us', 0))}개 · 국내 {int(holding_counts.get('kr', 0))}개</p>
+        </div>
+        {_stock_email_section(stock_reports)}
+        <div style="margin-top:24px;padding:17px;border:1px solid #d6e0ec;border-radius:12px;background:#ffffff;color:#10233f"><h2 style="margin:0 0 4px;color:#10233f;font-size:18px">보유종목·선택 섹터 주요뉴스</h2><p style="margin:0 0 6px;color:#52657d;font-size:11px">최근 24시간 제목 기반 선별이며 투자 판단 전 원문 확인이 필요합니다.</p>{news_html}</div>
+        <p style="margin:20px 4px 0;color:#52657d;font-size:11px;line-height:1.5">보유종목 목록은 메일 생성에만 사용하며 공개 대시보드 JSON에는 저장하지 않습니다. 정량 지표 기반 참고자료이며 투자 자문이 아닙니다.</p>
+      </div>
+    </div></body></html>"""
+
+
 def build_email_html(report: dict[str, Any], stock_reports: dict[str, dict[str, Any]] | None = None) -> str:
     market = report["market"]
     bitcoin = market["bitcoin"]
@@ -169,7 +207,7 @@ def build_email_html(report: dict[str, Any], stock_reports: dict[str, dict[str, 
     <div style="margin:0;padding:24px 10px;background:#f3f6fb;font-family:Arial,'Noto Sans KR',sans-serif;color:#10233f">
       <div style="max-width:760px;margin:auto;background:#f3f6fb;color:#10233f">
         <p style="margin:0;color:#1d5fbd;font-size:11px;font-weight:800;letter-spacing:1.3px">MARKET SIGNAL DESK</p>
-        <h1 style="margin:6px 0 4px;font-size:27px;color:#10233f">오늘의 코인·주식 분석</h1>
+        <h1 style="margin:6px 0 4px;font-size:27px;color:#10233f">오늘의 코인 분석</h1>
         <p style="margin:0 0 18px;color:#52657d;font-size:12px">{html.escape(report['generated_at_kst'])} 기준 · 매일 오전 7시 30분</p>
         <div style="padding:20px;border:1px solid #b9cbe0;border-radius:15px;background:#eaf2ff;color:#10233f">
           <table role="presentation" style="width:100%;border-collapse:collapse"><tr><td>
@@ -197,32 +235,40 @@ def send_email(report: dict[str, Any], stock_reports: dict[str, dict[str, Any]] 
         "SMTP_HOST": os.getenv("SMTP_HOST", "").strip(),
         "SMTP_USERNAME": os.getenv("SMTP_USERNAME", "").strip(),
         "SMTP_PASSWORD": os.getenv("SMTP_PASSWORD", "").strip(),
-        "EMAIL_TO": os.getenv("EMAIL_TO", "").strip(),
     }
     if not all(required.values()):
         print("메일 설정이 없어 발송을 건너뜁니다.")
         return False
     port = int(os.getenv("SMTP_PORT", "465"))
     sender = os.getenv("EMAIL_FROM", "").strip() or required["SMTP_USERNAME"]
-    recipients = parse_recipients(required["EMAIL_TO"])
-    if not recipients:
-        print("유효한 수신 이메일 주소가 없어 발송을 건너뜁니다.")
-        return False
-    message = EmailMessage()
     is_test_email = os.getenv("TEST_EMAIL", "").strip().lower() in {"1", "true", "yes"}
-    message["Subject"] = email_subject(report, is_test_email)
-    message["From"] = sender
-    message["To"] = ", ".join(recipients)
-    message.set_content("HTML을 지원하는 메일 앱에서 보고서를 확인해 주세요.")
-    message.add_alternative(build_email_html(report, stock_reports), subtype="html")
-    if port == 465:
-        with smtplib.SMTP_SSL(required["SMTP_HOST"], port, timeout=30) as smtp:
-            smtp.login(required["SMTP_USERNAME"], required["SMTP_PASSWORD"])
-            smtp.send_message(message)
-    else:
-        with smtplib.SMTP(required["SMTP_HOST"], port, timeout=30) as smtp:
-            smtp.starttls()
-            smtp.login(required["SMTP_USERNAME"], required["SMTP_PASSWORD"])
-            smtp.send_message(message)
-    print(f"분석 메일을 {len(recipients)}개 주소로 발송했습니다.")
-    return True
+    deliveries = [
+        ("코인", os.getenv("EMAIL_TO", "").strip(), email_subject(report, is_test_email), build_email_html(report)),
+    ]
+    if stock_reports:
+        deliveries.append(("주식", os.getenv("STOCK_EMAIL_TO", "").strip(), stock_email_subject(stock_reports, is_test_email), build_stock_email_html(stock_reports)))
+    sent = False
+    for label, recipient_value, subject, body in deliveries:
+        if not recipient_value:
+            print(f"{label} 메일 수신주소가 없어 발송을 건너뜁니다.")
+            continue
+        recipients = parse_recipients(recipient_value)
+        if not recipients:
+            print(f"{label} 메일의 유효한 수신주소가 없어 발송을 건너뜁니다.")
+            continue
+        message = EmailMessage()
+        message["Subject"], message["From"], message["To"] = subject, sender, ", ".join(recipients)
+        message.set_content("HTML을 지원하는 메일 앱에서 보고서를 확인해 주세요.")
+        message.add_alternative(body, subtype="html")
+        if port == 465:
+            with smtplib.SMTP_SSL(required["SMTP_HOST"], port, timeout=30) as smtp:
+                smtp.login(required["SMTP_USERNAME"], required["SMTP_PASSWORD"])
+                smtp.send_message(message)
+        else:
+            with smtplib.SMTP(required["SMTP_HOST"], port, timeout=30) as smtp:
+                smtp.starttls()
+                smtp.login(required["SMTP_USERNAME"], required["SMTP_PASSWORD"])
+                smtp.send_message(message)
+        print(f"{label} 분석 메일을 {len(recipients)}개 주소로 발송했습니다.")
+        sent = True
+    return sent

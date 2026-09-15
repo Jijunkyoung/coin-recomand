@@ -1,6 +1,7 @@
 import unittest
+from unittest.mock import patch
 
-from src.email_report import build_email_html, email_subject, parse_recipients
+from src.email_report import build_email_html, build_stock_email_html, email_subject, parse_recipients, send_email, stock_email_subject
 
 
 class EmailReportTests(unittest.TestCase):
@@ -14,7 +15,7 @@ class EmailReportTests(unittest.TestCase):
 
     def test_test_email_subject_is_clearly_marked(self):
         report = {"generated_at_kst": "2026-09-15 13:00 KST", "market": {"regime": "중립"}}
-        self.assertEqual(email_subject(report, True), "[테스트] [중립] 코인·주식 분석 2026-09-15")
+        self.assertEqual(email_subject(report, True), "[테스트] [중립] 코인 분석 2026-09-15")
 
     def test_email_contains_news_issue_and_escaped_link(self):
         report = {
@@ -39,6 +40,8 @@ class EmailReportTests(unittest.TestCase):
         }
         result = build_email_html(report)
         self.assertIn("최근 24시간 주요 코인 이슈", result)
+        self.assertIn("오늘의 코인 분석", result)
+        self.assertNotIn("오늘의 코인·주식 분석", result)
         self.assertIn("BTC 주요 이슈", result)
         self.assertIn("a=1&amp;b=2", result)
         self.assertIn("DeFi TVL", result)
@@ -62,12 +65,27 @@ class EmailReportTests(unittest.TestCase):
         stocks = {"us": {"market_name": "미국주식", "regime": "상승", "market_score": 80,
                          "recommendations": [{"name": "애플", "symbol": "AAPL", "score": 82, "decision": "분할매수 후보", "rsi": 58, "return_30d": 9}]},
                   "kr": {"market_name": "국내주식", "warnings": ["설정 필요"], "recommendations": []}}
-        result = build_email_html(report, stocks)
+        stocks["_mail"] = {"selected_sector_labels": ["반도체"], "holding_counts": {"us": 2, "kr": 1}, "news_issues": [{"title": "엔비디아 신제품", "url": "https://example.com", "source": "테스트", "impact": "호재 가능", "published_at_kst": "09-15 07:00", "related_holdings": ["NVDA"], "related_sectors": ["반도체"]}]}
+        result = build_stock_email_html(stocks)
         self.assertIn("미국주식 추천", result)
         self.assertIn("애플", result)
         self.assertIn("국내주식", result)
-        self.assertIn("MARKET SIGNAL DESK", result)
-        self.assertIn("오늘의 코인·주식 분석", result)
+        self.assertIn("PERSONAL STOCK DESK", result)
+        self.assertIn("맞춤 주식 브리핑", result)
+        self.assertIn("엔비디아 신제품", result)
+        self.assertIn("반도체", result)
+        self.assertEqual(stock_email_subject(stocks, True), "[테스트] 맞춤 주식 브리핑")
+
+    @patch.dict("os.environ", {"SMTP_HOST": "smtp.example.com", "SMTP_PORT": "465", "SMTP_USERNAME": "sender@example.com", "SMTP_PASSWORD": "secret", "EMAIL_TO": "coin@example.com", "STOCK_EMAIL_TO": "stock@example.com"}, clear=True)
+    @patch("src.email_report.smtplib.SMTP_SSL")
+    def test_coin_and_stock_reports_use_separate_recipients(self, smtp_ssl):
+        report = {"generated_at_kst": "2026-09-15 07:30 KST", "market": {"regime": "중립", "score": 50, "bitcoin": {"price": 100, "mvrv_z": 1.2}, "liquidity": {}}, "recommendations": [], "news_issues": [], "upcoming_events": []}
+        stocks = {"us": {"generated_at_kst": "2026-09-15 07:30 KST", "market_name": "미국주식", "recommendations": [], "warnings": []}, "kr": {"market_name": "국내주식", "recommendations": [], "warnings": []}, "_mail": {}}
+        self.assertTrue(send_email(report, stocks))
+        messages = [call.args[0] for call in smtp_ssl.return_value.__enter__.return_value.send_message.call_args_list]
+        self.assertEqual([message["To"] for message in messages], ["coin@example.com", "stock@example.com"])
+        self.assertIn("코인 분석", messages[0]["Subject"])
+        self.assertIn("맞춤 주식 브리핑", messages[1]["Subject"])
 
 
 if __name__ == "__main__":
