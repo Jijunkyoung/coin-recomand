@@ -10,6 +10,7 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("github.event.schedule == '30 22 * * *'", workflow)
         self.assertIn("github.event_name == 'workflow_dispatch' && inputs.send_email", workflow)
         self.assertIn("default: false", workflow)
+        self.assertIn("[send-test-email]", workflow)
 
 
 if __name__ == "__main__":

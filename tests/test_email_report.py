@@ -1,6 +1,6 @@
 import unittest
 
-from src.email_report import build_email_html, parse_recipients
+from src.email_report import build_email_html, email_subject, parse_recipients
 
 
 class EmailReportTests(unittest.TestCase):
@@ -11,6 +11,10 @@ class EmailReportTests(unittest.TestCase):
     def test_rejects_invalid_recipient(self):
         with self.assertRaisesRegex(ValueError, "잘못된 수신 이메일 주소"):
             parse_recipients("valid@example.com,not-an-email")
+
+    def test_test_email_subject_is_clearly_marked(self):
+        report = {"generated_at_kst": "2026-09-15 13:00 KST", "market": {"regime": "중립"}}
+        self.assertEqual(email_subject(report, True), "[테스트] [중립] 코인·주식 분석 2026-09-15")
 
     def test_email_contains_news_issue_and_escaped_link(self):
         report = {

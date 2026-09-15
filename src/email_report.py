@@ -35,6 +35,11 @@ def _change_badge(value: Any) -> str:
     return f"<span style='margin-left:6px;color:{color};font-weight:800'>{_pct(value)}</span>"
 
 
+def email_subject(report: dict[str, Any], test_email: bool = False) -> str:
+    prefix = "[테스트] " if test_email else ""
+    return f"{prefix}[{report['market']['regime']}] 코인·주식 분석 {report['generated_at_kst'][:10]}"
+
+
 def _asset_card(asset: dict[str, Any], currency: str, rank: int) -> str:
     price = float(asset.get("price") or 0)
     price_text = f"${price:,.2f}" if currency == "USD" else f"₩{price:,.0f}"
@@ -202,7 +207,8 @@ def send_email(report: dict[str, Any], stock_reports: dict[str, dict[str, Any]] 
         print("유효한 수신 이메일 주소가 없어 발송을 건너뜁니다.")
         return False
     message = EmailMessage()
-    message["Subject"] = f"[{report['market']['regime']}] 코인·주식 분석 {report['generated_at_kst'][:10]}"
+    is_test_email = os.getenv("TEST_EMAIL", "").strip().lower() in {"1", "true", "yes"}
+    message["Subject"] = email_subject(report, is_test_email)
     message["From"] = sender
     message["To"] = ", ".join(recipients)
     message.set_content("HTML을 지원하는 메일 앱에서 보고서를 확인해 주세요.")

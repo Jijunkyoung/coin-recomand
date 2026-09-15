@@ -757,6 +757,10 @@ $("#copyEmailSecret").addEventListener("click", async () => {
     $("#emailSettingsStatus").textContent = "자동 복사가 차단됐습니다. 선택된 주소를 직접 복사해 주세요.";
   }
 });
+$("#testEmailButton").addEventListener("click", () => {
+  $("#emailSettingsStatus").classList.remove("error");
+  $("#emailSettingsStatus").textContent = "GitHub Actions에서 Run workflow를 누르고 ‘메일 발송’을 체크하면 현재 EMAIL_TO Secret 주소로 테스트 보고서가 발송됩니다.";
+});
 
 async function loadLatestReport() {
   try {

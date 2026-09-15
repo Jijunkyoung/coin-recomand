@@ -166,11 +166,13 @@
         <button type="button" id="saveEmailRecipients" class="secondary-button">목록 저장</button>
         <button type="button" id="copyEmailSecret" class="primary-button">EMAIL_TO 값 복사</button>
         <a href="https://github.com/Jijunkyoung/coin-recomand/settings/secrets/actions/new" target="_blank" rel="noopener" class="secret-link">GitHub Secret 등록</a>
+        <a id="testEmailButton" href="https://github.com/Jijunkyoung/coin-recomand/actions/workflows/analyze-and-deploy.yml" target="_blank" rel="noopener" class="test-email-link">테스트 메일 보내기</a>
       </div>
       <div class="secret-guide">
         <strong>최초 1회 설정</strong>
         <ol><li>주소 입력 후 <b>EMAIL_TO 값 복사</b></li><li>GitHub Secret 이름에 <code>EMAIL_TO</code> 입력</li><li>복사한 주소를 Secret 값에 붙여넣고 저장</li></ol>
       </div>
+      <div class="test-email-guide"><strong>테스트 발송</strong><p><b>테스트 메일 보내기</b> → GitHub의 <b>Run workflow</b> → <b>메일 발송</b> 체크 → 초록색 <b>Run workflow</b> 순서로 실행하세요.</p></div>
       <p id="emailSettingsStatus" class="email-settings-status" aria-live="polite"></p>
     </div>
   </dialog>
