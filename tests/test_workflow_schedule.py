@@ -15,6 +15,9 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("STOCK_HOLDINGS_US: ${{ secrets.STOCK_HOLDINGS_US }}", workflow)
         self.assertIn("STOCK_HOLDINGS_KR: ${{ secrets.STOCK_HOLDINGS_KR }}", workflow)
         self.assertIn("STOCK_SECTORS: ${{ secrets.STOCK_SECTORS }}", workflow)
+        self.assertIn("SUPABASE_URL: ${{ secrets.SUPABASE_URL }}", workflow)
+        self.assertIn("SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}", workflow)
+        self.assertIn("python scripts/write_supabase_config.py", workflow)
 
 
 if __name__ == "__main__":

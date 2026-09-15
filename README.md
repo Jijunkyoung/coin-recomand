@@ -36,6 +36,20 @@ python -m http.server 8000 --directory docs
 
 브라우저에서 `http://localhost:8000`을 열면 됩니다.
 
+## 회원가입·로그인(Supabase 웹 설정)
+
+별도 프로그램 설치 없이 [Supabase 웹 대시보드](https://supabase.com/dashboard)만으로 연결할 수 있습니다. 회원 비밀번호는 애플리케이션 데이터베이스에 저장하지 않고 Supabase Auth가 처리하며, `user_preferences`에는 회원별 보유주식·관심 섹터·코인/주식 보고서 주소만 저장합니다. RLS 정책으로 로그인한 사용자는 자신의 행만 조회·수정할 수 있습니다.
+
+1. Supabase에서 새 프로젝트를 만들고 **SQL Editor → New query**를 엽니다.
+2. [`supabase/migrations/20260915_user_preferences.sql`](supabase/migrations/20260915_user_preferences.sql)의 전체 내용을 붙여넣어 **Run** 합니다.
+3. **Authentication → Providers → Email**에서 Email 로그인을 켜고 **Confirm email**을 켭니다.
+4. **Authentication → URL Configuration**에서 Site URL을 `https://jijunkyoung.github.io/coin-recomand/`로 지정하고 같은 주소와 `https://jijunkyoung.github.io/coin-recomand/**`를 Redirect URLs에 추가합니다.
+5. **Project Settings → API**에서 Project URL과 publishable key(구 프로젝트는 anon key)를 확인합니다.
+6. GitHub **Settings → Secrets and variables → Actions**에 각각 `SUPABASE_URL`, `SUPABASE_ANON_KEY`라는 이름으로 저장합니다. service_role/secret key는 브라우저용 Secret에 넣지 않습니다.
+7. Actions에서 워크플로를 한 번 실행하거나 변경사항 배포가 끝나면 우측 상단의 `회원가입`으로 확인합니다.
+
+`SUPABASE_ANON_KEY`는 GitHub Pages 브라우저에 전달되는 공개용 키입니다. 테이블 보호는 키 은닉이 아니라 위 SQL의 RLS 정책이 담당합니다. `service_role` 키는 RLS를 우회하므로 정적 페이지나 저장소 파일에 절대 넣지 않습니다.
+
 ## GitHub Actions 설정
 
 워크플로는 매시간 종합 분석·GitHub Pages 배포를 수행하고, 한국시간 오전 7시 30분 예약 또는 사용자가 직접 수동 실행했을 때만 코인 보고서와 맞춤 주식 보고서를 각 수신주소로 분리 발송합니다. 코드 변경에 따른 자동 배포에서는 이메일을 보내지 않습니다. 저장소의 **Settings → Pages → Source**를 `GitHub Actions`로 지정하세요.
@@ -56,6 +70,8 @@ python -m http.server 8000 --directory docs
 | `STOCK_HOLDINGS_US` | 미국 보유종목 뉴스 대상 | `AAPL\|애플,NVDA\|엔비디아` |
 | `STOCK_HOLDINGS_KR` | 국내 보유종목 뉴스 대상 | `005930\|삼성전자,000660\|SK하이닉스` |
 | `STOCK_SECTORS` | 분석·뉴스를 수집할 섹터 ID | `defense,semiconductor,energy` |
+| `SUPABASE_URL` | Supabase Project URL | `https://...supabase.co` |
+| `SUPABASE_ANON_KEY` | 브라우저용 publishable/anon key | `sb_publishable_...` 또는 기존 JWT anon key |
 
 ### 미국·국내주식 최초 설정
 

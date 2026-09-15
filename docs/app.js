@@ -737,12 +737,23 @@ $("#emailSettingsButton").addEventListener("click", openEmailSettings);
 $("#emailDialogClose").addEventListener("click", () => $("#emailDialog").close());
 $("#emailDialog").addEventListener("click", event => { if (event.target === event.currentTarget) event.currentTarget.close(); });
 $("#emailRecipients").addEventListener("input", updateEmailPreview);
-$("#saveEmailRecipients").addEventListener("click", () => {
+$("#saveEmailRecipients").addEventListener("click", async () => {
   const parsed = updateEmailPreview();
   if (parsed.invalid.length || !parsed.valid.length) return;
   localStorage.setItem(EMAIL_STORAGE_KEY, parsed.valid.join("\n"));
-  $("#emailSettingsStatus").classList.add("error");
-  $("#emailSettingsStatus").textContent = "브라우저에만 저장했습니다. 실제 예약 발송 주소는 아직 변경되지 않았습니다. ‘실제 발송주소 변경’에서 EMAIL_TO Secret을 수정하세요.";
+  if (window.CoinAuth?.user) {
+    try {
+      await window.CoinAuth.savePreferences({ coin_email: parsed.valid[0] });
+      $("#emailSettingsStatus").classList.remove("error");
+      $("#emailSettingsStatus").textContent = "로그인 회원의 코인 보고서 주소를 저장했습니다.";
+    } catch (error) {
+      $("#emailSettingsStatus").classList.add("error");
+      $("#emailSettingsStatus").textContent = `회원 설정 저장 실패: ${error.message}`;
+    }
+  } else {
+    $("#emailSettingsStatus").classList.add("error");
+    $("#emailSettingsStatus").textContent = "브라우저에만 저장했습니다. 로그인하면 회원별 주소로 저장됩니다.";
+  }
 });
 $("#copyEmailSecret").addEventListener("click", async () => {
   const parsed = updateEmailPreview();
