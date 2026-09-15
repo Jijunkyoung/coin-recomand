@@ -87,6 +87,15 @@ class EmailReportTests(unittest.TestCase):
         self.assertIn("코인 분석", messages[0]["Subject"])
         self.assertIn("맞춤 주식 브리핑", messages[1]["Subject"])
 
+    @patch.dict("os.environ", {"SMTP_HOST": "smtp.example.com", "SMTP_PORT": "465", "SMTP_USERNAME": "sender@example.com", "SMTP_PASSWORD": "secret", "EMAIL_TO": "fallback@example.com"}, clear=True)
+    @patch("src.email_report.smtplib.SMTP_SSL")
+    def test_stock_report_falls_back_to_coin_recipient(self, smtp_ssl):
+        report = {"generated_at_kst": "2026-09-16 07:30 KST", "market": {"regime": "중립", "score": 50, "bitcoin": {"price": 100, "mvrv_z": 1.2}, "liquidity": {}}, "recommendations": [], "news_issues": [], "upcoming_events": []}
+        stocks = {"us": {"generated_at_kst": "2026-09-16 07:30 KST", "market_name": "미국주식", "recommendations": [], "warnings": []}, "kr": {"market_name": "국내주식", "recommendations": [], "warnings": []}, "_mail": {}}
+        self.assertTrue(send_email(report, stocks))
+        messages = [call.args[0] for call in smtp_ssl.return_value.__enter__.return_value.send_message.call_args_list]
+        self.assertEqual([message["To"] for message in messages], ["fallback@example.com", "fallback@example.com"])
+
 
 if __name__ == "__main__":
     unittest.main()
