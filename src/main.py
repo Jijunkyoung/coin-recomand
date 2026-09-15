@@ -550,7 +550,9 @@ def main() -> None:
     stock_reports = generate_stock_reports(output_dir=output.parent)
     should_send = args.send_email or os.getenv("SEND_EMAIL", "").lower() in {"1", "true", "yes"}
     if should_send:
-        send_email(report, stock_reports)
+        delivered = send_email(report, stock_reports)
+        if not delivered and os.getenv("REQUIRE_EMAIL_DELIVERY", "").lower() in {"1", "true", "yes"}:
+            raise RuntimeError("요청된 보고서 메일이 한 건도 발송되지 않았습니다.")
 
 
 if __name__ == "__main__":
