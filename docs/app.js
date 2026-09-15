@@ -741,7 +741,8 @@ $("#saveEmailRecipients").addEventListener("click", () => {
   const parsed = updateEmailPreview();
   if (parsed.invalid.length || !parsed.valid.length) return;
   localStorage.setItem(EMAIL_STORAGE_KEY, parsed.valid.join("\n"));
-  $("#emailSettingsStatus").textContent = "이 브라우저에 주소 목록을 저장했습니다. 예약 발송에는 GitHub Secret 등록도 필요합니다.";
+  $("#emailSettingsStatus").classList.add("error");
+  $("#emailSettingsStatus").textContent = "브라우저에만 저장했습니다. 실제 예약 발송 주소는 아직 변경되지 않았습니다. ‘실제 발송주소 변경’에서 EMAIL_TO Secret을 수정하세요.";
 });
 $("#copyEmailSecret").addEventListener("click", async () => {
   const parsed = updateEmailPreview();
@@ -750,7 +751,8 @@ $("#copyEmailSecret").addEventListener("click", async () => {
   localStorage.setItem(EMAIL_STORAGE_KEY, parsed.valid.join("\n"));
   try {
     await navigator.clipboard.writeText(value);
-    $("#emailSettingsStatus").textContent = "EMAIL_TO 값이 복사됐습니다. GitHub Secret 등록 버튼을 눌러 붙여넣으세요.";
+    $("#emailSettingsStatus").classList.remove("error");
+    $("#emailSettingsStatus").textContent = "EMAIL_TO 값이 복사됐습니다. ‘실제 발송주소 변경’에서 기존 EMAIL_TO의 Update secret을 눌러 붙여넣으세요.";
   } catch {
     $("#emailRecipients").value = value;
     $("#emailRecipients").select();

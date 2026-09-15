@@ -161,18 +161,19 @@
       <label for="emailRecipients">보고서를 받을 이메일 주소</label>
       <textarea id="emailRecipients" rows="5" placeholder="me@example.com&#10;team@example.com"></textarea>
       <p class="email-help">한 줄에 하나씩 입력하거나 쉼표로 구분할 수 있습니다. 입력값은 이 브라우저에만 저장되며 공개되지 않습니다.</p>
+      <div class="email-secret-warning"><strong>중요</strong><span>아래 입력란은 주소 작성·복사용입니다. 실제 예약 발송 주소는 GitHub의 <code>EMAIL_TO</code> Secret을 수정해야 변경됩니다.</span></div>
       <div id="emailRecipientPreview" class="email-recipient-preview" aria-live="polite"></div>
       <div class="email-dialog-actions">
-        <button type="button" id="saveEmailRecipients" class="secondary-button">목록 저장</button>
+        <button type="button" id="saveEmailRecipients" class="secondary-button">브라우저 목록만 저장</button>
         <button type="button" id="copyEmailSecret" class="primary-button">EMAIL_TO 값 복사</button>
-        <a href="https://github.com/Jijunkyoung/coin-recomand/settings/secrets/actions/new" target="_blank" rel="noopener" class="secret-link">GitHub Secret 등록</a>
+        <a href="https://github.com/Jijunkyoung/coin-recomand/settings/secrets/actions" target="_blank" rel="noopener" class="secret-link">실제 발송주소 변경</a>
         <a id="testEmailButton" href="https://github.com/Jijunkyoung/coin-recomand/actions/workflows/analyze-and-deploy.yml" target="_blank" rel="noopener" class="test-email-link">테스트 메일 보내기</a>
       </div>
       <div class="secret-guide">
-        <strong>최초 1회 설정</strong>
-        <ol><li>주소 입력 후 <b>EMAIL_TO 값 복사</b></li><li>GitHub Secret 이름에 <code>EMAIL_TO</code> 입력</li><li>복사한 주소를 Secret 값에 붙여넣고 저장</li></ol>
+        <strong>실제 발송주소 변경 방법</strong>
+        <ol><li>새 주소 입력 후 <b>EMAIL_TO 값 복사</b></li><li><b>실제 발송주소 변경</b>에서 기존 <code>EMAIL_TO</code> 선택</li><li><b>Update secret</b> → 복사한 주소 붙여넣기 → <b>Save changes</b></li><li>테스트 메일로 적용 여부 확인</li></ol>
       </div>
-      <div class="test-email-guide"><strong>테스트 발송</strong><p><b>테스트 메일 보내기</b> → GitHub의 <b>Run workflow</b> → <b>메일 발송</b> 체크 → 초록색 <b>Run workflow</b> 순서로 실행하세요.</p></div>
+      <div class="test-email-guide"><strong>테스트 발송</strong><p>입력란이 아니라 현재 GitHub <code>EMAIL_TO</code> Secret으로 발송됩니다. <b>테스트 메일 보내기</b> → <b>Run workflow</b> → <b>메일 발송</b> 체크 → 초록색 <b>Run workflow</b> 순서로 실행하세요.</p></div>
       <p id="emailSettingsStatus" class="email-settings-status" aria-live="polite"></p>
     </div>
   </dialog>
