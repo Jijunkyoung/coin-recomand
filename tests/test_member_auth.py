@@ -21,6 +21,13 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn('id="logoutTop"', script)
         self.assertIn('client.auth.signOut()', script)
 
+    def test_coin_and_stock_recipient_lists_are_separate(self):
+        auth = (ROOT / "docs/auth.js").read_text(encoding="utf-8")
+        coin_page = (ROOT / "docs/app.js").read_text(encoding="utf-8")
+        self.assertIn('id="profileCoinEmail"', auth)
+        self.assertIn('id="profileStockEmail"', auth)
+        self.assertIn('coin_email: parsed.valid.join("\\n")', coin_page)
+
     def test_rls_is_limited_to_authenticated_owner(self):
         sql = (ROOT / "supabase/migrations/20260915_user_preferences.sql").read_text(encoding="utf-8")
         self.assertIn("enable row level security", sql.lower())

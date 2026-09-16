@@ -15,14 +15,13 @@
   let profile = null;
 
   const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
-  const oneEmail = value => String(value || "").split(/[\s,;]+/).map(x => x.trim()).find(Boolean) || "";
   const local = key => localStorage.getItem(key) || "";
   const defaultProfile = () => ({
     holdings_us: local("stock-holdings-us-v1"),
     holdings_kr: local("stock-holdings-kr-v1"),
     sector_ids: local("stock-sectors-v1").split(",").filter(Boolean),
-    coin_email: oneEmail(local("coin-signal-email-recipients")),
-    stock_email: oneEmail(local("stock-email-recipients-v1")),
+    coin_email: local("coin-signal-email-recipients"),
+    stock_email: local("stock-email-recipients-v1"),
   });
 
   const actions = document.createElement("div");
@@ -40,7 +39,7 @@
         </div>
         <form id="profileForm" class="auth-panel" hidden>
           <p id="profileAccountEmail" class="profile-email"></p>
-          <div class="profile-grid"><label class="auth-field">코인 보고서 수신 이메일<input id="profileCoinEmail" type="email" autocomplete="email"></label><label class="auth-field">주식 보고서 수신 이메일<input id="profileStockEmail" type="email" autocomplete="email"></label></div>
+          <div class="profile-grid"><label class="auth-field">코인 보고서 수신목록<textarea id="profileCoinEmail" rows="3" placeholder="coin@example.com&#10;team@example.com"></textarea></label><label class="auth-field">주식 보고서 수신목록<textarea id="profileStockEmail" rows="3" placeholder="stock@example.com&#10;team@example.com"></textarea></label></div>
           <div class="profile-grid"><label class="auth-field">미국 보유주식<textarea id="profileHoldingsUs" rows="4" placeholder="AAPL|애플&#10;NVDA|엔비디아"></textarea></label><label class="auth-field">국내 보유주식<textarea id="profileHoldingsKr" rows="4" placeholder="005930|삼성전자&#10;000660|SK하이닉스"></textarea></label></div>
           <label class="auth-field">관심분야</label><div id="profileSectors" class="profile-sectors">${sectors.map(([id,label]) => `<label><input type="checkbox" value="${id}"><span>${label}</span></label>`).join("")}</div>
           <div class="auth-profile-actions"><button type="submit" class="auth-submit">내 설정 저장</button><button type="button" id="logoutButton" class="auth-logout">로그아웃</button></div>

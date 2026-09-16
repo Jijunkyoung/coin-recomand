@@ -246,11 +246,7 @@ def send_email(report: dict[str, Any], stock_reports: dict[str, dict[str, Any]] 
         ("코인", os.getenv("EMAIL_TO", "").strip(), email_subject(report, is_test_email), build_email_html(report)),
     ]
     if stock_reports:
-        stock_recipients = os.getenv("STOCK_EMAIL_TO", "").strip()
-        if not stock_recipients and os.getenv("EMAIL_TO", "").strip():
-            stock_recipients = os.getenv("EMAIL_TO", "").strip()
-            print("STOCK_EMAIL_TO가 없어 주식 보고서를 EMAIL_TO 주소로 발송합니다.")
-        deliveries.append(("주식", stock_recipients, stock_email_subject(stock_reports, is_test_email), build_stock_email_html(stock_reports)))
+        deliveries.append(("주식", os.getenv("STOCK_EMAIL_TO", "").strip(), stock_email_subject(stock_reports, is_test_email), build_stock_email_html(stock_reports)))
     sent = False
     for label, recipient_value, subject, body in deliveries:
         if not recipient_value:

@@ -743,7 +743,7 @@ $("#saveEmailRecipients").addEventListener("click", async () => {
   localStorage.setItem(EMAIL_STORAGE_KEY, parsed.valid.join("\n"));
   if (window.CoinAuth?.user) {
     try {
-      await window.CoinAuth.savePreferences({ coin_email: parsed.valid[0] });
+      await window.CoinAuth.savePreferences({ coin_email: parsed.valid.join("\n") });
       $("#emailSettingsStatus").classList.remove("error");
       $("#emailSettingsStatus").textContent = "로그인 회원의 코인 보고서 주소를 저장했습니다.";
     } catch (error) {
