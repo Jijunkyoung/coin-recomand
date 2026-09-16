@@ -16,6 +16,17 @@ class MemberAuthTests(unittest.TestCase):
             self.assertIn('src="auth.js"', page)
             self.assertIn('href="auth.css"', page)
 
+    def test_auth_library_is_served_locally_and_signup_recovers_from_errors(self):
+        for name in ("index.html", "us-stocks.html", "kr-stocks.html"):
+            page = (ROOT / "docs" / name).read_text(encoding="utf-8")
+            self.assertIn('src="vendor/supabase.min.js"', page)
+            self.assertNotIn("cdn.jsdelivr.net/npm/@supabase", page)
+        self.assertGreater((ROOT / "docs" / "vendor" / "supabase.min.js").stat().st_size, 100_000)
+        script = (ROOT / "docs" / "auth.js").read_text(encoding="utf-8")
+        self.assertIn("확인메일 전송 중", script)
+        self.assertIn("finally{setBusy(form,false)}", script)
+        self.assertIn("withTimeout", script)
+
     def test_logged_in_header_has_logout_action(self):
         script = (ROOT / "docs/auth.js").read_text(encoding="utf-8")
         self.assertIn('id="logoutTop"', script)

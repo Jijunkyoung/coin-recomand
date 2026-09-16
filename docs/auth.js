@@ -56,7 +56,26 @@
   const $ = selector => document.querySelector(selector);
   const dialog = $("#authDialog");
   function status(message, error = false) { const node = $("#authStatus"); node.textContent = message; node.classList.toggle("error", error); }
-  function setBusy(form, busy) { form.querySelectorAll("input,textarea,button").forEach(node => node.disabled = busy); }
+  function setBusy(form, busy, label = "처리 중…") {
+    form.setAttribute("aria-busy", String(busy));
+    form.querySelectorAll("input,textarea,button").forEach(node => node.disabled = busy);
+    const submit = form.querySelector('button[type="submit"]');
+    if (!submit) return;
+    if (busy) { submit.dataset.idleLabel = submit.textContent; submit.textContent = label; }
+    else { submit.textContent = submit.dataset.idleLabel || submit.textContent; delete submit.dataset.idleLabel; }
+  }
+  async function withTimeout(promise, milliseconds = 20000) {
+    let timer;
+    try {
+      return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("요청 시간이 초과됐습니다. 네트워크 상태를 확인하고 다시 시도해 주세요.")), milliseconds); })]);
+    } finally { clearTimeout(timer); }
+  }
+  function authErrorMessage(error) {
+    const message = String(error?.message || "회원 인증 요청에 실패했습니다.");
+    if (/rate limit/i.test(message)) return "요청 횟수가 많습니다. 잠시 후 다시 시도해 주세요.";
+    if (/failed to fetch|network/i.test(message)) return "Supabase 인증 서버에 연결하지 못했습니다. 네트워크 또는 보안 프로그램을 확인해 주세요.";
+    return message;
+  }
   function showMode(mode) {
     $("#loginForm").hidden = mode !== "login"; $("#signupForm").hidden = mode !== "signup";
     document.querySelectorAll("[data-auth-mode]").forEach(b => b.classList.toggle("active", b.dataset.authMode === mode));
@@ -142,8 +161,8 @@
   renderActions();
   $("#authClose").addEventListener("click", () => dialog.close()); dialog.addEventListener("click", e => { if (e.target === dialog) dialog.close(); });
   document.querySelectorAll("[data-auth-mode]").forEach(b => b.addEventListener("click", () => showMode(b.dataset.authMode)));
-  $("#loginForm").addEventListener("submit", async event => { event.preventDefault(); if (!configured) return status("Supabase 연결 설정이 필요합니다.", true); setBusy(event.currentTarget, true); const { error } = await client.auth.signInWithPassword({ email: $("#loginEmail").value.trim(), password: $("#loginPassword").value }); setBusy(event.currentTarget, false); if (error) return status(error.message, true); status("로그인했습니다."); dialog.close(); });
-  $("#signupForm").addEventListener("submit", async event => { event.preventDefault(); const password = $("#signupPassword").value; if (password !== $("#signupPasswordConfirm").value) return status("비밀번호 확인이 일치하지 않습니다.", true); if (!configured) return status("Supabase 연결 설정이 필요합니다.", true); setBusy(event.currentTarget, true); const redirect = `${location.origin}${location.pathname}`; const { data, error } = await client.auth.signUp({ email: $("#signupEmail").value.trim(), password, options: { emailRedirectTo: redirect } }); setBusy(event.currentTarget, false); if (error) return status(error.message, true); status(data.session ? "가입과 로그인이 완료됐습니다." : "확인메일을 보냈습니다. 메일의 인증 링크를 눌러 가입을 완료하세요."); });
+  $("#loginForm").addEventListener("submit", async event => { event.preventDefault(); const form=event.currentTarget;if(!configured)return status("회원 인증 연결이 준비되지 않았습니다. 페이지를 새로고침한 뒤 계속되면 관리자 설정을 확인해 주세요.",true);setBusy(form,true,"로그인 중…");status("로그인을 요청하고 있습니다.");try{const {error}=await withTimeout(client.auth.signInWithPassword({email:$("#loginEmail").value.trim(),password:$("#loginPassword").value}));if(error)throw error;status("로그인했습니다.");dialog.close()}catch(error){status(authErrorMessage(error),true)}finally{setBusy(form,false)} });
+  $("#signupForm").addEventListener("submit", async event => { event.preventDefault(); const form=event.currentTarget,password=$("#signupPassword").value;if(password!==$("#signupPasswordConfirm").value)return status("비밀번호 확인이 일치하지 않습니다.",true);if(!configured)return status("회원 인증 연결이 준비되지 않았습니다. 페이지를 새로고침한 뒤 계속되면 관리자 설정을 확인해 주세요.",true);const redirect=`${location.origin}${location.pathname}`;setBusy(form,true,"확인메일 전송 중…");status("확인메일을 요청하고 있습니다. 잠시만 기다려 주세요.");try{const {data,error}=await withTimeout(client.auth.signUp({email:$("#signupEmail").value.trim(),password,options:{emailRedirectTo:redirect}}));if(error)throw error;status(data?.session?"가입과 로그인이 완료됐습니다.":"확인메일을 보냈습니다. 받은편지함과 스팸함을 확인해 주세요.")}catch(error){status(authErrorMessage(error),true)}finally{setBusy(form,false)} });
   $("#profileForm").addEventListener("submit", async event => { event.preventDefault(); setBusy(event.currentTarget, true); try { await savePreferences({ coin_email: $("#profileCoinEmail").value.trim() || null, stock_email: $("#profileStockEmail").value.trim() || null, holdings_us: $("#profileHoldingsUs").value.trim(), holdings_kr: $("#profileHoldingsKr").value.trim(), sector_ids: [...$("#profileSectors").querySelectorAll("input:checked")].map(x => x.value) }); status("회원별 맞춤 설정을 저장했습니다."); } catch (error) { status(error.message, true); } finally { setBusy(event.currentTarget, false); } });
   $("#logoutButton").addEventListener("click", async () => { await client?.auth.signOut(); dialog.close(); });
   $("#brokerSyncButton").addEventListener("click", async event => { const button=event.currentTarget; button.disabled=true; try { await syncBrokerageHoldings({force:true}); status("계좌 보유현황을 갱신했습니다."); } catch(error) { status(error.message,true); } finally { button.disabled=false; } });
