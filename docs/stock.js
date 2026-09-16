@@ -37,6 +37,16 @@ function renderSearch(stock){
   $("#stockSearchResult button").addEventListener("click",()=>openChart(stock));
 }
 
+function portfolioCurrency(value, code) { return code === "USD" ? `$${fmt(value,2)}` : `₩${fmt(value,0)}`; }
+function renderPortfolio(data) {
+  const panel=$("#accountPortfolio"); if(!panel)return;
+  if(!data){panel.hidden=true;return}
+  const positions=(data.positions||[]).filter(item=>item.market===market), label=market==="us"?"미국":"국내", currencyCode=market==="us"?"USD":"KRW";
+  const evaluation=positions.reduce((sum,item)=>sum+Number(item.evaluation_amount||0),0), profit=positions.reduce((sum,item)=>sum+Number(item.profit_loss||0),0), cost=evaluation-profit, rate=cost?profit/cost*100:0;
+  panel.hidden=false;
+  panel.innerHTML=`<div class="section-head"><div><span class="eyebrow">MY KIS PORTFOLIO</span><h2>내 ${label}주식 보유현황</h2></div><p>${escapeHTML(new Date(data.synced_at).toLocaleString("ko-KR"))} 기준</p></div><div class="portfolio-summary">${metric("보유 종목",`${positions.length}개`)}${metric("평가금액",portfolioCurrency(evaluation,currencyCode))}${metric("평가손익",`<span class="price-change ${profit>=0?"up":"down"}">${portfolioCurrency(profit,currencyCode)}</span>`)}${metric("수익률",`<span class="price-change ${rate>=0?"up":"down"}">${pct(rate)}</span>`)}</div>${positions.length?`<div class="portfolio-list">${positions.map(item=>`<div class="portfolio-row"><span><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.symbol)} · ${fmt(item.quantity,4)}주</small></span><span><small>현재가</small><strong>${portfolioCurrency(item.current_price,item.currency)}</strong></span><span><small>평가금액</small><strong>${portfolioCurrency(item.evaluation_amount,item.currency)}</strong></span><span><small>평가손익</small><strong class="price-change ${Number(item.profit_loss)>=0?"up":"down"}">${portfolioCurrency(item.profit_loss,item.currency)} · ${pct(item.profit_rate)}</strong></span></div>`).join("")}</div>`:`<p class="portfolio-empty">조회된 ${label}주식 보유잔고가 없습니다.</p>`}${(data.warnings||[]).length?`<p class="portfolio-warning">일부 해외시장 조회 경고: ${escapeHTML(data.warnings.join(" · "))}</p>`:""}`;
+}
+
 function showSetup(){
   const panel=$("#setupPanel"); panel.hidden=false; panel.innerHTML=`<h2>주식 데이터 연결을 위한 최초 설정이 필요합니다</h2><p>API 키는 대시보드에 저장하지 않으며 GitHub Actions에서만 사용합니다. 주문 기능은 연결하지 않습니다.</p><ol><li><a href="https://apiportal.koreainvestment.com/" target="_blank" rel="noopener">한국투자증권 Open API</a>에서 API 서비스를 신청합니다.</li><li>GitHub 저장소의 <b>Settings → Secrets and variables → Actions</b>로 이동합니다.</li><li><code>KIS_APP_KEY</code>와 <code>KIS_APP_SECRET</code>을 각각 Repository secret으로 등록합니다.</li><li>Actions에서 <b>Analyze, email and deploy → Run workflow</b>를 한 번 실행합니다.</li></ol>`;
   if(report?.configured&&report?.selected_sectors?.length){panel.innerHTML=`<h2>선택한 종목의 데이터를 수집하지 못했습니다</h2><p>한국투자증권 API는 연결됐지만 선택 섹터의 시세가 비어 있습니다. 아래 데이터 상태에서 종목별 오류를 확인해 주세요.</p>`;}
@@ -98,6 +108,8 @@ $("#copyStockHoldings").addEventListener("click",()=>copySetting($("#stockHoldin
 $("#copyStockSectors").addEventListener("click",()=>copySetting(selectedSectorIds().join(","),"STOCK_SECTORS"));
 $("#copyStockEmail").addEventListener("click",()=>copySetting($("#stockEmailRecipients").value,"STOCK_EMAIL_TO"));
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&settingsDialog.open)settingsDialog.close()});
-window.addEventListener("coin-auth-change",()=>{if(settingsDialog.open)renderStockSettings()});
+window.addEventListener("coin-auth-change",event=>{if(settingsDialog.open)renderStockSettings();if(!event.detail?.user)renderPortfolio(null)});
+window.addEventListener("kis-portfolio-sync",event=>renderPortfolio(event.detail));
+if(window.CoinAuth?.portfolio)renderPortfolio(window.CoinAuth.portfolio);
 
 fetch(`data/stocks-${market}.json?v=${Date.now()}`).then(response=>{if(!response.ok)throw new Error("주식 분석 파일을 읽지 못했습니다.");return response.json()}).then(render).catch(error=>{$("#stockStatus").textContent="데이터 오류";$("#stockStatus").className="stock-status error";$("#recommendations").innerHTML=`<div class="error-card">${escapeHTML(error.message)}</div>`;showSetup()});

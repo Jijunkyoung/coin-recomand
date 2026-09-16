@@ -84,6 +84,23 @@ python -m http.server 8000 --directory docs
 
 키는 GitHub Actions 서버에서 시세 조회에만 사용되고 정적 페이지나 분석 JSON에는 포함되지 않습니다. 이 프로젝트는 주문 API를 호출하지 않습니다. 키가 없을 때 주식 페이지는 임의 가격을 표시하지 않고 설정 절차를 안내합니다.
 
+### 로그인 계정의 한국투자증권 보유현황 자동 동기화
+
+로그인한 소유자 계정은 주식 페이지 진입 시 Supabase Edge Function을 통해 한국투자증권 잔고를 자동 조회합니다. 최근 조회 결과는 같은 브라우저 탭에서 5분간 재사용하며 `내 설정 → 지금 동기화`로 즉시 갱신할 수 있습니다. 계좌번호와 API Secret은 브라우저·정적 JSON·데이터베이스에 저장하지 않고 Edge Function Secret에서만 읽습니다. 조회된 종목코드와 종목명만 `user_preferences`의 보유종목 목록에 반영하며 주문 API는 호출하지 않습니다.
+
+1. Supabase **Authentication → Users**에서 자동 동기화를 허용할 내 회원의 UUID를 복사합니다.
+2. Supabase **Edge Functions → Secrets**에 아래 값을 등록합니다.
+   - `KIS_APP_KEY`: 한국투자증권 App Key
+   - `KIS_APP_SECRET`: 한국투자증권 App Secret
+   - `KIS_ACCOUNT_NO`: 계좌번호 앞 8자리(하이픈 제외)
+   - `KIS_ACCOUNT_PRODUCT_CODE`: 계좌번호 뒤 2자리(일반적으로 `01`)
+   - `KIS_OWNER_USER_ID`: 1단계에서 복사한 Supabase 회원 UUID
+3. Supabase **Edge Functions → Deploy a new function → Via Editor**에서 함수명을 `kis-portfolio`로 만들고 [`supabase/functions/kis-portfolio/index.ts`](supabase/functions/kis-portfolio/index.ts)의 내용을 붙여넣어 배포합니다.
+4. 함수의 JWT gateway 검증은 끄고 배포합니다. 함수 내부에서 전달된 JWT를 다시 검증한 뒤 `KIS_OWNER_USER_ID`와 정확히 일치하는 회원만 허용합니다. 저장소의 [`supabase/config.toml`](supabase/config.toml)에도 같은 설정이 포함돼 있습니다.
+5. 대시보드에서 로그아웃 후 다시 로그인하고 미국주식 또는 국내주식 페이지를 열어 `내 보유현황` 카드와 동기화 시각을 확인합니다.
+
+GitHub Actions에 등록한 `KIS_APP_KEY`, `KIS_APP_SECRET`은 Supabase로 자동 복사되지 않으므로 2단계에 별도로 한 번 등록해야 합니다. 실전투자용 TR ID를 사용하므로 모의투자 App Key와 계좌는 지원하지 않습니다.
+
 Reddit 언급 수는 선택 기능입니다. 사용하려면 Reddit의 script 앱을 만든 뒤 `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`을 추가하세요. 세 커뮤니티 모두 한국시간 당일 작성된 게시물만 반영합니다. 디시인사이드 비트코인 갤러리와 코인판은 별도 키 없이 게시글 제목을 표본 수집하며, 사이트 접근이 제한되면 0회로 간주하지 않고 `미수집`으로 표시합니다.
 
 예정된 토큰 언락 날짜와 수량을 반영하려면 Mobula에서 API 키를 발급한 뒤 `MOBULA_API_KEY`를 Repository secret으로 추가하세요. 키가 없을 때도 CoinGecko의 총공급량 대비 유통 비율은 희석 위험에 반영되지만 정확한 언락 날짜는 `미수집`으로 표시됩니다. 공식 GitHub 개발 활동은 Actions의 기본 토큰을 사용하므로 별도 Secret이 필요하지 않습니다.

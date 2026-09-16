@@ -51,6 +51,22 @@ class MemberAuthTests(unittest.TestCase):
             self.assertIn("public-key", output)
             self.assertNotIn("service", output.lower())
 
+    def test_kis_portfolio_is_owner_only_and_keeps_secrets_server_side(self):
+        edge = (ROOT / "supabase" / "functions" / "kis-portfolio" / "index.ts").read_text(encoding="utf-8")
+        browser = (ROOT / "docs" / "auth.js").read_text(encoding="utf-8")
+        self.assertIn('env("KIS_OWNER_USER_ID")', edge)
+        self.assertIn("user.id !== ownerId", edge)
+        self.assertIn('env("KIS_ACCOUNT_NO")', edge)
+        self.assertIn('client.functions.invoke("kis-portfolio"', browser)
+        self.assertNotIn("KIS_APP_SECRET", browser)
+        self.assertNotIn("KIS_ACCOUNT_NO", browser)
+
+    def test_stock_pages_show_synced_account_portfolio(self):
+        script = (ROOT / "docs" / "stock.js").read_text(encoding="utf-8")
+        self.assertIn('addEventListener("kis-portfolio-sync"', script)
+        for name in ("us-stocks.html", "kr-stocks.html"):
+            self.assertIn('id="accountPortfolio"', (ROOT / "docs" / name).read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()
