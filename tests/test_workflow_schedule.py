@@ -3,10 +3,14 @@ import unittest
 
 
 class WorkflowScheduleTests(unittest.TestCase):
-    def test_hourly_refresh_and_daily_email_are_separated(self):
+    def test_hourly_refresh_also_recovers_daily_email(self):
         workflow = (Path(__file__).parents[1] / ".github/workflows/analyze-and-deploy.yml").read_text(encoding="utf-8")
         self.assertIn('cron: "17 0-21,23 * * *"', workflow)
+        self.assertIn('cron: "20 22 * * *"', workflow)
         self.assertNotIn('cron: "30 22 * * *"', workflow)
+        self.assertIn("NOT_BEFORE_KST: \"07:20\"", workflow)
+        self.assertIn("steps.delivery.outputs.should_send == 'true'", workflow)
+        self.assertIn("actions/upload-artifact@v4", workflow)
         self.assertIn("github.event_name == 'workflow_dispatch' && inputs.send_email", workflow)
         self.assertIn("default: false", workflow)
         self.assertIn("[send-test-email]", workflow)
@@ -21,7 +25,7 @@ class WorkflowScheduleTests(unittest.TestCase):
 
     def test_daily_email_has_fallback_and_never_cancels_delivery(self):
         workflow = (Path(__file__).parents[1] / ".github/workflows/daily-email.yml").read_text(encoding="utf-8")
-        self.assertIn('cron: "20 22 * * *"', workflow)
+        self.assertNotIn('cron: "20 22 * * *"', workflow)
         self.assertIn('cron: "50 22 * * *"', workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("check_daily_email_delivery.py", workflow)

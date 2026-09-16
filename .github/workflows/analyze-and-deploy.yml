@@ -4,8 +4,9 @@ on:
   push:
     branches: [main]
   schedule:
-    # Hourly composite refresh at minute 17. 22 UTC is reserved for the dedicated daily-mail workflow.
+    # Hourly refresh plus the 07:20 KST primary mail run. Later hourly runs recover a missed schedule.
     - cron: "17 0-21,23 * * *"
+    - cron: "20 22 * * *"
   workflow_dispatch:
     inputs:
       send_email:
@@ -16,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -36,6 +38,14 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+      - name: Check daily email delivery
+        if: github.event_name == 'schedule'
+        id: delivery
+        env:
+          GH_API_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          NOT_BEFORE_KST: "07:20"
+        run: python scripts/check_daily_email_delivery.py
       - name: Run tests
         run: python -m unittest discover -s tests -v
       - name: Generate latest analysis
@@ -60,8 +70,20 @@ jobs:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           STOCK_EMAIL_TO: ${{ secrets.STOCK_EMAIL_TO }}
           TEST_EMAIL: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[send-test-email]') }}
-          SEND_EMAIL: ${{ (github.event_name == 'push' && (contains(github.event.head_commit.message, '[send-test-email]') || contains(github.event.head_commit.message, '[send-daily-email]'))) || (github.event_name == 'workflow_dispatch' && inputs.send_email) }}
+          SEND_EMAIL: ${{ (github.event_name == 'schedule' && steps.delivery.outputs.should_send == 'true') || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[send-test-email]') || contains(github.event.head_commit.message, '[send-daily-email]'))) || (github.event_name == 'workflow_dispatch' && inputs.send_email) }}
+          REQUIRE_EMAIL_DELIVERY: ${{ github.event_name == 'schedule' && steps.delivery.outputs.should_send == 'true' }}
         run: python -m src.main --output docs/data/latest.json
+      - name: Create daily email delivery marker
+        if: github.event_name == 'schedule' && steps.delivery.outputs.should_send == 'true' && success()
+        run: mkdir -p delivery-marker && printf 'sent\n' > delivery-marker/status.txt
+      - name: Save daily email delivery marker
+        if: github.event_name == 'schedule' && steps.delivery.outputs.should_send == 'true' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.delivery.outputs.marker_name }}
+          path: delivery-marker/status.txt
+          retention-days: 3
+          if-no-files-found: error
       - name: Configure member authentication
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

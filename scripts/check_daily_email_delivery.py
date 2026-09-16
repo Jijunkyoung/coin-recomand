@@ -23,12 +23,27 @@ def has_active_marker(payload: dict, expected_name: str) -> bool:
     )
 
 
+def is_not_before_kst(value: str, now: datetime | None = None) -> bool:
+    """Return whether the Korean local time reached an optional HH:MM threshold."""
+    if not value.strip():
+        return True
+    try:
+        hour, minute = (int(part) for part in value.split(":", 1))
+        if not 0 <= hour <= 23 or not 0 <= minute <= 59:
+            raise ValueError
+    except (TypeError, ValueError):
+        raise ValueError("NOT_BEFORE_KST는 HH:MM 형식이어야 합니다.") from None
+    current = (now or datetime.now(timezone.utc)).astimezone(KST)
+    return (current.hour, current.minute) >= (hour, minute)
+
+
 def main() -> None:
     name = marker_name()
     force = os.getenv("FORCE_SEND", "").lower() in {"1", "true", "yes"}
+    eligible = force or is_not_before_kst(os.getenv("NOT_BEFORE_KST", ""))
     exists = False
     token, repository = os.getenv("GH_API_TOKEN", "").strip(), os.getenv("GH_REPOSITORY", "").strip()
-    if not force and token and repository:
+    if eligible and not force and token and repository:
         query = urllib.parse.urlencode({"name": name, "per_page": 10})
         request = urllib.request.Request(
             f"https://api.github.com/repos/{repository}/actions/artifacts?{query}",
@@ -37,11 +52,15 @@ def main() -> None:
         with urllib.request.urlopen(request, timeout=30) as response:
             exists = has_active_marker(json.load(response), name)
     output_path = os.getenv("GITHUB_OUTPUT")
-    lines = f"marker_name={name}\nshould_send={'false' if exists else 'true'}\n"
+    should_send = eligible and not exists
+    lines = f"marker_name={name}\nshould_send={'true' if should_send else 'false'}\n"
     if output_path:
         with open(output_path, "a", encoding="utf-8") as output:
             output.write(lines)
-    print("오늘 발송 완료 기록이 있어 예비 발송을 건너뜁니다." if exists else "오늘 보고서 발송을 진행합니다.")
+    if not eligible:
+        print("한국시간 예약 발송 시각 전이므로 보고서 발송을 기다립니다.")
+    else:
+        print("오늘 발송 완료 기록이 있어 예비 발송을 건너뜁니다." if exists else "오늘 보고서 발송을 진행합니다.")
 
 
 if __name__ == "__main__":
