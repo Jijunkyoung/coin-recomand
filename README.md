@@ -96,7 +96,7 @@ python -m http.server 8000 --directory docs
    - `KIS_ACCOUNT_PRODUCT_CODE`: 계좌번호 뒤 2자리(일반적으로 `01`)
    - `KIS_OWNER_USER_ID`: 1단계에서 복사한 Supabase 회원 UUID
 3. Supabase **Edge Functions → Deploy a new function → Via Editor**에서 함수명을 `kis-portfolio`로 만들고 [`supabase/functions/kis-portfolio/index.ts`](supabase/functions/kis-portfolio/index.ts)의 내용을 붙여넣어 배포합니다.
-4. 함수의 JWT gateway 검증은 끄고 배포합니다. 함수 내부에서 전달된 JWT를 다시 검증한 뒤 `KIS_OWNER_USER_ID`와 정확히 일치하는 회원만 허용합니다. 저장소의 [`supabase/config.toml`](supabase/config.toml)에도 같은 설정이 포함돼 있습니다.
+4. 함수의 JWT 검증은 기본값인 **활성화 상태**로 유지합니다. 함수 내부에서도 전달된 JWT를 다시 검증한 뒤 `KIS_OWNER_USER_ID`와 정확히 일치하는 회원만 허용합니다. 저장소의 [`supabase/config.toml`](supabase/config.toml)에도 같은 설정이 포함돼 있습니다.
 5. 대시보드에서 로그아웃 후 다시 로그인하고 미국주식 또는 국내주식 페이지를 열어 `내 보유현황` 카드와 동기화 시각을 확인합니다.
 
 GitHub Actions에 등록한 `KIS_APP_KEY`, `KIS_APP_SECRET`은 Supabase로 자동 복사되지 않으므로 2단계에 별도로 한 번 등록해야 합니다. 실전투자용 TR ID를 사용하므로 모의투자 App Key와 계좌는 지원하지 않습니다.
