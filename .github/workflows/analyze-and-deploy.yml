@@ -39,12 +39,13 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
       - name: Check daily email delivery
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[send-daily-email]') || contains(github.event.head_commit.message, '[record-daily-email]')))
         id: delivery
         env:
           GH_API_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
           NOT_BEFORE_KST: "07:20"
+          FORCE_SEND: ${{ github.event_name == 'push' }}
         run: python scripts/check_daily_email_delivery.py
       - name: Run tests
         run: python -m unittest discover -s tests -v
@@ -71,13 +72,13 @@ jobs:
           STOCK_EMAIL_TO: ${{ secrets.STOCK_EMAIL_TO }}
           TEST_EMAIL: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[send-test-email]') }}
           SEND_EMAIL: ${{ (github.event_name == 'schedule' && steps.delivery.outputs.should_send == 'true') || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[send-test-email]') || contains(github.event.head_commit.message, '[send-daily-email]'))) || (github.event_name == 'workflow_dispatch' && inputs.send_email) }}
-          REQUIRE_EMAIL_DELIVERY: ${{ github.event_name == 'schedule' && steps.delivery.outputs.should_send == 'true' }}
+          REQUIRE_EMAIL_DELIVERY: ${{ steps.delivery.outputs.should_send == 'true' && !contains(github.event.head_commit.message, '[record-daily-email]') }}
         run: python -m src.main --output docs/data/latest.json
       - name: Create daily email delivery marker
-        if: github.event_name == 'schedule' && steps.delivery.outputs.should_send == 'true' && success()
+        if: steps.delivery.outputs.should_send == 'true' && success()
         run: mkdir -p delivery-marker && printf 'sent\n' > delivery-marker/status.txt
       - name: Save daily email delivery marker
-        if: github.event_name == 'schedule' && steps.delivery.outputs.should_send == 'true' && success()
+        if: steps.delivery.outputs.should_send == 'true' && success()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.delivery.outputs.marker_name }}

@@ -10,6 +10,8 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertNotIn('cron: "30 22 * * *"', workflow)
         self.assertIn("NOT_BEFORE_KST: \"07:20\"", workflow)
         self.assertIn("steps.delivery.outputs.should_send == 'true'", workflow)
+        self.assertIn("[record-daily-email]", workflow)
+        self.assertIn("FORCE_SEND: ${{ github.event_name == 'push' }}", workflow)
         self.assertIn("actions/upload-artifact@v4", workflow)
         self.assertIn("github.event_name == 'workflow_dispatch' && inputs.send_email", workflow)
         self.assertIn("default: false", workflow)
