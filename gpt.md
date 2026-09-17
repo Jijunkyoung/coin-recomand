@@ -339,3 +339,5 @@
 - `kis-portfolio`의 플랫폼 `verify_jwt`를 끄고 일반 호출은 함수 내부 회원 토큰 검증, 예약 호출은 64자리 `KIS_SCHEDULER_KEY` 검증으로 분리
 - Edge Function 관리자 클라이언트는 신규 `SUPABASE_SECRET_KEYS`의 기본 키를 우선 사용하고 레거시 service-role 환경변수는 호환용 대체값으로만 유지
 - 예약 호출 실패 시 HTTP 상태와 Supabase 응답 일부를 비밀값 없이 로그에 표시하도록 개선
+- 신규 Secret key를 구형 JWT처럼 `Authorization: Bearer`에 넣지 않고 Supabase 공식 방식인 `apikey` 헤더로만 전달하도록 수정
+- 예약 요청은 별도 `KIS_SCHEDULER_KEY`, 일반 브라우저 요청은 회원 Bearer 토큰으로 함수 내부에서 각각 인증하도록 요청 경계를 명확화

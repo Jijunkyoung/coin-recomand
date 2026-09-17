@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from scripts.load_member_stock_profile import env_block, function_url, validate_profile
 
@@ -17,6 +18,11 @@ class MemberStockProfileTests(unittest.TestCase):
         block = env_block("MEMBER_STOCK_HOLDINGS_KR", "005930|삼성전자\n000660|SK하이닉스")
         self.assertTrue(block.startswith("MEMBER_STOCK_HOLDINGS_KR<<EOF_"))
         self.assertIn("005930|삼성전자", block)
+
+    def test_new_secret_key_is_sent_as_apikey_not_bearer_jwt(self):
+        source = (Path(__file__).parents[1] / "scripts" / "load_member_stock_profile.py").read_text(encoding="utf-8")
+        self.assertIn('"apikey": service_key', source)
+        self.assertNotIn('"Authorization": f"Bearer {service_key}"', source)
 
 
 if __name__ == "__main__":

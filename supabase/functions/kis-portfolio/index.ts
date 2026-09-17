@@ -130,10 +130,10 @@ Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const authorization = request.headers.get("Authorization") || "";
-    if (!authorization.startsWith("Bearer ")) throw new Error("로그인이 필요합니다.");
     const ownerId = env("KIS_OWNER_USER_ID");
     const schedulerSecret = env("KIS_SCHEDULER_KEY");
     const schedulerMode = Boolean(schedulerSecret && request.headers.get("x-kis-scheduler-key") === schedulerSecret);
+    if (!schedulerMode && !authorization.startsWith("Bearer ")) throw new Error("로그인이 필요합니다.");
     const supabase = schedulerMode
       ? createClient(env("SUPABASE_URL"), adminKey())
       : createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { global: { headers: { Authorization: authorization } } });

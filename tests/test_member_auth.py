@@ -75,6 +75,7 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn('env("SUPABASE_SECRET_KEYS")', edge)
         self.assertIn('env("SUPABASE_SERVICE_ROLE_KEY")', edge)
         self.assertIn('request.headers.get("x-kis-scheduler-key")', edge)
+        self.assertIn('if (!schedulerMode && !authorization.startsWith("Bearer "))', edge)
         self.assertIn("supabase.auth.getUser()", edge)
         config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
         self.assertIn("verify_jwt = false", config)

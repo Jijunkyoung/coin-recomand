@@ -34,7 +34,7 @@ def load_payload(url: str, service_key: str, scheduler_key: str) -> dict:
     request = urllib.request.Request(
         function_url(url), data=b"{}", method="POST",
         headers={
-            "Authorization": f"Bearer {service_key}", "apikey": service_key,
+            "apikey": service_key,
             "x-kis-scheduler-key": scheduler_key, "content-type": "application/json",
             "user-agent": "coin-recomand-actions",
         },
