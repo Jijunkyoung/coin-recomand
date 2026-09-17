@@ -6,6 +6,17 @@ const corsHeaders = {
 };
 
 const env = (name: string) => (Deno.env.get(name) || "").trim();
+const adminKey = () => {
+  const secretKeys = env("SUPABASE_SECRET_KEYS");
+  if (secretKeys) {
+    try {
+      const parsed = JSON.parse(secretKeys);
+      const key = textValue(parsed.default || Object.values(parsed)[0]);
+      if (key) return key;
+    } catch { /* fall through to the legacy runtime key */ }
+  }
+  return env("SUPABASE_SERVICE_ROLE_KEY");
+};
 const numberValue = (value: unknown) => Number(String(value ?? "0").replaceAll(",", "")) || 0;
 const textValue = (value: unknown) => String(value ?? "").trim();
 
@@ -124,7 +135,7 @@ Deno.serve(async (request) => {
     const schedulerSecret = env("KIS_SCHEDULER_KEY");
     const schedulerMode = Boolean(schedulerSecret && request.headers.get("x-kis-scheduler-key") === schedulerSecret);
     const supabase = schedulerMode
-      ? createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"))
+      ? createClient(env("SUPABASE_URL"), adminKey())
       : createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { global: { headers: { Authorization: authorization } } });
     let userId = ownerId;
     if (!schedulerMode) {

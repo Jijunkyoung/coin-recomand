@@ -72,8 +72,12 @@ class MemberAuthTests(unittest.TestCase):
         self.assertNotIn("KIS_APP_SECRET", browser)
         self.assertNotIn("KIS_ACCOUNT_NO", browser)
         self.assertIn('env("KIS_SCHEDULER_KEY")', edge)
+        self.assertIn('env("SUPABASE_SECRET_KEYS")', edge)
         self.assertIn('env("SUPABASE_SERVICE_ROLE_KEY")', edge)
         self.assertIn('request.headers.get("x-kis-scheduler-key")', edge)
+        self.assertIn("supabase.auth.getUser()", edge)
+        config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
+        self.assertIn("verify_jwt = false", config)
 
     def test_kis_snapshots_are_owner_only_and_used_for_changes(self):
         migration = (ROOT / "supabase" / "migrations" / "20260917_kis_portfolio_snapshots.sql").read_text(encoding="utf-8")

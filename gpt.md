@@ -332,3 +332,10 @@
 - KIS 연동 재시험에서 코인메일 수신자에게 테스트메일이 함께 발송되지 않도록 `stock` 메일 범위 추가
 - `[send-stock-test-email]` 실행은 회원 KIS 계좌를 먼저 불러온 뒤 개인 주식 수신주소로 테스트 주식보고서 한 종류만 발송
 - 주식 전용 테스트에서 수신주소가 없거나 SMTP 발송이 실패하면 워크플로를 실패 처리하도록 강화
+
+## 2026-09-17 · Supabase 신규 Secret key 인증 전환
+
+- GitHub Actions에서 `sb_secret_...` 키가 정상 주입됐지만 Edge Function의 구형 JWT 게이트가 HTTP 401로 차단하는 현상을 실제 테스트로 확인
+- `kis-portfolio`의 플랫폼 `verify_jwt`를 끄고 일반 호출은 함수 내부 회원 토큰 검증, 예약 호출은 64자리 `KIS_SCHEDULER_KEY` 검증으로 분리
+- Edge Function 관리자 클라이언트는 신규 `SUPABASE_SECRET_KEYS`의 기본 키를 우선 사용하고 레거시 service-role 환경변수는 호환용 대체값으로만 유지
+- 예약 호출 실패 시 HTTP 상태와 Supabase 응답 일부를 비밀값 없이 로그에 표시하도록 개선

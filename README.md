@@ -96,7 +96,7 @@ python -m http.server 8000 --directory docs
    - `KIS_ACCOUNT_PRODUCT_CODE`: 계좌번호 뒤 2자리(일반적으로 `01`)
    - `KIS_OWNER_USER_ID`: 1단계에서 복사한 Supabase 회원 UUID
 3. Supabase **Edge Functions → Deploy a new function → Via Editor**에서 함수명을 `kis-portfolio`로 만들고 [`supabase/functions/kis-portfolio/index.ts`](supabase/functions/kis-portfolio/index.ts)의 내용을 붙여넣어 배포합니다.
-4. 함수의 JWT 검증은 기본값인 **활성화 상태**로 유지합니다. 함수 내부에서도 전달된 JWT를 다시 검증한 뒤 `KIS_OWNER_USER_ID`와 정확히 일치하는 회원만 허용합니다. 저장소의 [`supabase/config.toml`](supabase/config.toml)에도 같은 설정이 포함돼 있습니다.
+4. 함수 설정의 **Verify JWT with legacy secret**은 끕니다. 새 `sb_secret_...` 키는 JWT가 아니므로 플랫폼의 구형 JWT 검증을 사용하지 않습니다. 대신 함수 내부에서 일반 호출은 회원 토큰을 직접 검증하고, 예약 호출은 별도 `KIS_SCHEDULER_KEY`를 검증한 뒤 `KIS_OWNER_USER_ID` 한 명만 허용합니다. 저장소의 [`supabase/config.toml`](supabase/config.toml)에도 같은 설정이 포함돼 있습니다.
 5. 대시보드에서 로그아웃 후 다시 로그인하고 미국주식 또는 국내주식 페이지를 열어 `내 보유현황` 카드와 동기화 시각을 확인합니다.
 
 GitHub Actions에 등록한 `KIS_APP_KEY`, `KIS_APP_SECRET`은 Supabase로 자동 복사되지 않으므로 2단계에 별도로 한 번 등록해야 합니다. 실전투자용 TR ID를 사용하므로 모의투자 App Key와 계좌는 지원하지 않습니다.
@@ -106,9 +106,9 @@ GitHub Actions에 등록한 `KIS_APP_KEY`, `KIS_APP_SECRET`은 Supabase로 자�
 예약메일은 소유자 한 명의 실시간 KIS 잔고를 조회하고 약 24시간 전 스냅샷과 비교해 신규 매수·전량 매도·수량 증감을 표시합니다. 주식 메일 수신주소는 해당 회원의 `내 설정 → 주식 보고서 수신목록`을 우선 사용하며, 다른 회원의 계좌나 메일 설정은 조회하지 않습니다.
 
 1. Supabase **SQL Editor**에서 [`supabase/migrations/20260917_kis_portfolio_snapshots.sql`](supabase/migrations/20260917_kis_portfolio_snapshots.sql)을 실행합니다.
-2. 기존 `kis-portfolio` Edge Function 코드를 최신 [`supabase/functions/kis-portfolio/index.ts`](supabase/functions/kis-portfolio/index.ts)로 교체해 다시 배포합니다. JWT 검증은 계속 활성화합니다.
+2. 기존 `kis-portfolio` Edge Function 코드를 최신 [`supabase/functions/kis-portfolio/index.ts`](supabase/functions/kis-portfolio/index.ts)로 교체해 다시 배포하고 **Verify JWT with legacy secret**을 끕니다. 함수 내부 인증은 계속 적용됩니다.
 3. 충분히 긴 임의 문자열을 하나 만들어 `KIS_SCHEDULER_KEY`라는 이름으로 Supabase **Edge Functions → Secrets**와 GitHub **Actions secrets** 양쪽에 같은 값으로 등록합니다.
-4. Supabase **Project Settings → API Keys**에서 `service_role` 또는 secret key를 확인해 GitHub Actions secret `SUPABASE_SERVICE_ROLE_KEY`로만 등록합니다. 이 키는 브라우저용 `SUPABASE_ANON_KEY`와 다르며 공개 페이지에 입력하지 않습니다.
+4. Supabase **Project Settings → API Keys**의 `sb_secret_...` Secret key를 GitHub Actions secret `SUPABASE_SERVICE_ROLE_KEY`로만 등록합니다. 이 키는 브라우저용 Publishable key와 다르며 공개 페이지에 입력하지 않습니다.
 5. 내 계정으로 로그인해 `내 설정 → 주식 보고서 수신목록`을 확인하고 저장합니다. 비어 있으면 가입 이메일을 사용합니다.
 6. 다음 예약메일 또는 Actions 수동 메일 발송에서 실시간 보유현황과 변동내역이 포함되는지 확인합니다. 첫 실행은 비교 기준을 만드는 날이므로 두 번째 날부터 24시간 변동이 표시됩니다.
 

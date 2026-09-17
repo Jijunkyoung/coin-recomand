@@ -1,4 +1,4 @@
 project_id = "coin-recomand"
 
 [functions.kis-portfolio]
-verify_jwt = true
+verify_jwt = false

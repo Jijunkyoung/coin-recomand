@@ -5,6 +5,7 @@ import json
 import os
 import re
 import urllib.request
+import urllib.error
 import uuid
 from pathlib import Path
 
@@ -38,8 +39,12 @@ def load_payload(url: str, service_key: str, scheduler_key: str) -> dict:
             "user-agent": "coin-recomand-actions",
         },
     )
-    with urllib.request.urlopen(request, timeout=90) as response:
-        payload = json.load(response)
+    try:
+        with urllib.request.urlopen(request, timeout=90) as response:
+            payload = json.load(response)
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace").strip()
+        raise RuntimeError(f"Supabase KIS 함수 호출 실패 (HTTP {error.code}): {detail[:300]}") from error
     if payload.get("error"):
         raise RuntimeError(str(payload["error"]))
     return payload
