@@ -397,10 +397,10 @@ def generate_stock_reports(settings_path: str | Path = "config/stocks.json", out
     settings, output = load_settings(settings_path), Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     client = KisDataClient()
-    sector_ids = parse_sector_selection(os.getenv("STOCK_SECTORS", ""), settings)
+    sector_ids = parse_sector_selection(os.getenv("MEMBER_STOCK_SECTORS") or os.getenv("STOCK_SECTORS", ""), settings)
     holdings = {
-        "us": parse_holdings(os.getenv("STOCK_HOLDINGS_US", ""), settings["us"]),
-        "kr": parse_holdings(os.getenv("STOCK_HOLDINGS_KR", ""), settings["kr"]),
+        "us": parse_holdings(os.getenv("MEMBER_STOCK_HOLDINGS_US") or os.getenv("STOCK_HOLDINGS_US", ""), settings["us"]),
+        "kr": parse_holdings(os.getenv("MEMBER_STOCK_HOLDINGS_KR") or os.getenv("STOCK_HOLDINGS_KR", ""), settings["kr"]),
     }
     reports = {
         market: build_stock_report(market, settings, client, selected_universe(market, settings, sector_ids), sector_ids)
@@ -415,10 +415,19 @@ def generate_stock_reports(settings_path: str | Path = "config/stocks.json", out
     for market, report in reports.items():
         (output / f"stocks-{market}.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"{report['market_name']} 분석 저장: {len(report['rankings'])}개")
+    portfolio = None
+    portfolio_path = os.getenv("MEMBER_KIS_PORTFOLIO_PATH", "").strip()
+    if portfolio_path:
+        try:
+            portfolio = json.loads(Path(portfolio_path).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            for report in reports.values():
+                report["warnings"].append(f"회원 KIS 계좌변동 미수집: {type(exc).__name__}")
     reports["_mail"] = {
         "news_issues": news_issues,
         "holding_counts": {market: len(items) for market, items in holdings.items()},
         "selected_sector_labels": [settings["sectors"][sector_id]["label"] for sector_id in sector_ids],
+        "portfolio": portfolio,
     }
     return reports
 

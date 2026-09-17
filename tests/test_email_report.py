@@ -76,6 +76,14 @@ class EmailReportTests(unittest.TestCase):
         self.assertIn("반도체", result)
         self.assertEqual(stock_email_subject(stocks, True), "[테스트] 맞춤 주식 브리핑")
 
+    def test_stock_email_contains_kis_positions_and_changes(self):
+        stocks = {"us": {"market_name": "미국주식", "recommendations": [], "warnings": []}, "kr": {"market_name": "국내주식", "recommendations": [], "warnings": []}}
+        stocks["_mail"] = {"portfolio": {"synced_at": "2026-09-17T07:30:00+09:00", "positions": [{"market": "kr", "symbol": "005930", "name": "삼성전자", "quantity": 10, "evaluation_amount": 800000, "profit_loss": 50000, "profit_rate": 6.67, "currency": "KRW"}], "changes": {"baseline_at": "2026-09-16T07:30:00+09:00", "added": [{"market": "kr", "symbol": "005930", "name": "삼성전자"}], "removed": [], "quantity_changes": []}}}
+        result = build_stock_email_html(stocks)
+        self.assertIn("내 한국투자증권 계좌", result)
+        self.assertIn("신규 삼성전자", result)
+        self.assertIn("800,000.00", result)
+
     @patch.dict("os.environ", {"SMTP_HOST": "smtp.example.com", "SMTP_PORT": "465", "SMTP_USERNAME": "sender@example.com", "SMTP_PASSWORD": "secret", "EMAIL_TO": "coin@example.com", "STOCK_EMAIL_TO": "stock@example.com"}, clear=True)
     @patch("src.email_report.smtplib.SMTP_SSL")
     def test_coin_and_stock_reports_use_separate_recipients(self, smtp_ssl):
@@ -96,6 +104,15 @@ class EmailReportTests(unittest.TestCase):
         messages = [call.args[0] for call in smtp_ssl.return_value.__enter__.return_value.send_message.call_args_list]
         self.assertEqual([message["To"] for message in messages], ["coin-only@example.com"])
         self.assertIn("코인 분석", messages[0]["Subject"])
+
+    @patch.dict("os.environ", {"SMTP_HOST": "smtp.example.com", "SMTP_PORT": "465", "SMTP_USERNAME": "sender@example.com", "SMTP_PASSWORD": "secret", "EMAIL_TO": "coin@example.com", "STOCK_EMAIL_TO": "global@example.com", "MEMBER_STOCK_EMAIL_TO": "owner@example.com"}, clear=True)
+    @patch("src.email_report.smtplib.SMTP_SSL")
+    def test_member_stock_recipient_overrides_global_list(self, smtp_ssl):
+        report = {"generated_at_kst": "2026-09-17 07:30 KST", "market": {"regime": "중립", "score": 50, "bitcoin": {"price": 100, "mvrv_z": 1.2}, "liquidity": {}}, "recommendations": [], "news_issues": [], "upcoming_events": []}
+        stocks = {"us": {"generated_at_kst": "2026-09-17 07:30 KST", "market_name": "미국주식", "recommendations": [], "warnings": []}, "kr": {"market_name": "국내주식", "recommendations": [], "warnings": []}, "_mail": {}}
+        self.assertTrue(send_email(report, stocks))
+        messages = [call.args[0] for call in smtp_ssl.return_value.__enter__.return_value.send_message.call_args_list]
+        self.assertEqual(messages[1]["To"], "owner@example.com")
 
 
 if __name__ == "__main__":

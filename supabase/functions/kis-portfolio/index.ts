@@ -2,7 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-kis-scheduler-key",
 };
 
 const env = (name: string) => (Deno.env.get(name) || "").trim();
@@ -21,6 +21,40 @@ type Position = {
   profit_rate: number;
   currency: "KRW" | "USD";
 };
+
+type Snapshot = { positions?: Position[]; captured_at?: string };
+
+function marketTotals(positions: Position[]) {
+  const result = {
+    kr: { evaluation_amount: 0, profit_loss: 0, currency: "KRW" },
+    us: { evaluation_amount: 0, profit_loss: 0, currency: "USD" },
+  };
+  for (const item of positions) {
+    result[item.market].evaluation_amount += item.evaluation_amount;
+    result[item.market].profit_loss += item.profit_loss;
+  }
+  return result;
+}
+
+function portfolioChanges(current: Position[], baseline: Snapshot | null) {
+  const previous = Array.isArray(baseline?.positions) ? baseline.positions : [];
+  const previousMap = new Map(previous.map((item) => [`${item.market}:${item.symbol}`, item]));
+  const currentMap = new Map(current.map((item) => [`${item.market}:${item.symbol}`, item]));
+  const added = current.filter((item) => !previousMap.has(`${item.market}:${item.symbol}`));
+  const removed = previous.filter((item) => !currentMap.has(`${item.market}:${item.symbol}`));
+  const quantity_changes = current.flatMap((item) => {
+    const before = previousMap.get(`${item.market}:${item.symbol}`);
+    if (!before || before.quantity === item.quantity) return [];
+    return [{ market: item.market, symbol: item.symbol, name: item.name, before: before.quantity, after: item.quantity, difference: item.quantity - before.quantity }];
+  });
+  const nowTotals = marketTotals(current), beforeTotals = marketTotals(previous);
+  const totals = Object.fromEntries((["kr", "us"] as const).map((market) => [market, {
+    ...nowTotals[market],
+    evaluation_change: previous.length ? nowTotals[market].evaluation_amount - beforeTotals[market].evaluation_amount : null,
+    profit_change: previous.length ? nowTotals[market].profit_loss - beforeTotals[market].profit_loss : null,
+  }]));
+  return { baseline_at: baseline?.captured_at || null, added, removed, quantity_changes, totals };
+}
 
 async function kisToken(appKey: string, appSecret: string, baseUrl: string) {
   const response = await fetch(`${baseUrl}/oauth2/tokenP`, {
@@ -86,13 +120,19 @@ Deno.serve(async (request) => {
   try {
     const authorization = request.headers.get("Authorization") || "";
     if (!authorization.startsWith("Bearer ")) throw new Error("로그인이 필요합니다.");
-    const supabase = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), {
-      global: { headers: { Authorization: authorization } },
-    });
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw new Error("로그인 세션을 확인할 수 없습니다.");
     const ownerId = env("KIS_OWNER_USER_ID");
-    if (!ownerId || user.id !== ownerId) return new Response(JSON.stringify({ error: "이 회원에는 증권계좌가 연결되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
+    const schedulerSecret = env("KIS_SCHEDULER_KEY");
+    const schedulerMode = Boolean(schedulerSecret && request.headers.get("x-kis-scheduler-key") === schedulerSecret);
+    const supabase = schedulerMode
+      ? createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"))
+      : createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { global: { headers: { Authorization: authorization } } });
+    let userId = ownerId;
+    if (!schedulerMode) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("로그인 세션을 확인할 수 없습니다.");
+      userId = user.id;
+    }
+    if (!ownerId || userId !== ownerId) return new Response(JSON.stringify({ error: "이 회원에는 증권계좌가 연결되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
 
     const appKey = env("KIS_APP_KEY"), appSecret = env("KIS_APP_SECRET");
     const account = env("KIS_ACCOUNT_NO"), productCode = env("KIS_ACCOUNT_PRODUCT_CODE") || "01";
@@ -117,14 +157,39 @@ Deno.serve(async (request) => {
       } catch (error) { overseasErrors.push(`${exchange}: ${error instanceof Error ? error.message : "조회 실패"}`); }
     }
     const unique = [...new Map(positions.map((item) => [`${item.market}:${item.symbol}`, item])).values()];
+    const baselineCutoff = new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString();
+    const { data: baseline, error: baselineError } = await supabase.from("kis_portfolio_snapshots")
+      .select("positions,captured_at").eq("user_id", userId).lte("captured_at", baselineCutoff)
+      .order("captured_at", { ascending: false }).limit(1).maybeSingle();
+    if (baselineError) throw new Error(`이전 계좌현황 조회 실패: ${baselineError.message}`);
+    const changes = portfolioChanges(unique, baseline as Snapshot | null);
     const holdingsKr = unique.filter((item) => item.market === "kr").map((item) => `${item.symbol}|${item.name}`).join("\n");
     const holdingsUs = unique.filter((item) => item.market === "us").map((item) => `${item.symbol}|${item.name}`).join("\n");
     const { error: saveError } = await supabase.from("user_preferences").upsert({
-      user_id: user.id, holdings_kr: holdingsKr, holdings_us: holdingsUs, updated_at: new Date().toISOString(),
+      user_id: userId, holdings_kr: holdingsKr, holdings_us: holdingsUs, updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" });
     if (saveError) throw new Error(`보유종목 저장 실패: ${saveError.message}`);
+    const capturedAt = new Date().toISOString();
+    const { error: snapshotError } = await supabase.from("kis_portfolio_snapshots").insert({
+      user_id: userId, positions: unique, totals: marketTotals(unique), captured_at: capturedAt,
+    });
+    if (snapshotError) throw new Error(`계좌 변동기록 저장 실패: ${snapshotError.message}`);
 
-    return new Response(JSON.stringify({ positions: unique, synced_at: new Date().toISOString(), warnings: overseasErrors }), {
+    let mailProfile = null;
+    if (schedulerMode) {
+      const { data: preferences, error: preferenceError } = await supabase.from("user_preferences")
+        .select("holdings_us,holdings_kr,sector_ids,stock_email").eq("user_id", userId).maybeSingle();
+      if (preferenceError) throw new Error(`회원 메일 설정 조회 실패: ${preferenceError.message}`);
+      const { data: authData, error: authError } = await supabase.auth.admin.getUserById(userId);
+      if (authError) throw new Error(`회원 이메일 조회 실패: ${authError.message}`);
+      mailProfile = {
+        holdings_us: holdingsUs, holdings_kr: holdingsKr,
+        sector_ids: preferences?.sector_ids || [],
+        stock_email: preferences?.stock_email || authData.user?.email || null,
+      };
+    }
+
+    return new Response(JSON.stringify({ positions: unique, synced_at: capturedAt, warnings: overseasErrors, changes, mail_profile: mailProfile }), {
       headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "no-store" },
     });
   } catch (error) {

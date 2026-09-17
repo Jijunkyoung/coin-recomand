@@ -154,6 +154,36 @@ def build_stock_email_html(stock_reports: dict[str, dict[str, Any]]) -> str:
             f"<span style='color:#52657d;font-size:11px'>{html.escape(str(issue.get('published_at_kst') or ''))} KST · {html.escape(str(issue.get('source') or '출처 미상'))} · {html.escape(str(issue.get('impact') or '중립·혼재'))} · 관련 {html.escape(' · '.join(related) or '선택 주식')}</span></div>"
         )
     news_html = "".join(news_rows) or "<p style='color:#52657d;font-size:12px'>최근 24시간 선별된 맞춤 주식뉴스가 없습니다.</p>"
+    portfolio = mail_context.get("portfolio") or {}
+    changes = portfolio.get("changes") or {}
+    position_rows = []
+    for item in portfolio.get("positions") or []:
+        symbol, name = html.escape(str(item.get("symbol") or "")), html.escape(str(item.get("name") or ""))
+        prefix = "$" if str(item.get("currency") or "KRW") == "USD" else "₩"
+        profit = float(item.get("profit_loss") or 0)
+        position_rows.append(
+            f"<tr><td style='padding:8px;border-bottom:1px solid #e3e9f0'><b>{name}</b><br><span style='color:#52657d;font-size:10px'>{symbol} · {float(item.get('quantity') or 0):,.4f}주</span></td>"
+            f"<td style='padding:8px;text-align:right;border-bottom:1px solid #e3e9f0'>{prefix}{float(item.get('evaluation_amount') or 0):,.2f}</td>"
+            f"<td style='padding:8px;text-align:right;border-bottom:1px solid #e3e9f0;color:{'#c62828' if profit >= 0 else '#1565c0'}'>{prefix}{profit:+,.2f}<br><span style='font-size:10px'>{_pct(item.get('profit_rate'))}</span></td></tr>"
+        )
+    change_labels = []
+    for item in changes.get("added") or []:
+        change_labels.append(f"신규 {html.escape(str(item.get('name') or item.get('symbol')))}")
+    for item in changes.get("removed") or []:
+        change_labels.append(f"전량매도 {html.escape(str(item.get('name') or item.get('symbol')))}")
+    for item in changes.get("quantity_changes") or []:
+        change_labels.append(f"{html.escape(str(item.get('name') or item.get('symbol')))} {float(item.get('difference') or 0):+,.4f}주")
+    portfolio_html = ""
+    if portfolio:
+        baseline_text = html.escape(str(changes.get("baseline_at") or "첫 기록"))
+        rows = "".join(position_rows) or '<tr><td style="padding:8px">조회된 보유종목이 없습니다.</td></tr>'
+        portfolio_html = (
+            "<div style='margin-top:24px;padding:17px;border:1px solid #b9cbe0;border-radius:12px;background:#ffffff;color:#10233f'>"
+            "<h2 style='margin:0 0 4px;color:#10233f;font-size:18px'>내 한국투자증권 계좌</h2>"
+            f"<p style='margin:0 0 10px;color:#52657d;font-size:11px'>비교 기준 {baseline_text} · {html.escape(str(portfolio.get('synced_at') or ''))} 조회</p>"
+            f"<p style='margin:0 0 10px;color:#263b55;font-size:12px'><b>보유 변동</b> {' · '.join(change_labels) if change_labels else '신규·매도·수량 변동 없음'}</p>"
+            f"<table role='presentation' style='width:100%;border-collapse:collapse;font-size:12px'>{rows}</table></div>"
+        )
     return f"""<!doctype html>
     <html><head><meta charset="utf-8"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><style>:root{{color-scheme:light only}} body{{margin:0!important;background:#f3f6fb!important;color:#10233f!important}}</style></head>
     <body bgcolor="#f3f6fb" style="margin:0;background:#f3f6fb;color:#10233f">
@@ -166,6 +196,7 @@ def build_stock_email_html(stock_reports: dict[str, dict[str, Any]]) -> str:
           <p style="margin:0 0 7px;color:#52657d;font-size:11px">선택 섹터</p><strong style="color:#10233f">{html.escape(sectors)}</strong>
           <p style="margin:10px 0 0;color:#263b55;font-size:12px">보유종목 뉴스 대상: 미국 {int(holding_counts.get('us', 0))}개 · 국내 {int(holding_counts.get('kr', 0))}개</p>
         </div>
+        {portfolio_html}
         {_stock_email_section(stock_reports)}
         <div style="margin-top:24px;padding:17px;border:1px solid #d6e0ec;border-radius:12px;background:#ffffff;color:#10233f"><h2 style="margin:0 0 4px;color:#10233f;font-size:18px">보유종목·선택 섹터 주요뉴스</h2><p style="margin:0 0 6px;color:#52657d;font-size:11px">최근 24시간 제목 기반 선별이며 투자 판단 전 원문 확인이 필요합니다.</p>{news_html}</div>
         <p style="margin:20px 4px 0;color:#52657d;font-size:11px;line-height:1.5">보유종목 목록은 메일 생성에만 사용하며 공개 대시보드 JSON에는 저장하지 않습니다. 정량 지표 기반 참고자료이며 투자 자문이 아닙니다.</p>
@@ -246,7 +277,7 @@ def send_email(report: dict[str, Any], stock_reports: dict[str, dict[str, Any]] 
         ("코인", os.getenv("EMAIL_TO", "").strip(), email_subject(report, is_test_email), build_email_html(report)),
     ]
     if stock_reports:
-        deliveries.append(("주식", os.getenv("STOCK_EMAIL_TO", "").strip(), stock_email_subject(stock_reports, is_test_email), build_stock_email_html(stock_reports)))
+        deliveries.append(("주식", (os.getenv("MEMBER_STOCK_EMAIL_TO") or os.getenv("STOCK_EMAIL_TO", "")).strip(), stock_email_subject(stock_reports, is_test_email), build_stock_email_html(stock_reports)))
     sent = False
     for label, recipient_value, subject, body in deliveries:
         if not recipient_value:

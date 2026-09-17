@@ -101,6 +101,19 @@ python -m http.server 8000 --directory docs
 
 GitHub Actions에 등록한 `KIS_APP_KEY`, `KIS_APP_SECRET`은 Supabase로 자동 복사되지 않으므로 2단계에 별도로 한 번 등록해야 합니다. 실전투자용 TR ID를 사용하므로 모의투자 App Key와 계좌는 지원하지 않습니다.
 
+### 내 KIS 계좌 변동·개인 주식메일 연결
+
+예약메일은 소유자 한 명의 실시간 KIS 잔고를 조회하고 약 24시간 전 스냅샷과 비교해 신규 매수·전량 매도·수량 증감을 표시합니다. 주식 메일 수신주소는 해당 회원의 `내 설정 → 주식 보고서 수신목록`을 우선 사용하며, 다른 회원의 계좌나 메일 설정은 조회하지 않습니다.
+
+1. Supabase **SQL Editor**에서 [`supabase/migrations/20260917_kis_portfolio_snapshots.sql`](supabase/migrations/20260917_kis_portfolio_snapshots.sql)을 실행합니다.
+2. 기존 `kis-portfolio` Edge Function 코드를 최신 [`supabase/functions/kis-portfolio/index.ts`](supabase/functions/kis-portfolio/index.ts)로 교체해 다시 배포합니다. JWT 검증은 계속 활성화합니다.
+3. 충분히 긴 임의 문자열을 하나 만들어 `KIS_SCHEDULER_KEY`라는 이름으로 Supabase **Edge Functions → Secrets**와 GitHub **Actions secrets** 양쪽에 같은 값으로 등록합니다.
+4. Supabase **Project Settings → API Keys**에서 `service_role` 또는 secret key를 확인해 GitHub Actions secret `SUPABASE_SERVICE_ROLE_KEY`로만 등록합니다. 이 키는 브라우저용 `SUPABASE_ANON_KEY`와 다르며 공개 페이지에 입력하지 않습니다.
+5. 내 계정으로 로그인해 `내 설정 → 주식 보고서 수신목록`을 확인하고 저장합니다. 비어 있으면 가입 이메일을 사용합니다.
+6. 다음 예약메일 또는 Actions 수동 메일 발송에서 실시간 보유현황과 변동내역이 포함되는지 확인합니다. 첫 실행은 비교 기준을 만드는 날이므로 두 번째 날부터 24시간 변동이 표시됩니다.
+
+GitHub Actions는 service role key와 별도의 scheduler key가 모두 있어야 예약용 조회를 호출합니다. Edge Function은 고정된 `KIS_OWNER_USER_ID` 한 명만 처리하며 주문 API는 호출하지 않습니다.
+
 Reddit 언급 수는 선택 기능입니다. 사용하려면 Reddit의 script 앱을 만든 뒤 `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`을 추가하세요. 세 커뮤니티 모두 한국시간 당일 작성된 게시물만 반영합니다. 디시인사이드 비트코인 갤러리와 코인판은 별도 키 없이 게시글 제목을 표본 수집하며, 사이트 접근이 제한되면 0회로 간주하지 않고 `미수집`으로 표시합니다.
 
 예정된 토큰 언락 날짜와 수량을 반영하려면 Mobula에서 API 키를 발급한 뒤 `MOBULA_API_KEY`를 Repository secret으로 추가하세요. 키가 없을 때도 CoinGecko의 총공급량 대비 유통 비율은 희석 위험에 반영되지만 정확한 언락 날짜는 `미수집`으로 표시됩니다. 공식 GitHub 개발 활동은 Actions의 기본 토큰을 사용하므로 별도 Secret이 필요하지 않습니다.

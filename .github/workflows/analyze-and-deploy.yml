@@ -49,6 +49,13 @@ jobs:
         run: python scripts/check_daily_email_delivery.py
       - name: Run tests
         run: python -m unittest discover -s tests -v
+      - name: Load owner's live KIS portfolio for mail
+        if: (steps.delivery.outputs.should_send == 'true' && !contains(github.event.head_commit.message, '[record-daily-email]')) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[send-test-email]')) || (github.event_name == 'workflow_dispatch' && inputs.send_email)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          KIS_SCHEDULER_KEY: ${{ secrets.KIS_SCHEDULER_KEY }}
+        run: python scripts/load_member_stock_profile.py
       - name: Generate latest analysis
         env:
           COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}

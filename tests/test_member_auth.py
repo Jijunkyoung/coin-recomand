@@ -66,15 +66,28 @@ class MemberAuthTests(unittest.TestCase):
         edge = (ROOT / "supabase" / "functions" / "kis-portfolio" / "index.ts").read_text(encoding="utf-8")
         browser = (ROOT / "docs" / "auth.js").read_text(encoding="utf-8")
         self.assertIn('env("KIS_OWNER_USER_ID")', edge)
-        self.assertIn("user.id !== ownerId", edge)
+        self.assertIn("userId !== ownerId", edge)
         self.assertIn('env("KIS_ACCOUNT_NO")', edge)
         self.assertIn('client.functions.invoke("kis-portfolio"', browser)
         self.assertNotIn("KIS_APP_SECRET", browser)
         self.assertNotIn("KIS_ACCOUNT_NO", browser)
+        self.assertIn('env("KIS_SCHEDULER_KEY")', edge)
+        self.assertIn('env("SUPABASE_SERVICE_ROLE_KEY")', edge)
+        self.assertIn('request.headers.get("x-kis-scheduler-key")', edge)
+
+    def test_kis_snapshots_are_owner_only_and_used_for_changes(self):
+        migration = (ROOT / "supabase" / "migrations" / "20260917_kis_portfolio_snapshots.sql").read_text(encoding="utf-8")
+        edge = (ROOT / "supabase" / "functions" / "kis-portfolio" / "index.ts").read_text(encoding="utf-8")
+        self.assertIn("enable row level security", migration.lower())
+        self.assertIn("(select auth.uid()) = user_id", migration)
+        self.assertIn('from("kis_portfolio_snapshots")', edge)
+        self.assertIn("portfolioChanges", edge)
+        self.assertIn("mail_profile", edge)
 
     def test_stock_pages_show_synced_account_portfolio(self):
         script = (ROOT / "docs" / "stock.js").read_text(encoding="utf-8")
         self.assertIn('addEventListener("kis-portfolio-sync"', script)
+        self.assertIn("changes.quantity_changes", script)
         for name in ("us-stocks.html", "kr-stocks.html"):
             self.assertIn('id="accountPortfolio"', (ROOT / "docs" / name).read_text(encoding="utf-8"))
 
