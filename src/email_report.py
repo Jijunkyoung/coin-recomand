@@ -273,10 +273,11 @@ def send_email(report: dict[str, Any], stock_reports: dict[str, dict[str, Any]] 
     port = int(os.getenv("SMTP_PORT", "465"))
     sender = os.getenv("EMAIL_FROM", "").strip() or required["SMTP_USERNAME"]
     is_test_email = os.getenv("TEST_EMAIL", "").strip().lower() in {"1", "true", "yes"}
-    deliveries = [
-        ("코인", os.getenv("EMAIL_TO", "").strip(), email_subject(report, is_test_email), build_email_html(report)),
-    ]
-    if stock_reports:
+    report_scope = os.getenv("EMAIL_REPORT_SCOPE", "all").strip().lower()
+    deliveries = []
+    if report_scope in {"all", "coin"}:
+        deliveries.append(("코인", os.getenv("EMAIL_TO", "").strip(), email_subject(report, is_test_email), build_email_html(report)))
+    if stock_reports and report_scope in {"all", "stock"}:
         deliveries.append(("주식", (os.getenv("MEMBER_STOCK_EMAIL_TO") or os.getenv("STOCK_EMAIL_TO", "")).strip(), stock_email_subject(stock_reports, is_test_email), build_stock_email_html(stock_reports)))
     sent = False
     for label, recipient_value, subject, body in deliveries:

@@ -16,6 +16,8 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("github.event_name == 'workflow_dispatch' && inputs.send_email", workflow)
         self.assertIn("default: false", workflow)
         self.assertIn("[send-test-email]", workflow)
+        self.assertIn("[send-stock-test-email]", workflow)
+        self.assertIn("EMAIL_REPORT_SCOPE:", workflow)
         self.assertIn("[send-daily-email]", workflow)
         self.assertIn("STOCK_EMAIL_TO: ${{ secrets.STOCK_EMAIL_TO }}", workflow)
         self.assertIn("STOCK_HOLDINGS_US: ${{ secrets.STOCK_HOLDINGS_US }}", workflow)

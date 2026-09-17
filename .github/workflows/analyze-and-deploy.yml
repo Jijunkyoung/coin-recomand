@@ -50,7 +50,7 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s tests -v
       - name: Load owner's live KIS portfolio for mail
-        if: (steps.delivery.outputs.should_send == 'true' && !contains(github.event.head_commit.message, '[record-daily-email]')) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[send-test-email]')) || (github.event_name == 'workflow_dispatch' && inputs.send_email)
+        if: (steps.delivery.outputs.should_send == 'true' && !contains(github.event.head_commit.message, '[record-daily-email]')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[send-test-email]') || contains(github.event.head_commit.message, '[send-stock-test-email]'))) || (github.event_name == 'workflow_dispatch' && inputs.send_email)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -78,9 +78,10 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           STOCK_EMAIL_TO: ${{ secrets.STOCK_EMAIL_TO }}
-          TEST_EMAIL: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[send-test-email]') }}
-          SEND_EMAIL: ${{ (github.event_name == 'schedule' && steps.delivery.outputs.should_send == 'true') || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[send-test-email]') || contains(github.event.head_commit.message, '[send-daily-email]'))) || (github.event_name == 'workflow_dispatch' && inputs.send_email) }}
-          REQUIRE_EMAIL_DELIVERY: ${{ steps.delivery.outputs.should_send == 'true' && !contains(github.event.head_commit.message, '[record-daily-email]') }}
+          TEST_EMAIL: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[send-test-email]') || contains(github.event.head_commit.message, '[send-stock-test-email]')) }}
+          EMAIL_REPORT_SCOPE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[send-stock-test-email]') && 'stock' || 'all' }}
+          SEND_EMAIL: ${{ (github.event_name == 'schedule' && steps.delivery.outputs.should_send == 'true') || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[send-test-email]') || contains(github.event.head_commit.message, '[send-stock-test-email]') || contains(github.event.head_commit.message, '[send-daily-email]'))) || (github.event_name == 'workflow_dispatch' && inputs.send_email) }}
+          REQUIRE_EMAIL_DELIVERY: ${{ (steps.delivery.outputs.should_send == 'true' && !contains(github.event.head_commit.message, '[record-daily-email]')) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[send-stock-test-email]')) }}
         run: python -m src.main --output docs/data/latest.json
       - name: Create daily email delivery marker
         if: steps.delivery.outputs.should_send == 'true' && success()

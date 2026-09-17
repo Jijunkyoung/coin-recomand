@@ -114,6 +114,17 @@ class EmailReportTests(unittest.TestCase):
         messages = [call.args[0] for call in smtp_ssl.return_value.__enter__.return_value.send_message.call_args_list]
         self.assertEqual(messages[1]["To"], "owner@example.com")
 
+    @patch.dict("os.environ", {"SMTP_HOST": "smtp.example.com", "SMTP_PORT": "465", "SMTP_USERNAME": "sender@example.com", "SMTP_PASSWORD": "secret", "EMAIL_TO": "coin@example.com", "MEMBER_STOCK_EMAIL_TO": "owner@example.com", "EMAIL_REPORT_SCOPE": "stock", "TEST_EMAIL": "true"}, clear=True)
+    @patch("src.email_report.smtplib.SMTP_SSL")
+    def test_stock_only_scope_never_sends_coin_email(self, smtp_ssl):
+        report = {"generated_at_kst": "2026-09-17 14:00 KST", "market": {"regime": "중립", "score": 50, "bitcoin": {"price": 100, "mvrv_z": 1.2}, "liquidity": {}}, "recommendations": [], "news_issues": [], "upcoming_events": []}
+        stocks = {"us": {"market_name": "미국주식", "recommendations": [], "warnings": []}, "kr": {"market_name": "국내주식", "recommendations": [], "warnings": []}, "_mail": {}}
+        self.assertTrue(send_email(report, stocks))
+        messages = [call.args[0] for call in smtp_ssl.return_value.__enter__.return_value.send_message.call_args_list]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]["To"], "owner@example.com")
+        self.assertEqual(messages[0]["Subject"], "[테스트] 맞춤 주식 브리핑")
+
 
 if __name__ == "__main__":
     unittest.main()
