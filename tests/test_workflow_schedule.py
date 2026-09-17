@@ -25,7 +25,9 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}", workflow)
         self.assertIn("SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}", workflow)
         self.assertIn("KIS_SCHEDULER_KEY: ${{ secrets.KIS_SCHEDULER_KEY }}", workflow)
+        self.assertIn('REQUIRE_MEMBER_STOCK_PROFILE: "true"', workflow)
         self.assertIn("load_member_stock_profile.py", workflow)
+        self.assertIn('REQUIRE_MEMBER_STOCK_PROFILE: "true"', workflow)
         self.assertIn("python scripts/write_supabase_config.py", workflow)
 
     def test_daily_email_has_fallback_and_never_cancels_delivery(self):

@@ -50,11 +50,18 @@ def main() -> None:
     service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     scheduler_key = os.getenv("KIS_SCHEDULER_KEY", "").strip()
     required = os.getenv("REQUIRE_MEMBER_STOCK_PROFILE", "").lower() in {"1", "true", "yes"}
-    if not all((url, service_key, scheduler_key)):
-        message = "회원 KIS 예약메일 연동 Secret이 없어 기존 주식 설정을 사용합니다."
+    missing = [
+        name for name, value in (
+            ("SUPABASE_URL", url),
+            ("SUPABASE_SERVICE_ROLE_KEY", service_key),
+            ("KIS_SCHEDULER_KEY", scheduler_key),
+        ) if not value
+    ]
+    if missing:
+        message = f"회원 KIS 예약메일 필수 Secret이 없습니다: {', '.join(missing)}"
         if required:
             raise SystemExit(message)
-        print(message)
+        print(f"{message}. 기존 주식 설정을 사용합니다.")
         return
 
     payload = load_payload(url, service_key, scheduler_key)
