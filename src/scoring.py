@@ -185,7 +185,7 @@ def alt_score(metrics: dict[str, Any], regime: str) -> tuple[int, list[str], lis
         score += community_points
         source_labels = {"reddit": "Reddit", "dcinside": "디시", "coinpan": "코인판", "ddengle": "땡글"}
         breakdown = "·".join(f"{source_labels.get(name, name)} {value}회" for name, value in community_mentions.items() if value is not None)
-        reasons.append(f"오늘 커뮤니티 표본 {community_sources}곳에서 총 {community_total}회 언급됐습니다({breakdown}).")
+        reasons.append(f"최근 24시간 커뮤니티 표본 {community_sources}곳에서 총 {community_total}회 언급됐습니다({breakdown}).")
     commits = development.get("commits_30d")
     release_days = development.get("latest_release_days")
     commit_days = development.get("latest_commit_days")

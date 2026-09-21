@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 from src.main import resolve_coingecko_id, summarize_unlock
-from src.providers import MarketDataClient, _coinpan_posts, _ddengle_posts, _link_titles, _today_link_titles, count_post_mentions
+from src.providers import MarketDataClient, _coinpan_posts, _ddengle_posts, _link_titles, _recent_link_titles, count_post_mentions
 from src.scoring import alt_score
 
 
@@ -67,13 +67,19 @@ class CommunityAndEventTests(unittest.TestCase):
         self.assertEqual(counts["XRP"], 4)
         self.assertEqual(samples, 4)
 
-    def test_today_filter_excludes_previous_board_posts(self):
+    def test_recent_filter_uses_rolling_24_hours(self):
         page = '''
-            <tr><td><a href="/free/123">오늘 리플</a></td><td>09:15</td></tr>
-            <tr><td><a href="/free/122">어제 리플</a></td><td title="2026-09-08 23:50">09.08</td></tr>
+            <tr><td><a href="/free/123">24시간 안 리플</a></td><td title="2026-09-20 18:00:00">09.20</td></tr>
+            <tr><td><a href="/free/122">24시간 밖 리플</a></td><td title="2026-09-20 08:59:59">09.20</td></tr>
         '''
-        titles = _today_link_titles(page, lambda href: href.startswith("/free/"), datetime(2026, 9, 9, tzinfo=timezone.utc))
-        self.assertEqual(titles, ["오늘 리플"])
+        # 2026-09-21 09:00 KST: cutoff is 2026-09-20 09:00 KST.
+        titles = _recent_link_titles(page, lambda href: href.startswith("/free/"), datetime(2026, 9, 21, 0, 0, tzinfo=timezone.utc))
+        self.assertEqual(titles, ["24시간 안 리플"])
+
+    def test_recent_filter_excludes_previous_date_without_exact_time(self):
+        page = '<tr><td><a href="/free/123">시간 미확인 리플</a></td><td>2026.09.20</td></tr>'
+        titles = _recent_link_titles(page, lambda href: href.startswith("/free/"), datetime(2026, 9, 21, 0, 0, tzinfo=timezone.utc))
+        self.assertEqual(titles, [])
 
     def test_github_project_activity_chooses_active_repository(self):
         client = MarketDataClient()

@@ -37,20 +37,45 @@ def _link_titles(page: str, predicate: Any) -> list[str]:
     return titles
 
 
-def _today_link_titles(page: str, predicate: Any, now: datetime | None = None) -> list[str]:
-    current_date = (now or datetime.now(KST)).astimezone(KST).date()
+def _recent_link_titles(page: str, predicate: Any, now: datetime | None = None, hours: int = 24) -> list[str]:
+    current = (now or datetime.now(timezone.utc)).astimezone(KST)
+    cutoff = current - timedelta(hours=hours)
     titles: list[str] = []
     for row in re.findall(r"<tr\b[^>]*>.*?</tr>", page, flags=re.IGNORECASE | re.DOTALL):
-        dates = re.findall(r"(?<!\d)((?:20)?\d{2})[./-](\d{1,2})[./-](\d{1,2})(?!\d)", row)
-        if dates:
-            year, month, day = dates[-1]
-            year_number = int(year) if len(year) == 4 else 2000 + int(year)
-            if (year_number, int(month), int(day)) != (current_date.year, current_date.month, current_date.day):
-                continue
-        elif not re.search(r"(?<!\d)[0-2]?\d:[0-5]\d(?!\d)", row):
+        full_time = re.search(
+            r"((?:20)?\d{2})[./-](\d{1,2})[./-](\d{1,2})[^\d]{1,8}([0-2]?\d):([0-5]\d)(?::([0-5]\d))?",
+            row,
+        )
+        published: datetime | None = None
+        if full_time:
+            year, month, day, hour, minute, second = full_time.groups()
+            published = datetime(
+                int(year) if len(year) == 4 else 2000 + int(year),
+                int(month), int(day), int(hour), int(minute), int(second or 0), tzinfo=KST,
+            )
+        else:
+            time_match = re.search(r"(?<!\d)([0-2]?\d):([0-5]\d)(?::([0-5]\d))?(?!\d)", row)
+            date_match = re.search(r"(?<!\d)((?:20)?\d{2})[./-](\d{1,2})[./-](\d{1,2})(?!\d)", row)
+            if time_match and not date_match:
+                published = current.replace(
+                    hour=int(time_match.group(1)), minute=int(time_match.group(2)),
+                    second=int(time_match.group(3) or 0), microsecond=0,
+                )
+            elif date_match:
+                year, month, day = date_match.groups()
+                row_date = (int(year) if len(year) == 4 else 2000 + int(year), int(month), int(day))
+                # A date without a posting time cannot safely prove inclusion in a rolling window.
+                if row_date == (current.year, current.month, current.day):
+                    published = datetime(*row_date, tzinfo=KST)
+        if published is None or not cutoff <= published <= current + timedelta(minutes=5):
             continue
         titles.extend(_link_titles(row, predicate))
     return titles
+
+
+def _today_link_titles(page: str, predicate: Any, now: datetime | None = None) -> list[str]:
+    """Backward-compatible alias; community collection now uses a rolling 24-hour window."""
+    return _recent_link_titles(page, predicate, now, 24)
 
 
 def _coinpan_post_id(href: str) -> str | None:
@@ -80,8 +105,9 @@ def _coinpan_posts(page: str) -> dict[str, str]:
 
 
 def _ddengle_posts(page: str, now: datetime | None = None) -> dict[str, str]:
-    """Extract today's public Ddengle posts using its stable row metadata."""
-    current_date = (now or datetime.now(KST)).astimezone(KST).date()
+    """Extract the last 24 hours of public Ddengle posts using row metadata."""
+    current = (now or datetime.now(timezone.utc)).astimezone(KST)
+    cutoff = current - timedelta(hours=24)
     posts: dict[str, str] = {}
     for row in re.findall(r'<tr\b[^>]*data-document-srl=["\'](\d+)["\'][^>]*>.*?</tr>', page, flags=re.IGNORECASE | re.DOTALL):
         # The first pass above only captures the id, so locate the matching full row.
@@ -95,12 +121,11 @@ def _ddengle_posts(page: str, now: datetime | None = None) -> dict[str, str]:
         body = match.group(1)
         timestamp = re.search(r'data-timestamp=["\'](\d+)["\']', body)
         if timestamp:
-            published = datetime.fromtimestamp(int(timestamp.group(1)), timezone.utc).astimezone(KST).date()
-            if published != current_date:
+            published = datetime.fromtimestamp(int(timestamp.group(1)), timezone.utc).astimezone(KST)
+            if not cutoff <= published <= current + timedelta(minutes=5):
                 continue
         else:
-            date_match = re.search(r'<td\b[^>]*class=["\'][^"\']*time[^"\']*["\'][^>]*>(.*?)</td>', body, flags=re.IGNORECASE | re.DOTALL)
-            if not date_match or not re.search(r'(?<!\d)[0-2]?\d:[0-5]\d(?::[0-5]\d)?(?!\d)', date_match.group(1)):
+            if not _recent_link_titles(f"<tr>{body}</tr>", lambda _href: True, current, 24):
                 continue
         title_match = re.search(
             r'<td\b[^>]*class=["\'][^"\']*title[^"\']*["\'][^>]*>.*?<a\b[^>]*href=["\'][^"\']+/(?:board_free|alt|traders_free|DeFi)/(\d+)["\'][^>]*>(.*?)</a>',
@@ -560,8 +585,7 @@ class MarketDataClient:
             "CryptoCurrency", "CryptoMarkets", "altcoin", "defi", "ethtrader",
             "solana", "cardano", "Ripple", "sui", "Chainlink", "Avax", "cosmosnetwork",
         )
-        now_kst = datetime.now(KST)
-        cutoff = now_kst.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).timestamp()
         post_texts: list[str] = []
         seen: set[str] = set()
         after: str | None = None
@@ -596,7 +620,7 @@ class MarketDataClient:
         posts: list[str] = []
         for page in range(1, pages + 1):
             body = self._text("https://gall.dcinside.com/board/lists/", params={"id": "bitcoins_new1", "page": page})
-            page_posts = _today_link_titles(
+            page_posts = _recent_link_titles(
                     body,
                     lambda href: "/board/view/" in href and "id=bitcoins_new1" in href and "t=cv" not in href and "no=1&" not in href,
                 )
@@ -634,7 +658,7 @@ class MarketDataClient:
                 today_rows = "".join(
                     row
                     for row in re.findall(r"<tr\b[^>]*>.*?</tr>", body, flags=re.IGNORECASE | re.DOTALL)
-                    if _today_link_titles(row, lambda href: _coinpan_post_id(href) is not None)
+                    if _recent_link_titles(row, lambda href: _coinpan_post_id(href) is not None)
                 )
                 page_posts = _coinpan_posts(today_rows)
                 if page_posts:
