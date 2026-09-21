@@ -55,6 +55,7 @@ class MainAnalysisTests(unittest.TestCase):
             def reddit_mentions(self, _aliases): return None, 0
             def dcinside_mentions(self, _aliases, _pages): return {}, 0
             def coinpan_mentions(self, _aliases, _pages): return {}, 0
+            def ddengle_mentions(self, _aliases, _pages): return {}, 0
             def crypto_news(self, _symbols, limit=7): return []
             def coinmarketcal_events(self, _symbols, limit=8): return []
             def coingecko_coin_list(self): return []
@@ -66,7 +67,7 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(report["data_quality"]["notices"], ["KRW-CP 분석 제외: 거래이력 부족 (2일/최소 60일)"])
 
     @patch("src.main.time.sleep", return_value=None)
-    def test_report_combines_three_community_sources_and_project_context(self, _sleep):
+    def test_report_combines_four_community_sources_and_project_context(self, _sleep):
         candles = self.candles()
 
         class FakeClient:
@@ -80,6 +81,7 @@ class MainAnalysisTests(unittest.TestCase):
             def reddit_mentions(self, _aliases): return {"XRP": 1}, 20
             def dcinside_mentions(self, _aliases, _pages): return {"XRP": 2}, 40
             def coinpan_mentions(self, _aliases, _pages): return {"XRP": 3}, 40
+            def ddengle_mentions(self, _aliases, _pages): return {"XRP": 2}, 20
             def crypto_news(self, _symbols, limit=7): return [{"title": "XRP 이슈", "source": "테스트", "url": "https://example.com", "published_at": "2026-01-01T00:00:00+00:00", "published_at_kst": "01-01 09:00", "category": "시장", "impact": "중립·혼재", "related_symbols": ["XRP"]}]
             def coinmarketcal_events(self, _symbols, limit=8): return [{"id": "1", "title": "XRP 일정", "date": "2026-01-02", "date_kst": "01-02", "related_symbols": ["XRP"], "categories": [], "impact_score": None, "source": "CoinMarketCal"}]
             def coingecko_coin_list(self): return [{"id": "ripple", "symbol": "xrp", "name": "XRP"}]
@@ -95,8 +97,8 @@ class MainAnalysisTests(unittest.TestCase):
         self.assertEqual(report["alt_rankings"][0]["timeframe_scores"]["hourly"], coin["score"])
         self.assertIn("daily", report["alt_rankings"][0]["timeframe_scores"])
         self.assertIn("weekly", report["alt_rankings"][0]["timeframe_scores"])
-        self.assertEqual(coin["community_total"], 6)
-        self.assertEqual(coin["community_sources"], 3)
+        self.assertEqual(coin["community_total"], 8)
+        self.assertEqual(coin["community_sources"], 4)
         self.assertEqual(coin["development"]["status"], "공개 GitHub 없음")
         self.assertEqual(coin["tokenomics"]["circulating_ratio"], 80.0)
         self.assertEqual(report["news_issues"][0]["related_symbols"], ["XRP"])

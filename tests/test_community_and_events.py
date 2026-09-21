@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 from src.main import resolve_coingecko_id, summarize_unlock
-from src.providers import MarketDataClient, _coinpan_posts, _link_titles, _today_link_titles, count_post_mentions
+from src.providers import MarketDataClient, _coinpan_posts, _ddengle_posts, _link_titles, _today_link_titles, count_post_mentions
 from src.scoring import alt_score
 
 
@@ -44,6 +44,28 @@ class CommunityAndEventTests(unittest.TestCase):
         self.assertEqual(counts["XRP"], 1)
         self.assertEqual(samples, 1)
         self.assertEqual(client._text.call_count, 2)
+
+    def test_ddengle_parser_keeps_only_today_and_deduplicates(self):
+        today = int(datetime(2026, 9, 21, 1, 0, tzinfo=timezone.utc).timestamp())
+        yesterday = int(datetime(2026, 9, 20, 1, 0, tzinfo=timezone.utc).timestamp())
+        page = f'''
+            <tr data-document-srl="101"><td class="title"><a href="https://www.ddengle.com/alt/101">수이 SUI 상승</a></td><td class="time" data-timestamp="{today}">10:00</td></tr>
+            <tr data-document-srl="100"><td class="title"><a href="https://www.ddengle.com/alt/100">어제 리플</a></td><td class="time" data-timestamp="{yesterday}">09.20</td></tr>
+        '''
+        now = datetime(2026, 9, 21, 3, 0, tzinfo=timezone.utc)
+        self.assertEqual(_ddengle_posts(page, now), {"101": "수이 SUI 상승"})
+
+    def test_ddengle_collector_combines_public_boards(self):
+        timestamp = int(datetime.now(timezone.utc).timestamp())
+        pages = [
+            f'<tr data-document-srl="{index}"><td class="title"><a href="https://www.ddengle.com/{board}/{index}">리플 소식</a></td><td class="time" data-timestamp="{timestamp}">10:00</td></tr>'
+            for index, board in enumerate(("board_free", "alt", "traders_free", "DeFi"), 1)
+        ]
+        client = MarketDataClient()
+        client._text = Mock(side_effect=pages)
+        counts, samples = client.ddengle_mentions({"XRP": ("XRP", "리플")}, 1)
+        self.assertEqual(counts["XRP"], 4)
+        self.assertEqual(samples, 4)
 
     def test_today_filter_excludes_previous_board_posts(self):
         page = '''

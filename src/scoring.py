@@ -183,7 +183,7 @@ def alt_score(metrics: dict[str, Any], regime: str) -> tuple[int, list[str], lis
         exposure_rate = metrics.get("community_exposure_rate") or 0
         community_points = min(5, 1 + int(community_total >= 3) + int(community_total >= 7) + max(0, mentioned_sources - 1) + int(exposure_rate >= 3))
         score += community_points
-        source_labels = {"reddit": "Reddit", "dcinside": "디시", "coinpan": "코인판"}
+        source_labels = {"reddit": "Reddit", "dcinside": "디시", "coinpan": "코인판", "ddengle": "땡글"}
         breakdown = "·".join(f"{source_labels.get(name, name)} {value}회" for name, value in community_mentions.items() if value is not None)
         reasons.append(f"오늘 커뮤니티 표본 {community_sources}곳에서 총 {community_total}회 언급됐습니다({breakdown}).")
     commits = development.get("commits_30d")

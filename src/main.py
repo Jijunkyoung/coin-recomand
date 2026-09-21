@@ -303,8 +303,9 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         "reddit": lambda: client.reddit_mentions(aliases),
         "dcinside": lambda: client.dcinside_mentions(aliases, settings.get("community_pages", 2)),
         "coinpan": lambda: client.coinpan_mentions(aliases, settings.get("community_pages", 2)),
+        "ddengle": lambda: client.ddengle_mentions(aliases, settings.get("community_pages", 2)),
     }
-    source_names = {"reddit": "Reddit", "dcinside": "디시인사이드", "coinpan": "코인판"}
+    source_names = {"reddit": "Reddit", "dcinside": "디시인사이드", "coinpan": "코인판", "ddengle": "땡글"}
     for source, collect in community_collectors.items():
         try:
             counts, sample_size = collect()
@@ -522,6 +523,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             {"name": "Reddit", "url": "https://www.reddit.com/r/CryptoCurrency/"},
             {"name": "DCInside", "url": "https://gall.dcinside.com/board/lists/?id=bitcoins_new1"},
             {"name": "Coinpan", "url": "https://coinpan.com/free"},
+            {"name": "Ddengle", "url": "https://www.ddengle.com/board_free"},
             {"name": "Alternative.me", "url": "https://alternative.me/crypto/fear-and-greed-index/"},
             {"name": "Google News RSS", "url": "https://news.google.com/"},
             {"name": "CoinMarketCal", "url": "https://coinmarketcal.com/developer"},

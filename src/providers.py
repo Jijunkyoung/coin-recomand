@@ -79,6 +79,43 @@ def _coinpan_posts(page: str) -> dict[str, str]:
     return posts
 
 
+def _ddengle_posts(page: str, now: datetime | None = None) -> dict[str, str]:
+    """Extract today's public Ddengle posts using its stable row metadata."""
+    current_date = (now or datetime.now(KST)).astimezone(KST).date()
+    posts: dict[str, str] = {}
+    for row in re.findall(r'<tr\b[^>]*data-document-srl=["\'](\d+)["\'][^>]*>.*?</tr>', page, flags=re.IGNORECASE | re.DOTALL):
+        # The first pass above only captures the id, so locate the matching full row.
+        match = re.search(
+            rf'<tr\b[^>]*data-document-srl=["\']{re.escape(row)}["\'][^>]*>(.*?)</tr>',
+            page,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if not match:
+            continue
+        body = match.group(1)
+        timestamp = re.search(r'data-timestamp=["\'](\d+)["\']', body)
+        if timestamp:
+            published = datetime.fromtimestamp(int(timestamp.group(1)), timezone.utc).astimezone(KST).date()
+            if published != current_date:
+                continue
+        else:
+            date_match = re.search(r'<td\b[^>]*class=["\'][^"\']*time[^"\']*["\'][^>]*>(.*?)</td>', body, flags=re.IGNORECASE | re.DOTALL)
+            if not date_match or not re.search(r'(?<!\d)[0-2]?\d:[0-5]\d(?::[0-5]\d)?(?!\d)', date_match.group(1)):
+                continue
+        title_match = re.search(
+            r'<td\b[^>]*class=["\'][^"\']*title[^"\']*["\'][^>]*>.*?<a\b[^>]*href=["\'][^"\']+/(?:board_free|alt|traders_free|DeFi)/(\d+)["\'][^>]*>(.*?)</a>',
+            body,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if not title_match:
+            continue
+        text = html.unescape(re.sub(r"<[^>]+>", " ", title_match.group(2)))
+        text = " ".join(text.split())
+        if len(text) >= 2:
+            posts.setdefault(title_match.group(1), text)
+    return posts
+
+
 def count_post_mentions(posts: list[str], aliases: dict[str, tuple[str, str]]) -> dict[str, int]:
     common_tickers = {"ONE", "GAS", "NEAR", "FLOW", "MASK", "LINK", "MOVE", "ME", "ID"}
     safe_short_tickers = {"BTC", "ETH", "XRP", "SOL", "ADA", "DOT", "TRX", "SUI", "TON"}
@@ -519,19 +556,41 @@ class MarketDataClient:
         )
         token_response.raise_for_status()
         token = token_response.json()["access_token"]
-        posts = self._json(
-            "https://oauth.reddit.com/r/CryptoCurrency/new",
-            params={"limit": 100, "raw_json": 1},
-            headers={"Authorization": f"Bearer {token}"},
+        subreddits = (
+            "CryptoCurrency", "CryptoMarkets", "altcoin", "defi", "ethtrader",
+            "solana", "cardano", "Ripple", "sui", "Chainlink", "Avax", "cosmosnetwork",
         )
         now_kst = datetime.now(KST)
         cutoff = now_kst.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-        posts = [
-            f"{child['data'].get('title', '')} {child['data'].get('selftext', '')}"
-            for child in posts.get("data", {}).get("children", [])
-            if float(child.get("data", {}).get("created_utc", 0)) >= cutoff
-        ]
-        return count_post_mentions(posts, aliases), len(posts)
+        post_texts: list[str] = []
+        seen: set[str] = set()
+        after: str | None = None
+        for _ in range(4):
+            params: dict[str, Any] = {"limit": 100, "raw_json": 1}
+            if after:
+                params["after"] = after
+            listing = self._json(
+                f"https://oauth.reddit.com/r/{'+'.join(subreddits)}/new",
+                params=params,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            children = listing.get("data", {}).get("children", [])
+            reached_previous_day = False
+            for child in children:
+                data = child.get("data", {})
+                created = float(data.get("created_utc", 0))
+                if created < cutoff:
+                    reached_previous_day = True
+                    continue
+                post_id = str(data.get("name") or data.get("id") or "")
+                if post_id and post_id not in seen:
+                    seen.add(post_id)
+                    post_texts.append(f"{data.get('title', '')} {data.get('selftext', '')}")
+            after = listing.get("data", {}).get("after")
+            if not after or reached_previous_day:
+                break
+            time.sleep(0.2)
+        return count_post_mentions(post_texts, aliases), len(post_texts)
 
     def dcinside_mentions(self, aliases: dict[str, tuple[str, str]], pages: int = 2) -> tuple[dict[str, int], int]:
         posts: list[str] = []
@@ -589,4 +648,18 @@ class MarketDataClient:
         titles = list(posts.values())
         if not titles:
             raise DataProviderError("코인판 게시글 주소를 찾지 못했습니다.")
+        return count_post_mentions(titles, aliases), len(titles)
+
+    def ddengle_mentions(self, aliases: dict[str, tuple[str, str]], pages: int = 2) -> tuple[dict[str, int], int]:
+        posts: dict[str, str] = {}
+        boards = ("board_free", "alt", "traders_free", "DeFi")
+        for board in boards:
+            for page in range(1, pages + 1):
+                body = self._text(f"https://www.ddengle.com/{board}", params={"page": page})
+                page_posts = _ddengle_posts(body)
+                posts.update(page_posts)
+                if page > 1 and not page_posts:
+                    break
+                time.sleep(0.2)
+        titles = list(posts.values())
         return count_post_mentions(titles, aliases), len(titles)

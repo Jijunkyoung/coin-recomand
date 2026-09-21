@@ -585,7 +585,7 @@ function renderAltSearchResult(coin) {
   const decisionClass = coin.decision === "분할매수 후보" ? "buy" : coin.decision === "보류" ? "hold" : "watch";
   const mentions = coin.community_mentions || {};
   const community = coin.community_sources
-    ? `오늘 ${coin.community_total || 0}회 · Reddit ${mentions.reddit ?? "미수집"} / 디시 ${mentions.dcinside ?? "미수집"} / 코인판 ${mentions.coinpan ?? "미수집"}`
+    ? `오늘 ${coin.community_total || 0}회 · Reddit ${mentions.reddit ?? "미수집"} / 디시 ${mentions.dcinside ?? "미수집"} / 코인판 ${mentions.coinpan ?? "미수집"} / 땡글 ${mentions.ddengle ?? "미수집"}`
     : "커뮤니티 데이터 미수집";
   const development = coin.development || {};
   const tokenomics = coin.tokenomics || {};

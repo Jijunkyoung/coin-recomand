@@ -13,7 +13,7 @@
 - 알트코인: RSI, MACD, EMA 추세, 7일·30일 모멘텀, 거래량 변화, 변동성, 유동성
 - 추천·검색 결과: 현재가 옆에 전일 종가 대비 일간 등락률 표시
 - 전체 분석 대상 검색: 종목명·심볼로 순위, 100점 환산 점수, 판정, 가감 근거, 커뮤니티·개발·언락 정보와 상세차트 조회
-- 커뮤니티: CoinGecko 인기 검색 + Reddit·디시인사이드 비트코인 갤러리·코인판 한국시간 당일 게시글 언급 노출도
+- 커뮤니티: CoinGecko 인기 검색 + Reddit 주요 코인 커뮤니티·디시인사이드 비트코인 갤러리·코인판·땡글의 한국시간 당일 게시글 언급 노출도
 - 프로젝트: 공식 GitHub 최근 30일 커밋·릴리스로 개발 진척 확인
 - 토크노믹스: 유통 비율과 향후 토큰 언락 일정·규모를 공급 위험으로 반영
 - 결과: `분할매수 후보`, `관찰`, `보류`와 항목별 점수·선정 사유·위험 요인
@@ -116,7 +116,7 @@ GitHub Actions는 service role key와 별도의 scheduler key가 모두 있어�
 
 신규 `sb_secret_...` 키는 JWT가 아니므로 GitHub Actions가 Supabase 프로젝트를 호출할 때 `apikey` 헤더로만 전달합니다. 별도의 `KIS_SCHEDULER_KEY`가 예약 작업 자체를 인증하며, 브라우저에서 호출할 때는 로그인 회원의 Bearer 토큰을 함수 내부에서 검증합니다.
 
-Reddit 언급 수는 선택 기능입니다. 사용하려면 Reddit의 script 앱을 만든 뒤 `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`을 추가하세요. 세 커뮤니티 모두 한국시간 당일 작성된 게시물만 반영합니다. 디시인사이드 비트코인 갤러리와 코인판은 별도 키 없이 게시글 제목을 표본 수집하며, 사이트 접근이 제한되면 0회로 간주하지 않고 `미수집`으로 표시합니다.
+Reddit 언급 수는 선택 기능입니다. 사용하려면 Reddit의 script 앱을 만든 뒤 `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`을 추가하세요. Reddit은 r/CryptoCurrency뿐 아니라 CryptoMarkets·altcoin·DeFi 및 주요 생태계 커뮤니티를 페이지네이션해 최대 400개 당일 게시물을 확인합니다. 네 커뮤니티 모두 한국시간 당일 작성된 게시물만 반영합니다. 디시인사이드 비트코인 갤러리·코인판·땡글은 별도 키 없이 공개 게시글 제목을 표본 수집하며, 사이트 접근이 제한되면 0회로 간주하지 않고 `미수집`으로 표시합니다.
 
 예정된 토큰 언락 날짜와 수량을 반영하려면 Mobula에서 API 키를 발급한 뒤 `MOBULA_API_KEY`를 Repository secret으로 추가하세요. 키가 없을 때도 CoinGecko의 총공급량 대비 유통 비율은 희석 위험에 반영되지만 정확한 언락 날짜는 `미수집`으로 표시됩니다. 공식 GitHub 개발 활동은 Actions의 기본 토큰을 사용하므로 별도 Secret이 필요하지 않습니다.
 
@@ -172,6 +172,7 @@ python -m unittest discover -s tests -v
 - [Reddit r/CryptoCurrency](https://www.reddit.com/r/CryptoCurrency/)
 - [디시인사이드 비트코인 갤러리](https://gall.dcinside.com/board/lists/?id=bitcoins_new1)
 - [코인판 자유게시판](https://coinpan.com/free)
+- [땡글 자유게시판·알트코인·트레이딩·DeFi](https://www.ddengle.com/board_free)
 - [Google News 한국어 RSS](https://news.google.com/)
 - [CoinMarketCal API](https://coinmarketcal.com/developer)
 - [DefiLlama API](https://api-docs.defillama.com/)
