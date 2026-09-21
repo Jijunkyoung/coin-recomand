@@ -73,8 +73,14 @@ async function kisToken(appKey: string, appSecret: string, baseUrl: string) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ grant_type: "client_credentials", appkey: appKey, appsecret: appSecret }),
   });
-  const data = await response.json();
-  if (!response.ok || !data.access_token) throw new Error(data.msg1 || "한국투자증권 토큰 발급 실패");
+  const raw = await response.text();
+  let data: Record<string, unknown> = {};
+  try { data = JSON.parse(raw); } catch { /* KIS may return a plain-text gateway error. */ }
+  if (!response.ok || !data.access_token) {
+    const detail = textValue(data.error_description || data.msg1 || data.error || data.msg_cd || raw);
+    const safeDetail = detail.slice(0, 200) || `HTTP ${response.status}`;
+    throw new Error(`한국투자증권 토큰 발급 실패: ${safeDetail}`);
+  }
   return data.access_token as string;
 }
 

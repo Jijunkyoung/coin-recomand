@@ -77,6 +77,8 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn('request.headers.get("x-kis-scheduler-key")', edge)
         self.assertIn('request.headers.get("apikey")', edge)
         self.assertIn('requestApiKey === serverAdminKey', edge)
+        self.assertIn('data.error_description || data.msg1 || data.error', edge)
+        self.assertIn('한국투자증권 토큰 발급 실패:', edge)
         self.assertIn('if (!schedulerMode && !authorization.startsWith("Bearer "))', edge)
         self.assertIn("supabase.auth.getUser()", edge)
         config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")

@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   analyze:
+    if: ${{ !(github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-supabase-only]')) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

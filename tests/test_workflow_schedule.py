@@ -39,6 +39,7 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("DELIVERY_MARKER_SCOPE: coin", workflow)
         self.assertIn("DELIVERY_MARKER_SCOPE: stock", workflow)
         self.assertIn("steps.kis_profile.outcome == 'success'", workflow)
+        self.assertIn("[deploy-supabase-only]", workflow)
 
     def test_daily_email_has_fallback_and_never_cancels_delivery(self):
         workflow = (Path(__file__).parents[1] / ".github/workflows/daily-email.yml").read_text(encoding="utf-8")
