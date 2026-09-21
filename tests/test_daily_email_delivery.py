@@ -8,6 +8,11 @@ class DailyEmailDeliveryTests(unittest.TestCase):
     def test_marker_uses_korean_calendar_date(self):
         self.assertEqual(marker_name(datetime(2026, 9, 15, 23, 30, tzinfo=timezone.utc)), "daily-email-kst-2026-09-16")
 
+    def test_marker_separates_coin_and_stock_delivery(self):
+        now = datetime(2026, 9, 15, 23, 30, tzinfo=timezone.utc)
+        self.assertEqual(marker_name(now, "coin"), "daily-email-kst-2026-09-16-coin")
+        self.assertEqual(marker_name(now, "stock"), "daily-email-kst-2026-09-16-stock")
+
     def test_only_matching_nonexpired_marker_blocks_fallback(self):
         name = "daily-email-kst-2026-09-16"
         self.assertTrue(has_active_marker({"artifacts": [{"name": name, "expired": False}]}, name))

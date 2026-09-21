@@ -9,7 +9,8 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn('cron: "20 22 * * *"', workflow)
         self.assertNotIn('cron: "30 22 * * *"', workflow)
         self.assertIn("NOT_BEFORE_KST: \"07:20\"", workflow)
-        self.assertIn("steps.delivery.outputs.should_send == 'true'", workflow)
+        self.assertIn("steps.coin_delivery.outputs.should_send == 'true'", workflow)
+        self.assertIn("steps.stock_delivery.outputs.should_send == 'true'", workflow)
         self.assertIn("[record-daily-email]", workflow)
         self.assertIn("FORCE_SEND: ${{ github.event_name == 'push' }}", workflow)
         self.assertIn("actions/upload-artifact@v4", workflow)
@@ -31,6 +32,13 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("load_member_stock_profile.py", workflow)
         self.assertIn('REQUIRE_MEMBER_STOCK_PROFILE: "true"', workflow)
         self.assertIn("python scripts/write_supabase_config.py", workflow)
+        self.assertIn("id: coin_delivery", workflow)
+        self.assertIn("id: stock_delivery", workflow)
+        self.assertIn("id: kis_profile", workflow)
+        self.assertIn("continue-on-error:", workflow)
+        self.assertIn("DELIVERY_MARKER_SCOPE: coin", workflow)
+        self.assertIn("DELIVERY_MARKER_SCOPE: stock", workflow)
+        self.assertIn("steps.kis_profile.outcome == 'success'", workflow)
 
     def test_daily_email_has_fallback_and_never_cancels_delivery(self):
         workflow = (Path(__file__).parents[1] / ".github/workflows/daily-email.yml").read_text(encoding="utf-8")
@@ -42,6 +50,10 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("REQUIRE_EMAIL_DELIVERY: \"true\"", workflow)
         self.assertIn("actions/upload-artifact@v4", workflow)
         self.assertIn("load_member_stock_profile.py", workflow)
+        self.assertIn("id: coin_delivery", workflow)
+        self.assertIn("id: stock_delivery", workflow)
+        self.assertIn("continue-on-error: true", workflow)
+        self.assertIn("EMAIL_REPORT_SCOPE:", workflow)
 
 
 if __name__ == "__main__":

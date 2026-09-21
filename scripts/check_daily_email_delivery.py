@@ -11,9 +11,11 @@ from datetime import datetime, timedelta, timezone
 KST = timezone(timedelta(hours=9))
 
 
-def marker_name(now: datetime | None = None) -> str:
+def marker_name(now: datetime | None = None, scope: str = "") -> str:
     current = now or datetime.now(timezone.utc)
-    return f"daily-email-kst-{current.astimezone(KST):%Y-%m-%d}"
+    base = f"daily-email-kst-{current.astimezone(KST):%Y-%m-%d}"
+    normalized_scope = scope.strip().lower()
+    return f"{base}-{normalized_scope}" if normalized_scope else base
 
 
 def has_active_marker(payload: dict, expected_name: str) -> bool:
@@ -38,7 +40,8 @@ def is_not_before_kst(value: str, now: datetime | None = None) -> bool:
 
 
 def main() -> None:
-    name = marker_name()
+    scope = os.getenv("DELIVERY_MARKER_SCOPE", "").strip().lower()
+    name = marker_name(scope=scope)
     force = os.getenv("FORCE_SEND", "").lower() in {"1", "true", "yes"}
     eligible = force or is_not_before_kst(os.getenv("NOT_BEFORE_KST", ""))
     exists = False
@@ -60,7 +63,8 @@ def main() -> None:
     if not eligible:
         print("한국시간 예약 발송 시각 전이므로 보고서 발송을 기다립니다.")
     else:
-        print("오늘 발송 완료 기록이 있어 예비 발송을 건너뜁니다." if exists else "오늘 보고서 발송을 진행합니다.")
+        label = {"coin": "코인", "stock": "주식"}.get(scope, "보고서")
+        print(f"오늘 {label} 메일 발송 완료 기록이 있어 건너뜁니다." if exists else f"오늘 {label} 메일 발송을 진행합니다.")
 
 
 if __name__ == "__main__":
