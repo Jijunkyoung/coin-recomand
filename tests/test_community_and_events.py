@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 from src.main import resolve_coingecko_id, summarize_unlock
-from src.providers import MarketDataClient, _coinpan_posts, _ddengle_posts, _link_titles, _recent_link_titles, count_post_mentions
+from src.providers import KST, MarketDataClient, _coinpan_posts, _ddengle_posts, _link_titles, _recent_link_titles, count_post_mentions
 from src.scoring import alt_score
 
 
@@ -37,7 +37,8 @@ class CommunityAndEventTests(unittest.TestCase):
         self.assertEqual(_coinpan_posts(page), {"123": "리플 소식", "124": "프로스퍼 진척"})
 
     def test_coinpan_collector_falls_back_after_http_failure(self):
-        page = '<tr class="bg1"><td><a href="/free/123">오늘 리플</a></td><td class="time"><span class="regdateHour">08:10</span></td></tr>'
+        posted_at = datetime.now(timezone.utc).astimezone(KST).strftime("%Y-%m-%d %H:%M:%S")
+        page = f'<tr class="bg1"><td><a href="/free/123">오늘 리플</a></td><td class="time" title="{posted_at}">{posted_at}</td></tr>'
         client = MarketDataClient()
         client._text = Mock(side_effect=[__import__("requests").HTTPError("blocked"), page])
         counts, samples = client.coinpan_mentions({"XRP": ("XRP", "리플")}, 1)
