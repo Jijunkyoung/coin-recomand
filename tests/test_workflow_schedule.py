@@ -60,6 +60,8 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("pgtxtnggjqaysjhtdepz", workflow)
         self.assertIn("SUPABASE_ACCESS_TOKEN", workflow)
         self.assertIn("SUPABASE_DB_PASSWORD", workflow)
+        self.assertIn('branches: [main]', workflow)
+        self.assertIn('"supabase/**"', workflow)
         self.assertIn("supabase db push --linked", workflow)
         self.assertIn("functions deploy kis-portfolio", workflow)
         self.assertIn("--no-verify-jwt", workflow)
