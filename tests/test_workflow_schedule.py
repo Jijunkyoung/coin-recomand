@@ -55,6 +55,15 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("continue-on-error: true", workflow)
         self.assertIn("EMAIL_REPORT_SCOPE:", workflow)
 
+    def test_supabase_backend_deploy_targets_owned_project(self):
+        workflow = (Path(__file__).parents[1] / ".github/workflows/deploy-supabase.yml").read_text(encoding="utf-8")
+        self.assertIn("pgtxtnggjqaysjhtdepz", workflow)
+        self.assertIn("SUPABASE_ACCESS_TOKEN", workflow)
+        self.assertIn("SUPABASE_DB_PASSWORD", workflow)
+        self.assertIn("supabase db push --linked", workflow)
+        self.assertIn("functions deploy kis-portfolio", workflow)
+        self.assertIn("--no-verify-jwt", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

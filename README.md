@@ -116,6 +116,18 @@ GitHub Actions는 service role key와 별도의 scheduler key가 모두 있어�
 
 신규 `sb_secret_...` 키는 JWT가 아니므로 GitHub Actions가 Supabase 프로젝트를 호출할 때 `apikey` 헤더로만 전달합니다. 별도의 `KIS_SCHEDULER_KEY`가 예약 작업 자체를 인증하며, 브라우저에서 호출할 때는 로그인 회원의 Bearer 토큰을 함수 내부에서 검증합니다.
 
+### Supabase 백엔드 자동 배포
+
+현재 관리 프로젝트는 `pgtxtnggjqaysjhtdepz`입니다. 저장소의 **Deploy Supabase backend** 워크플로는 이 프로젝트에 DB 마이그레이션과 `kis-portfolio` Edge Function을 함께 배포합니다. 프로젝트 ID는 공개 식별자이고, 아래 두 인증값만 Repository secret으로 보관합니다.
+
+1. Supabase 계정의 **Account Settings → Access Tokens**에서 토큰을 만들어 GitHub Repository secret `SUPABASE_ACCESS_TOKEN`으로 저장합니다. 이 토큰은 Supabase CLI가 사용자 대신 프로젝트에 배포하도록 허가하는 용도입니다.
+2. 프로젝트의 데이터베이스 비밀번호를 GitHub Repository secret `SUPABASE_DB_PASSWORD`로 저장합니다. 이 값은 SQL 마이그레이션 연결에만 사용되며 로그와 정적 페이지에는 포함되지 않습니다.
+3. GitHub **Actions → Deploy Supabase backend → Run workflow**를 실행합니다.
+4. 배포 성공 후에만 GitHub의 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`를 새 프로젝트 값으로 교체합니다.
+5. 새 프로젝트에서 가입한 내 회원 UUID를 `KIS_OWNER_USER_ID`로 설정하고 `KIS_SCHEDULER_KEY`가 GitHub와 Supabase 양쪽에서 같은지 확인합니다.
+
+프로젝트를 먼저 배포하고 마지막에 연결값을 바꾸는 이유는, 새 프로젝트에 테이블이나 함수가 없는 상태에서 운영 대시보드가 전환돼 회원가입과 주식메일이 동시에 중단되는 것을 막기 위해서입니다.
+
 Reddit 언급 수는 선택 기능입니다. 사용하려면 Reddit의 script 앱을 만든 뒤 `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`을 추가하세요. Reddit은 r/CryptoCurrency뿐 아니라 CryptoMarkets·altcoin·DeFi 및 주요 생태계 커뮤니티를 페이지네이션해 최대 400개 게시물을 확인합니다. 네 커뮤니티 모두 분석 실행시점 직전 24시간에 작성된 게시물만 반영합니다. 작성일만 있고 정확한 시각이 없는 이전 날짜 게시물은 과대 집계를 막기 위해 제외합니다. 디시인사이드 비트코인 갤러리·코인판·땡글은 별도 키 없이 공개 게시글 제목을 표본 수집하며, 사이트 접근이 제한되면 0회로 간주하지 않고 `미수집`으로 표시합니다.
 
 예정된 토큰 언락 날짜와 수량을 반영하려면 Mobula에서 API 키를 발급한 뒤 `MOBULA_API_KEY`를 Repository secret으로 추가하세요. 키가 없을 때도 CoinGecko의 총공급량 대비 유통 비율은 희석 위험에 반영되지만 정확한 언락 날짜는 `미수집`으로 표시됩니다. 공식 GitHub 개발 활동은 Actions의 기본 토큰을 사용하므로 별도 Secret이 필요하지 않습니다.
