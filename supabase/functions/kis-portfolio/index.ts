@@ -132,10 +132,18 @@ Deno.serve(async (request) => {
     const authorization = request.headers.get("Authorization") || "";
     const ownerId = env("KIS_OWNER_USER_ID");
     const schedulerSecret = env("KIS_SCHEDULER_KEY");
-    const schedulerMode = Boolean(schedulerSecret && request.headers.get("x-kis-scheduler-key") === schedulerSecret);
+    const requestApiKey = request.headers.get("apikey") || "";
+    const serverAdminKey = adminKey();
+    // Scheduled jobs already hold a server-only Supabase secret. Accept that
+    // credential as well as the dedicated scheduler key so a rotated or
+    // mismatched scheduler key cannot silently block the daily stock report.
+    const schedulerMode = Boolean(
+      (schedulerSecret && request.headers.get("x-kis-scheduler-key") === schedulerSecret) ||
+      (serverAdminKey && requestApiKey === serverAdminKey)
+    );
     if (!schedulerMode && !authorization.startsWith("Bearer ")) throw new Error("로그인이 필요합니다.");
     const supabase = schedulerMode
-      ? createClient(env("SUPABASE_URL"), adminKey())
+      ? createClient(env("SUPABASE_URL"), serverAdminKey)
       : createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { global: { headers: { Authorization: authorization } } });
     let userId = ownerId;
     if (!schedulerMode) {
