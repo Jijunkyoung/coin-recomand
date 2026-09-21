@@ -78,11 +78,12 @@ class EmailReportTests(unittest.TestCase):
 
     def test_stock_email_contains_kis_positions_and_changes(self):
         stocks = {"us": {"market_name": "미국주식", "recommendations": [], "warnings": []}, "kr": {"market_name": "국내주식", "recommendations": [], "warnings": []}}
-        stocks["_mail"] = {"portfolio": {"synced_at": "2026-09-17T07:30:00+09:00", "positions": [{"market": "kr", "symbol": "005930", "name": "삼성전자", "quantity": 10, "evaluation_amount": 800000, "profit_loss": 50000, "profit_rate": 6.67, "currency": "KRW"}], "changes": {"baseline_at": "2026-09-16T07:30:00+09:00", "added": [{"market": "kr", "symbol": "005930", "name": "삼성전자"}], "removed": [], "quantity_changes": []}}}
+        stocks["_mail"] = {"portfolio": {"synced_at": "2026-09-17T07:30:00+09:00", "positions": [{"market": "kr", "symbol": "005930", "name": "삼성전자", "quantity": 10, "current_price": 81000, "daily_change_rate": 1.25, "evaluation_amount": 800000, "profit_loss": 50000, "profit_rate": 6.67, "currency": "KRW"}], "changes": {"baseline_at": "2026-09-16T07:30:00+09:00", "added": [{"market": "kr", "symbol": "005930", "name": "삼성전자"}], "removed": [], "quantity_changes": []}}}
         result = build_stock_email_html(stocks)
         self.assertIn("내 한국투자증권 계좌", result)
         self.assertIn("신규 삼성전자", result)
         self.assertIn("800,000.00", result)
+        self.assertIn("일간 +1.25%", result)
 
     @patch.dict("os.environ", {"SMTP_HOST": "smtp.example.com", "SMTP_PORT": "465", "SMTP_USERNAME": "sender@example.com", "SMTP_PASSWORD": "secret", "EMAIL_TO": "coin@example.com", "STOCK_EMAIL_TO": "stock@example.com"}, clear=True)
     @patch("src.email_report.smtplib.SMTP_SSL")

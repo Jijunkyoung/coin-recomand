@@ -30,6 +30,7 @@ type Position = {
   evaluation_amount: number;
   profit_loss: number;
   profit_rate: number;
+  daily_change_rate?: number | null;
   currency: "KRW" | "USD";
 };
 
@@ -181,12 +182,23 @@ Deno.serve(async (request) => {
         positions.push(...overseasPositions(data.output1 || []));
       } catch (error) { overseasErrors.push(`${exchange}: ${error instanceof Error ? error.message : "조회 실패"}`); }
     }
-    const unique = [...new Map(positions.map((item) => [`${item.market}:${item.symbol}`, item])).values()];
+    let unique = [...new Map(positions.map((item) => [`${item.market}:${item.symbol}`, item])).values()];
     const baselineCutoff = new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString();
     const { data: baseline, error: baselineError } = await supabase.from("kis_portfolio_snapshots")
       .select("positions,captured_at").eq("user_id", userId).lte("captured_at", baselineCutoff)
       .order("captured_at", { ascending: false }).limit(1).maybeSingle();
     if (baselineError) throw new Error(`이전 계좌현황 조회 실패: ${baselineError.message}`);
+    const previousPositions = Array.isArray((baseline as Snapshot | null)?.positions)
+      ? (baseline as Snapshot).positions || []
+      : [];
+    const previousMap = new Map(previousPositions.map((item) => [`${item.market}:${item.symbol}`, item]));
+    unique = unique.map((item) => {
+      const previous = previousMap.get(`${item.market}:${item.symbol}`);
+      const dailyChangeRate = previous && previous.current_price > 0
+        ? Math.round(((item.current_price / previous.current_price) - 1) * 10000) / 100
+        : null;
+      return { ...item, daily_change_rate: dailyChangeRate };
+    });
     const changes = portfolioChanges(unique, baseline as Snapshot | null);
     const holdingsKr = unique.filter((item) => item.market === "kr").map((item) => `${item.symbol}|${item.name}`).join("\n");
     const holdingsUs = unique.filter((item) => item.market === "us").map((item) => `${item.symbol}|${item.name}`).join("\n");

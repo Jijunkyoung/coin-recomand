@@ -161,10 +161,13 @@ def build_stock_email_html(stock_reports: dict[str, dict[str, Any]]) -> str:
         symbol, name = html.escape(str(item.get("symbol") or "")), html.escape(str(item.get("name") or ""))
         prefix = "$" if str(item.get("currency") or "KRW") == "USD" else "₩"
         profit = float(item.get("profit_loss") or 0)
+        daily_rate = item.get("daily_change_rate")
+        daily_color = "#52657d" if daily_rate is None else "#c62828" if float(daily_rate) >= 0 else "#1565c0"
         position_rows.append(
             f"<tr><td style='padding:8px;border-bottom:1px solid #e3e9f0'><b>{name}</b><br><span style='color:#52657d;font-size:10px'>{symbol} · {float(item.get('quantity') or 0):,.4f}주</span></td>"
-            f"<td style='padding:8px;text-align:right;border-bottom:1px solid #e3e9f0'>{prefix}{float(item.get('evaluation_amount') or 0):,.2f}</td>"
-            f"<td style='padding:8px;text-align:right;border-bottom:1px solid #e3e9f0;color:{'#c62828' if profit >= 0 else '#1565c0'}'>{prefix}{profit:+,.2f}<br><span style='font-size:10px'>{_pct(item.get('profit_rate'))}</span></td></tr>"
+            f"<td style='padding:8px;text-align:right;border-bottom:1px solid #e3e9f0'><span style='color:#52657d;font-size:10px'>현재가</span><br>{prefix}{float(item.get('current_price') or 0):,.2f}<br><span style='font-size:10px;color:{daily_color}'>일간 {_pct(daily_rate)}</span></td>"
+            f"<td style='padding:8px;text-align:right;border-bottom:1px solid #e3e9f0'><span style='color:#52657d;font-size:10px'>평가액</span><br>{prefix}{float(item.get('evaluation_amount') or 0):,.2f}</td>"
+            f"<td style='padding:8px;text-align:right;border-bottom:1px solid #e3e9f0;color:{'#c62828' if profit >= 0 else '#1565c0'}'><span style='color:#52657d;font-size:10px'>평가손익</span><br>{prefix}{profit:+,.2f}<br><span style='font-size:10px'>{_pct(item.get('profit_rate'))}</span></td></tr>"
         )
     change_labels = []
     for item in changes.get("added") or []:
