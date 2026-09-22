@@ -25,6 +25,21 @@ class NewsProviderTests(unittest.TestCase):
         self.assertEqual(issues[1]["category"], "보안")
         self.assertEqual(issues[1]["impact"], "악재 가능")
 
+    def test_policy_news_marks_official_source_and_importance(self):
+        feed = """<?xml version="1.0" encoding="UTF-8"?>
+        <rss><channel><item><title>SEC 디지털자산 규제 지침 발표 - U.S. Securities and Exchange Commission</title>
+        <link>https://example.com/sec</link><pubDate>Thu, 10 Sep 2026 22:00:00 GMT</pubDate>
+        <source>U.S. Securities and Exchange Commission</source></item></channel></rss>"""
+        client = MarketDataClient()
+        with patch.object(client, "_text", return_value=feed), patch("src.providers.datetime") as mocked_datetime:
+            from datetime import datetime, timezone
+            mocked_datetime.now.return_value = datetime(2026, 9, 10, 23, 0, tzinfo=timezone.utc)
+            issues = client.crypto_policy_news()
+        self.assertEqual(len(issues), 1)
+        self.assertTrue(issues[0]["official_source"])
+        self.assertEqual(issues[0]["importance"], "높음")
+        self.assertEqual(issues[0]["status"], "발표")
+
 
 if __name__ == "__main__":
     unittest.main()

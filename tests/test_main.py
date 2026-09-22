@@ -57,6 +57,7 @@ class MainAnalysisTests(unittest.TestCase):
             def coinpan_mentions(self, _aliases, _pages): return {}, 0
             def ddengle_mentions(self, _aliases, _pages): return {}, 0
             def crypto_news(self, _symbols, limit=7): return []
+            def crypto_policy_news(self, limit=10): return []
             def coinmarketcal_events(self, _symbols, limit=8): return []
             def coingecko_coin_list(self): return []
 
@@ -83,6 +84,7 @@ class MainAnalysisTests(unittest.TestCase):
             def coinpan_mentions(self, _aliases, _pages): return {"XRP": 3}, 40
             def ddengle_mentions(self, _aliases, _pages): return {"XRP": 2}, 20
             def crypto_news(self, _symbols, limit=7): return [{"title": "XRP 이슈", "source": "테스트", "url": "https://example.com", "published_at": "2026-01-01T00:00:00+00:00", "published_at_kst": "01-01 09:00", "category": "시장", "impact": "중립·혼재", "related_symbols": ["XRP"]}]
+            def crypto_policy_news(self, limit=10): return []
             def coinmarketcal_events(self, _symbols, limit=8): return [{"id": "1", "title": "XRP 일정", "date": "2026-01-02", "date_kst": "01-02", "related_symbols": ["XRP"], "categories": [], "impact_score": None, "source": "CoinMarketCal"}]
             def coingecko_coin_list(self): return [{"id": "ripple", "symbol": "xrp", "name": "XRP"}]
             def coingecko_coin_details(self, _coin_id): return {"id": "ripple", "market_data": {"circulating_supply": 80, "total_supply": 100}, "links": {"repos_url": {"github": []}, "homepage": ["https://ripple.com"]}}

@@ -156,8 +156,8 @@ function renderMajorEvents() {
       : `<span class="major-event-source">${escapeHTML(event.source || "출처 미상")}</span>`;
     const symbols = event.related_symbols?.length ? event.related_symbols.join(" · ") : "시장 전체";
     return `<article class="major-event-card ${importanceClass}">
-      <div class="major-event-top"><div class="major-event-badges"><span class="major-event-badge importance">${escapeHTML(event.importance || "보통")}</span><span class="major-event-badge status">${escapeHTML(event.status || "확인 필요")}</span><span class="major-event-badge">${escapeHTML(event.event_type || "시장 일정")}</span></div><strong class="major-event-dday">${escapeHTML(eventDday(event.days_until))}</strong></div>
-      <h3>${escapeHTML(event.title || "제목 없는 일정")}</h3>
+      <div class="major-event-top"><div class="major-event-badges"><span class="major-event-badge status">${escapeHTML(event.status || "확인 필요")}</span><span class="major-event-badge">${escapeHTML(event.event_kind || "일정")}</span><span class="major-event-badge">${escapeHTML(event.event_type || "시장 일정")}</span></div><strong class="major-event-dday">${escapeHTML(eventDday(event.days_until))}</strong></div>
+      <h3>${escapeHTML(event.title || "제목 없는 일정")} <span class="major-event-badge importance">중요도 ${escapeHTML(event.importance || "보통")}</span></h3>
       <p class="major-event-date">${escapeHTML(event.date || "일정 확인 중")} · ${escapeHTML(event.time_kst || "시각 미정")} KST · ${escapeHTML(symbols)}</p>
       <p class="major-event-summary">${escapeHTML(event.summary || "시장 영향을 확인 중입니다.")}</p>
       <div class="major-event-scenarios"><p><b>긍정 시나리오</b>${escapeHTML(event.bull_case || "긍정적 결과 시 시장심리 개선 가능")}</p><p><b>부정 시나리오</b>${escapeHTML(event.bear_case || "부정적 결과 시 변동성 확대 가능")}</p></div>
