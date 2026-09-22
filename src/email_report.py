@@ -86,7 +86,7 @@ def _major_event_section(events: list[dict[str, Any]]) -> str:
             "<p style='margin:0;color:#52657d;font-size:12px'>현재 선별된 고영향 일정이 없습니다.</p></div>"
         )
     rows = []
-    for event in events[:5]:
+    for event in events[:8]:
         importance = str(event.get("importance", "보통"))
         border = "#c2412d" if importance == "매우 높음" else "#9a6200"
         days = event.get("days_until")
@@ -103,7 +103,8 @@ def _major_event_section(events: list[dict[str, Any]]) -> str:
             f"<div style='margin-top:10px;padding:14px;border-left:3px solid {border};border-radius:8px;background:#f6f8fb;color:#10233f'>"
             f"<p style='margin:0 0 6px;color:#52657d;font-size:11px'><b style='color:{border}'>{html.escape(importance)}</b> · "
             f"{html.escape(str(event.get('status', '확인 필요')))} · {html.escape(dday)} · {html.escape(str(event.get('date') or '일정 확인 중'))} · {html.escape(str(event.get('time_kst') or '시각 미정'))} KST</p>"
-            f"<h3 style='margin:0 0 6px;color:#10233f;font-size:15px'>{html.escape(str(event.get('title', '시장 일정')))}</h3>"
+            f"<h3 style='margin:0 0 6px;color:#10233f;font-size:15px'>{html.escape(str(event.get('title', '시장 일정')))} "
+            f"<span style='display:inline-block;margin-left:5px;padding:2px 6px;border-radius:999px;background:{border};color:#ffffff;font-size:10px;vertical-align:2px'>중요도 {html.escape(importance)}</span></h3>"
             f"<p style='margin:0;color:#263b55;font-size:12px;line-height:1.55'>{html.escape(str(event.get('summary') or '시장 영향을 확인 중입니다.'))}</p>"
             f"<p style='margin:7px 0 0;color:#52657d;font-size:11px'>관련 {html.escape(symbols)} · {source}</p>"
             f"<p style='margin:7px 0 0;color:#087a52;font-size:11px'><b>긍정</b> {html.escape(str(event.get('bull_case') or '긍정적 결과 시 시장심리 개선 가능'))}</p>"

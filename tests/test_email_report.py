@@ -49,6 +49,7 @@ class EmailReportTests(unittest.TestCase):
         self.assertIn("XRP 네트워크 업그레이드", result)
         self.assertIn("주요 시장 이벤트", result)
         self.assertIn("미국 CLARITY 법안 관련 표결 일정", result)
+        self.assertIn("중요도 매우 높음", result)
         self.assertIn("결과 확인 전에는 추천 점수에 가산하지 않고", result)
         self.assertIn('name="color-scheme" content="light"', result)
         self.assertIn('bgcolor="#f3f6fb"', result)

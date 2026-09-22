@@ -37,6 +37,21 @@ class MajorEventTests(unittest.TestCase):
         self.assertEqual(events[0]["status"], "확인 필요")
         self.assertEqual(events[0]["origin"], "news")
 
+    def test_official_policy_news_without_schedule_is_included(self):
+        events = build_major_events([], [{
+            "title": "금융위원회 가상자산 규제 지침 발표",
+            "source": "금융위원회",
+            "url": "https://example.com/fsc",
+            "published_at": "2026-09-13T01:00:00+00:00",
+            "official_source": True,
+            "status": "발표",
+        }], [], now=self.NOW)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["origin"], "official")
+        self.assertEqual(events[0]["event_kind"], "정부 발표")
+        self.assertEqual(events[0]["importance"], "높음")
+        self.assertEqual(events[0]["date"], "2026-09-13")
+
     def test_low_impact_event_and_expired_event_are_excluded(self):
         events = build_major_events(
             [{"title": "소규모 커뮤니티 AMA", "date": "2026-09-16"}],

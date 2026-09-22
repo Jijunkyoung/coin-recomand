@@ -22,6 +22,39 @@ class DataProviderError(RuntimeError):
 
 KST = timezone(timedelta(hours=9))
 
+OFFICIAL_CRYPTO_SOURCE_TERMS = (
+    "securities and exchange commission", "commodity futures trading commission",
+    "u.s. department of the treasury", "federal reserve", "congress.gov",
+    "sec.gov", "cftc.gov", "treasury.gov", "federalreserve.gov",
+    "financial services commission", "financial supervisory service",
+    "fsc.go.kr", "fss.or.kr", "korea.kr", "bok.or.kr",
+    "금융위원회", "금융감독원", "기획재정부", "한국은행", "대한민국 정책브리핑", "국회",
+)
+
+
+def _is_official_crypto_source(source: str) -> bool:
+    lowered = source.lower()
+    return any(term in lowered for term in OFFICIAL_CRYPTO_SOURCE_TERMS)
+
+
+def _policy_importance(title: str, official_source: bool = False) -> str:
+    lowered = title.lower()
+    critical = (
+        "법안 통과", "법안 표결", "최종 표결", "signed into law", "passes bill", "final vote",
+        "etf 승인", "etf 거절", "etf approved", "etf denied", "금리 결정", "fomc",
+        "거래 금지", "ban cryptocurrency", "긴급", "emergency",
+    )
+    high = (
+        "가상자산", "암호화폐", "디지털자산", "digital asset", "crypto", "bitcoin", "stablecoin",
+        "규제", "법안", "sec", "cftc", "과세", "세금", "소송", "enforcement", "guidance",
+        "etf", "해킹", "탈취", "보안 사고", "제재", "sanction",
+    )
+    if any(term in lowered for term in critical):
+        return "매우 높음"
+    if official_source or any(term in lowered for term in high):
+        return "높음"
+    return "보통"
+
 
 def _link_titles(page: str, predicate: Any) -> list[str]:
     titles: list[str] = []
@@ -426,6 +459,7 @@ class MarketDataClient:
                 ("토크노믹스", ("언락", "락업", "소각", "발행", "unlock", "burn")),
             )
             category = next((name for name, words in categories if any(word in combined for word in words)), "시장")
+            official_source = _is_official_crypto_source(source)
             negative_words = ("해킹", "탈취", "공격", "취약점", "상장폐지", "소송", "금지", "급락", "폭락", "청산", "언락", "파산")
             positive_words = ("승인", "상장", "파트너십", "출시", "업그레이드", "투자 유치", "신고가", "급등", "소각")
             negative = sum(word in combined for word in negative_words)
@@ -452,6 +486,8 @@ class MarketDataClient:
                     "category": category,
                     "impact": impact,
                     "related_symbols": related,
+                    "importance": _policy_importance(title, official_source),
+                    "official_source": official_source,
                 }
             )
         issues.sort(key=lambda issue: issue["published_at"], reverse=True)
@@ -465,6 +501,72 @@ class MarketDataClient:
             if len(selected) >= limit:
                 break
         return selected
+
+    def crypto_policy_news(self, limit: int = 10) -> list[dict[str, Any]]:
+        """Collect recent crypto policy coverage and official government announcements."""
+        asset_terms = '(가상자산 OR 암호화폐 OR 디지털자산 OR 비트코인 OR "digital asset" OR cryptocurrency OR bitcoin OR stablecoin)'
+        queries = (
+            (f'{asset_terms} (규제 OR 법안 OR 정부 OR 금융위원회 OR 금융감독원 OR SEC OR CFTC OR Treasury OR Congress OR regulation OR bill) when:7d', False, {"hl": "ko", "gl": "KR", "ceid": "KR:ko"}),
+            ('(cryptocurrency OR "digital asset" OR bitcoin OR stablecoin) (site:sec.gov OR site:cftc.gov OR site:treasury.gov OR site:federalreserve.gov) when:30d', True, {"hl": "en-US", "gl": "US", "ceid": "US:en"}),
+            ('(가상자산 OR 암호화폐 OR 디지털자산 OR 비트코인) (site:fsc.go.kr OR site:fss.or.kr OR site:korea.kr OR site:bok.or.kr) when:30d', True, {"hl": "ko", "gl": "KR", "ceid": "KR:ko"}),
+        )
+        now = datetime.now(timezone.utc)
+        rows: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        feed_items: list[tuple[ET.Element, bool]] = []
+        for query, official_query, locale in queries:
+            body = self._text(
+                "https://news.google.com/rss/search",
+                params={"q": query, **locale},
+            )
+            feed_items.extend((item, official_query) for item in ET.fromstring(body).findall(".//item"))
+        for item, official_query in feed_items:
+            raw_title = " ".join((item.findtext("title") or "").split())
+            link = (item.findtext("link") or "").strip()
+            source_node = item.find("source")
+            source = " ".join(((source_node.text if source_node is not None else "") or "").split()) or "Google News"
+            if not raw_title or not link:
+                continue
+            title = re.sub(rf"\s+-\s+{re.escape(source)}\s*$", "", raw_title, flags=re.IGNORECASE).strip()
+            lowered = title.lower()
+            combined = f"{title} {source}".lower()
+            relevance = ("가상자산", "암호화폐", "디지털자산", "비트코인", "코인", "블록체인", "digital asset", "crypto", "bitcoin", "stablecoin")
+            policy = ("규제", "법안", "정부", "금융위", "금감원", "국회", "sec", "cftc", "treasury", "congress", "regulation", "bill", "enforcement", "guidance", "과세", "세금")
+            if not any(term in combined for term in relevance) or not any(term in combined for term in policy):
+                continue
+            normalized = re.sub(r"[^0-9a-z가-힣]", "", lowered)
+            fingerprint = hashlib.sha1(normalized.encode("utf-8")).hexdigest()[:16]
+            if not normalized or fingerprint in seen:
+                continue
+            try:
+                published = parsedate_to_datetime(item.findtext("pubDate") or "").astimezone(timezone.utc)
+            except (TypeError, ValueError):
+                published = now
+            if published < now - timedelta(days=8):
+                continue
+            seen.add(fingerprint)
+            official_source = official_query or _is_official_crypto_source(source)
+            event_type = "ETF·기관" if "etf" in lowered else "법안·규제"
+            rows.append({
+                "title": title[:220],
+                "source": source[:100],
+                "url": link,
+                "source_url": link,
+                "published_at": published.isoformat(),
+                "published_at_kst": published.astimezone(KST).strftime("%m-%d %H:%M"),
+                "event_type": event_type,
+                "category": event_type,
+                "status": "발표",
+                "importance": _policy_importance(title, official_source),
+                "official_source": official_source,
+                "verification": "정부·규제기관 공식 발표" if official_source else "정책·규제 관련 보도",
+                "related_symbols": ["BTC", "ETH"],
+                "summary": title[:220],
+            })
+        importance_order = {"매우 높음": 0, "높음": 1, "보통": 2}
+        rows.sort(key=lambda row: row["published_at"], reverse=True)
+        rows.sort(key=lambda row: (not row["official_source"], importance_order[row["importance"]]))
+        return rows[:limit]
 
     def github_repository_activity(self, repository_url: str) -> dict[str, Any]:
         parsed = urlparse(repository_url)

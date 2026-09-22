@@ -11,20 +11,21 @@ KST = timezone(timedelta(hours=9))
 IMPORTANCE_ORDER = {"매우 높음": 0, "높음": 1, "보통": 2}
 
 EVENT_TYPES: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("법안·규제", ("clarity", "클래리티", "법안", "표결", "투표", "의회", "규제", "sec", "판결")),
+    ("법안·규제", ("clarity", "클래리티", "법안", "표결", "투표", "의회", "규제", "sec", "cftc", "금융위원회", "금융감독원", "판결", "소송", "과세", "세금")),
     ("통화정책", ("fomc", "연준", "금리 결정", "금리결정", "파월")),
     ("경제지표", ("cpi", "소비자물가", "고용보고서", "비농업", "실업률", "ppi", "gdp")),
     ("ETF·기관", ("etf", "현물 승인", "승인 결정", "기관")),
     ("토크노믹스", ("언락", "unlock", "락업", "토큰 해제")),
     ("네트워크", ("메인넷", "하드포크", "업그레이드", "mainnet", "hard fork")),
     ("거래소", ("상장폐지", "상장", "거래지원", "listing")),
+    ("보안", ("해킹", "탈취", "공격", "취약점", "exploit", "hack")),
 )
 
 CRITICAL_TERMS = (
     "clarity", "클래리티", "법안 표결", "법안 투표", "fomc", "금리 결정", "금리결정",
     "cpi", "소비자물가", "etf 승인", "etf 결정", "sec 판결", "대규모 언락",
 )
-HIGH_TERMS = ("법안", "표결", "투표", "규제", "고용보고서", "비농업", "ppi", "gdp", "언락", "하드포크", "메인넷")
+HIGH_TERMS = ("법안", "표결", "투표", "규제", "정부", "금융위원회", "금융감독원", "sec", "cftc", "소송", "과세", "세금", "etf", "고용보고서", "비농업", "ppi", "gdp", "언락", "하드포크", "메인넷", "해킹", "탈취")
 SCHEDULE_TERMS = ("예정", "일정", "이번 주", "이번주", "내일", "모레", "표결", "투표", "발표", "결정", "회의", "마감")
 WEEKDAYS = {"월": 0, "화": 1, "수": 2, "목": 3, "금": 4, "토": 5, "일": 6}
 
@@ -105,6 +106,7 @@ def _scenarios(event_type: str) -> tuple[str, str]:
         "토크노믹스": ("예상보다 작은 매도 물량이면 공급 부담 완화", "대규모 물량 출회 시 단기 가격 압력 가능"),
         "네트워크": ("정상 출시·업그레이드 시 사용성과 신뢰 개선", "지연·오류 발생 시 관련 자산 신뢰 약화 가능"),
         "거래소": ("유동성 확대와 신규 수요 유입 가능", "상장폐지·지원 축소 시 유동성 급감 가능"),
+        "보안": ("피해 차단·자금 회수 확인 시 불안 완화 가능", "피해 확산 또는 추가 취약점 확인 시 시장 전반 위험회피 가능"),
     }
     return scenarios.get(event_type, ("긍정적 결과면 시장심리 개선 가능", "부정적 결과면 단기 변동성 확대 가능"))
 
@@ -114,16 +116,18 @@ def _normalize_event(row: dict[str, Any], today: date, origin: str) -> dict[str,
     if not title:
         return None
     event_date = _parse_date(row.get("date"))
-    if event_date is None and origin == "news":
-        event_date = _date_from_headline(title, today)
+    if event_date is None and origin in {"news", "official"}:
+        event_date = _date_from_headline(title, today) or _parse_date(row.get("published_at"))
     event_type = _clean(row.get("event_type")) or _event_type(" ".join([title, *map(str, row.get("categories") or [])]))
     importance = _importance(title, row.get("importance"))
     bull_case, bear_case = _scenarios(event_type)
     days_until = (event_date - today).days if event_date else None
-    status = _clean(row.get("status")) or ("예정" if origin != "news" and event_date else "확인 필요")
-    if status not in {"예정", "확정", "확인 필요", "연기", "완료", "취소"}:
+    is_news = origin in {"news", "official"}
+    is_scheduled_news = is_news and any(term in title.lower() for term in SCHEDULE_TERMS) and _date_from_headline(title, today) is not None
+    status = _clean(row.get("status")) or ("확인 필요" if is_scheduled_news else "발표" if is_news else "예정" if event_date else "확인 필요")
+    if status not in {"예정", "확정", "확인 필요", "발표", "연기", "완료", "취소"}:
         status = "확인 필요"
-    if event_date and event_date < today and status not in {"완료", "취소", "연기"}:
+    if event_date and event_date < today and status not in {"완료", "취소", "연기", "발표"}:
         status = "확인 필요"
     source_url = _clean(row.get("source_url") or row.get("url"))
     symbols = sorted({str(symbol).upper() for symbol in row.get("related_symbols") or [] if symbol})
@@ -134,19 +138,20 @@ def _normalize_event(row: dict[str, Any], today: date, origin: str) -> dict[str,
         "event_type": event_type,
         "importance": importance,
         "status": status,
-        "verification": _clean(row.get("verification")) or ("고정 등록" if origin == "manual" else "공식 일정 확인 필요" if origin == "news" else "외부 일정 참고"),
+        "verification": _clean(row.get("verification")) or ("고정 등록" if origin == "manual" else "정부·규제기관 공식 발표" if origin == "official" else "공식 일정 확인 필요" if is_scheduled_news else "보도 원문 확인" if origin == "news" else "외부 일정 참고"),
         "date": event_date.isoformat() if event_date else None,
         "date_kst": event_date.strftime("%m-%d") if event_date else "일정 확인 중",
         "time_kst": _clean(row.get("time_kst")) or None,
         "days_until": days_until,
         "related_symbols": symbols or (["BTC", "ETH"] if event_type in {"법안·규제", "통화정책", "경제지표", "ETF·기관"} else []),
-        "summary": _clean(row.get("summary")) or (title if origin == "news" else f"{event_type} 관련 시장 영향 일정을 추적합니다."),
+        "summary": _clean(row.get("summary")) or (title if is_news else f"{event_type} 관련 시장 영향 일정을 추적합니다."),
         "bull_case": _clean(row.get("bull_case")) or bull_case,
         "bear_case": _clean(row.get("bear_case")) or bear_case,
-        "source": _clean(row.get("source")) or ("Google News 후보" if origin == "news" else "CoinMarketCal"),
+        "source": _clean(row.get("source")) or ("정부기관" if origin == "official" else "Google News 후보" if origin == "news" else "CoinMarketCal"),
         "source_url": source_url,
         "official_source": bool(row.get("official_source")),
         "origin": origin,
+        "event_kind": "정부 발표" if origin == "official" else "뉴스" if is_news and not is_scheduled_news else "일정",
         "last_verified": _clean(row.get("last_verified")) or None,
     }
 
@@ -168,8 +173,11 @@ def build_major_events(
     for row in news_issues:
         title = _clean(row.get("title"))
         lowered = title.lower()
-        if any(term in lowered for term in SCHEDULE_TERMS) and _importance(lowered) != "보통":
-            candidates.append((row, "news"))
+        importance = _importance(lowered, row.get("importance"))
+        event_type = _clean(row.get("event_type") or row.get("category")) or _event_type(lowered)
+        high_impact_news = event_type in {"법안·규제", "통화정책", "경제지표", "ETF·기관", "보안"}
+        if bool(row.get("official_source")) or (importance != "보통" and (high_impact_news or any(term in lowered for term in SCHEDULE_TERMS))):
+            candidates.append((row, "official" if row.get("official_source") else "news"))
 
     result: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -178,7 +186,8 @@ def build_major_events(
         if not normalized:
             continue
         days_until = normalized["days_until"]
-        if days_until is not None and (days_until < -3 or days_until > horizon_days):
+        oldest_days = -8 if origin in {"news", "official"} else -3
+        if days_until is not None and (days_until < oldest_days or days_until > horizon_days):
             continue
         fingerprint = re.sub(r"[^0-9a-z가-힣]", "", normalized["title"].lower())
         if normalized["id"] in seen or fingerprint in seen:
@@ -186,4 +195,4 @@ def build_major_events(
         seen.update({normalized["id"], fingerprint})
         result.append(normalized)
     result.sort(key=lambda event: (IMPORTANCE_ORDER[event["importance"]], event["date"] or "9999-12-31", event["title"]))
-    return result[:12]
+    return result[:18]

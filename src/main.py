@@ -410,10 +410,15 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     enriched.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
     top = enriched[: settings["recommendation_count"]]
     try:
-        news_issues = client.crypto_news(["BTC", "ETH", *(coin["symbol"] for coin in top)], limit=7)
+        news_issues = client.crypto_news(["BTC", "ETH", *(coin["symbol"] for coin in top)], limit=12)
     except Exception as exc:
         news_issues = []
         warnings.append(f"주요 코인 이슈 미수집: {warning_reason(exc)}")
+    try:
+        policy_news = client.crypto_policy_news(limit=10)
+    except Exception as exc:
+        policy_news = []
+        warnings.append(f"정부·규제기관 코인 소식 미수집: {warning_reason(exc)}")
     try:
         upcoming_events = client.coinmarketcal_events(["BTC", "ETH", *(coin["symbol"] for coin in top)], limit=8)
         if upcoming_events is None:
@@ -424,7 +429,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         warnings.append(f"CoinMarketCal 일정 미수집: {warning_reason(exc)}")
     try:
         manual_events = load_manual_events(settings.get("major_events_file", "config/major_events.json"))
-        major_events = build_major_events(upcoming_events, news_issues, manual_events)
+        major_events = build_major_events(upcoming_events, [*policy_news, *news_issues], manual_events)
     except Exception as exc:
         major_events = []
         warnings.append(f"주요 시장 이벤트 구성 실패: {warning_reason(exc)}")
