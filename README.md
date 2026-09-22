@@ -63,6 +63,8 @@ python -m http.server 8000 --directory docs
 | `SMTP_USERNAME` | SMTP 로그인 계정 | 보내는 Gmail 주소 |
 | `SMTP_PASSWORD` | SMTP 비밀번호 | Google 2단계 인증 후 만든 앱 비밀번호 |
 | `EMAIL_FROM` | 발신 주소(선택) | 미설정 시 SMTP 계정 |
+
+`main` 배포 시 같은 SMTP 설정이 Supabase Auth에도 자동 반영됩니다. 따라서 회원가입 확인메일은 Supabase의 제한적인 기본 발송 서버가 아니라 등록한 SMTP 계정으로 발송되며, 이메일 확인 절차 자체는 계속 유지됩니다.
 | `EMAIL_TO` | 코인 보고서 수신주소, 복수 주소 지원 | `coin@example.com` |
 | `STOCK_EMAIL_TO` | 주식 보고서 수신주소, 복수 주소 지원 | `stock@example.com` |
 | `KIS_APP_KEY` | 한국투자증권 Open API App Key | KIS Developers에서 발급 |

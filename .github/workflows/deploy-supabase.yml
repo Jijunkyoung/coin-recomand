@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "supabase/**"
+      - "scripts/configure_supabase_auth.py"
       - ".github/workflows/deploy-supabase.yml"
 
 permissions:
@@ -23,6 +24,10 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: pgtxtnggjqaysjhtdepz
       KIS_OWNER_EMAIL_CANDIDATE: ${{ secrets.KIS_OWNER_EMAIL || secrets.STOCK_EMAIL_TO }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +36,11 @@ jobs:
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || { echo "SUPABASE_ACCESS_TOKEN secret is missing"; exit 1; }
           test -n "$SUPABASE_DB_PASSWORD" || { echo "SUPABASE_DB_PASSWORD secret is missing"; exit 1; }
+          test -n "$SMTP_HOST" || { echo "SMTP_HOST secret is missing"; exit 1; }
+          test -n "$SMTP_USERNAME" || { echo "SMTP_USERNAME secret is missing"; exit 1; }
+          test -n "$SMTP_PASSWORD" || { echo "SMTP_PASSWORD secret is missing"; exit 1; }
+      - name: Configure Auth confirmation email delivery
+        run: python scripts/configure_supabase_auth.py
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
