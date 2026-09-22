@@ -12,7 +12,7 @@ class MemberAuthTests(unittest.TestCase):
     def test_all_pages_load_shared_auth(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html"):
             page = (ROOT / "docs" / name).read_text(encoding="utf-8")
-            self.assertIn('src="supabase-config.js?v=20260922"', page)
+            self.assertIn('src="supabase-config.js?v=20260922-auth2"', page)
             self.assertIn('src="auth.js"', page)
             self.assertIn('href="auth.css"', page)
 
