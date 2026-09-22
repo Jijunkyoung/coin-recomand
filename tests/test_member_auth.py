@@ -74,6 +74,7 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn('env("KIS_OWNER_EMAIL")', edge)
         self.assertIn("user.id === ownerId", edge)
         self.assertIn("email === ownerEmail", edge)
+        self.assertIn("ownerEmail ? email === ownerEmail", edge)
         self.assertIn('env("KIS_ACCOUNT_NO")', edge)
         self.assertIn('client.functions.invoke("kis-portfolio"', browser)
         self.assertNotIn("KIS_APP_SECRET", browser)
