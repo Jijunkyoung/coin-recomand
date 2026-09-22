@@ -142,7 +142,15 @@ function safeExternalURL(value) {
 
 function renderMajorEvents() {
   const grid = $("#majorEventsGrid");
-  const visible = majorEvents.filter(eventIsVisible);
+  const importanceOrder = { "매우 높음": 0, "높음": 1, "보통": 2 };
+  const visible = majorEvents.filter(eventIsVisible).sort((left, right) => {
+    const leftTime = Date.parse(left.date || "");
+    const rightTime = Date.parse(right.date || "");
+    if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) return rightTime - leftTime;
+    if (Number.isFinite(leftTime) !== Number.isFinite(rightTime)) return Number.isFinite(leftTime) ? -1 : 1;
+    const importanceDiff = (importanceOrder[left.importance] ?? 3) - (importanceOrder[right.importance] ?? 3);
+    return importanceDiff || String(left.title || "").localeCompare(String(right.title || ""), "ko");
+  });
   $("#majorEventCount").textContent = `${visible.length}/${majorEvents.length}건 표시`;
   if (!visible.length) {
     grid.innerHTML = `<p class="major-event-empty">조건에 맞는 주요 이벤트가 없습니다.</p>`;
@@ -156,12 +164,15 @@ function renderMajorEvents() {
       : `<span class="major-event-source">${escapeHTML(event.source || "출처 미상")}</span>`;
     const symbols = event.related_symbols?.length ? event.related_symbols.join(" · ") : "시장 전체";
     return `<article class="major-event-card ${importanceClass}">
-      <div class="major-event-top"><div class="major-event-badges"><span class="major-event-badge status">${escapeHTML(event.status || "확인 필요")}</span><span class="major-event-badge">${escapeHTML(event.event_kind || "일정")}</span><span class="major-event-badge">${escapeHTML(event.event_type || "시장 일정")}</span></div><strong class="major-event-dday">${escapeHTML(eventDday(event.days_until))}</strong></div>
-      <h3>${escapeHTML(event.title || "제목 없는 일정")} <span class="major-event-badge importance">중요도 ${escapeHTML(event.importance || "보통")}</span></h3>
-      <p class="major-event-date">${escapeHTML(event.date || "일정 확인 중")} · ${escapeHTML(event.time_kst || "시각 미정")} KST · ${escapeHTML(symbols)}</p>
-      <p class="major-event-summary">${escapeHTML(event.summary || "시장 영향을 확인 중입니다.")}</p>
+      <div class="major-event-date-block"><strong>${escapeHTML(event.date || "날짜 확인 중")}</strong><span>${escapeHTML(event.time_kst || "시각 미정")} KST</span><em>${escapeHTML(eventDday(event.days_until))}</em></div>
+      <div class="major-event-body">
+        <div class="major-event-badges"><span class="major-event-badge status">${escapeHTML(event.status || "확인 필요")}</span><span class="major-event-badge">${escapeHTML(event.event_kind || "일정")}</span><span class="major-event-badge">${escapeHTML(event.event_type || "시장 일정")}</span></div>
+        <h3>${escapeHTML(event.title || "제목 없는 일정")} <span class="major-event-badge importance">중요도 ${escapeHTML(event.importance || "보통")}</span></h3>
+        <p class="major-event-date">관련 자산 · ${escapeHTML(symbols)}</p>
+        <p class="major-event-summary">${escapeHTML(event.summary || "시장 영향을 확인 중입니다.")}</p>
+        <div class="major-event-foot"><span>${escapeHTML(event.verification || "세부 일정 확인 필요")}${event.last_verified ? ` · 확인 ${escapeHTML(event.last_verified)}` : ""}</span>${source}</div>
+      </div>
       <div class="major-event-scenarios"><p><b>긍정 시나리오</b>${escapeHTML(event.bull_case || "긍정적 결과 시 시장심리 개선 가능")}</p><p><b>부정 시나리오</b>${escapeHTML(event.bear_case || "부정적 결과 시 변동성 확대 가능")}</p></div>
-      <div class="major-event-foot"><span>${escapeHTML(event.verification || "세부 일정 확인 필요")}${event.last_verified ? ` · 확인 ${escapeHTML(event.last_verified)}` : ""}</span>${source}</div>
     </article>`;
   }).join("");
 }
