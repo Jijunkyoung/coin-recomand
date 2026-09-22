@@ -5,10 +5,11 @@ import unittest
 class WorkflowScheduleTests(unittest.TestCase):
     def test_hourly_refresh_also_recovers_daily_email(self):
         workflow = (Path(__file__).parents[1] / ".github/workflows/analyze-and-deploy.yml").read_text(encoding="utf-8")
-        self.assertIn('cron: "17 0-21,23 * * *"', workflow)
-        self.assertIn('cron: "20 22 * * *"', workflow)
+        self.assertIn('cron: "17 * * * *"', workflow)
+        self.assertNotIn('cron: "17 0-21,23 * * *"', workflow)
+        self.assertNotIn('cron: "20 22 * * *"', workflow)
         self.assertNotIn('cron: "30 22 * * *"', workflow)
-        self.assertIn("NOT_BEFORE_KST: \"07:20\"", workflow)
+        self.assertEqual(workflow.count('NOT_BEFORE_KST: "07:00"'), 2)
         self.assertIn("steps.coin_delivery.outputs.should_send == 'true'", workflow)
         self.assertIn("steps.stock_delivery.outputs.should_send == 'true'", workflow)
         self.assertIn("[record-daily-email]", workflow)

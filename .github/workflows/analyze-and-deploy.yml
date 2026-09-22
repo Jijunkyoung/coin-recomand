@@ -4,9 +4,8 @@ on:
   push:
     branches: [main]
   schedule:
-    # Hourly refresh plus the 07:20 KST primary mail run. Later hourly runs recover a missed schedule.
-    - cron: "17 0-21,23 * * *"
-    - cron: "20 22 * * *"
+    # Refresh hourly. The 07:17 KST run sends mail; later runs recover a missed schedule.
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       send_email:
@@ -50,7 +49,7 @@ jobs:
         env:
           GH_API_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
-          NOT_BEFORE_KST: "07:20"
+          NOT_BEFORE_KST: "07:00"
           FORCE_SEND: ${{ github.event_name == 'push' }}
           DELIVERY_MARKER_SCOPE: coin
         run: python scripts/check_daily_email_delivery.py
@@ -60,7 +59,7 @@ jobs:
         env:
           GH_API_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
-          NOT_BEFORE_KST: "07:20"
+          NOT_BEFORE_KST: "07:00"
           FORCE_SEND: ${{ github.event_name == 'push' }}
           DELIVERY_MARKER_SCOPE: stock
         run: python scripts/check_daily_email_delivery.py
