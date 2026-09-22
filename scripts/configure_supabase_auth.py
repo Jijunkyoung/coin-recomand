@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
 AUTH_CONFIG_URL = "https://api.supabase.com/v1/projects/{project_ref}/config/auth"
+EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 
 def _required(name: str, environ: dict[str, str]) -> str:
@@ -21,6 +23,8 @@ def _required(name: str, environ: dict[str, str]) -> str:
 def build_payload(environ: dict[str, str] | None = None) -> dict[str, Any]:
     env = dict(os.environ if environ is None else environ)
     smtp_user = _required("SMTP_USERNAME", env)
+    if not EMAIL_PATTERN.fullmatch(smtp_user):
+        raise ValueError("SMTP_USERNAME must be a valid sender email address")
     try:
         smtp_port = int(env.get("SMTP_PORT", "465").strip() or "465")
     except ValueError as exc:
@@ -30,6 +34,7 @@ def build_payload(environ: dict[str, str] | None = None) -> dict[str, Any]:
 
     return {
         "external_email_enabled": True,
+        "mailer_secure_email_change_enabled": True,
         "mailer_autoconfirm": False,
         "smtp_admin_email": smtp_user,
         "smtp_host": _required("SMTP_HOST", env),
@@ -58,7 +63,20 @@ def configure_auth(environ: dict[str, str] | None = None) -> dict[str, Any]:
         with urlopen(request, timeout=30) as response:
             result = json.load(response)
     except HTTPError as exc:
-        raise RuntimeError(f"Supabase Auth configuration failed (HTTP {exc.code})") from exc
+        detail = ""
+        try:
+            error_data = json.loads(exc.read().decode("utf-8"))
+            candidate = error_data.get("message") or error_data.get("msg") or error_data.get("error")
+            if isinstance(candidate, str):
+                detail = candidate
+        except (UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+            pass
+        for name in ("SUPABASE_ACCESS_TOKEN", "SMTP_PASSWORD", "SMTP_USERNAME"):
+            secret = env.get(name, "")
+            if secret:
+                detail = detail.replace(secret, "[redacted]")
+        suffix = f": {detail[:300]}" if detail else ""
+        raise RuntimeError(f"Supabase Auth configuration failed (HTTP {exc.code}){suffix}") from exc
     except URLError as exc:
         raise RuntimeError("Supabase Auth configuration request failed") from exc
 
