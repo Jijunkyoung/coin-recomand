@@ -1,6 +1,8 @@
 import json
 import unittest
+from io import BytesIO
 from unittest.mock import MagicMock, patch
+from urllib.error import HTTPError
 
 from scripts.configure_supabase_auth import build_payload, configure_auth
 
@@ -50,6 +52,19 @@ class ConfigureSupabaseAuthTests(unittest.TestCase):
         sent = json.loads(request.data)
         self.assertEqual(sent["smtp_pass"], "app-password")
         self.assertFalse(result["mailer_autoconfirm"])
+
+    @patch("scripts.configure_supabase_auth.urlopen")
+    def test_reports_safe_management_api_error(self, mock_urlopen):
+        mock_urlopen.side_effect = HTTPError(
+            "https://api.supabase.com",
+            400,
+            "Bad Request",
+            {},
+            BytesIO(b'{"message":"invalid sender setting"}'),
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "invalid sender setting"):
+            configure_auth(ENV)
 
 
 if __name__ == "__main__":
