@@ -14,6 +14,11 @@ on:
         required: true
         type: boolean
         default: false
+      initialize_research:
+        description: "연구 이력 최초 생성 (기존 백업이 없을 때만 사용)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -60,7 +65,10 @@ jobs:
           DELIVERY_MARKER_SCOPE: stock
         run: python scripts/check_daily_email_delivery.py
       - name: Run tests
-        run: python -m unittest discover -s tests -v
+        run: |
+          python -m unittest discover -s tests -v
+          node --check docs/research.js
+          node tests/research_ui.cjs
       - name: Load owner's live KIS portfolio for mail
         id: kis_profile
         if: (steps.stock_delivery.outputs.should_send == 'true' && !contains(github.event.head_commit.message, '[record-daily-email]')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[send-test-email]') || contains(github.event.head_commit.message, '[send-stock-test-email]'))) || (github.event_name == 'workflow_dispatch' && inputs.send_email)
@@ -118,6 +126,23 @@ jobs:
           name: ${{ steps.stock_delivery.outputs.marker_name }}
           path: stock-delivery-marker/status.txt
           retention-days: 3
+          if-no-files-found: error
+      - name: Restore and evaluate paper research
+        id: research
+        continue-on-error: true
+        env:
+          GH_API_TOKEN: ${{ github.token }}
+          RESEARCH_ALLOW_BOOTSTRAP: ${{ github.event_name == 'workflow_dispatch' && inputs.initialize_research && 'true' || 'false' }}
+        run: |
+          python scripts/restore_research.py
+          python -m src.research
+      - name: Preserve paper research ledger
+        if: steps.research.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-ledger-v1
+          path: research-state/state.json
+          retention-days: 90
           if-no-files-found: error
       - name: Configure member authentication
         env:
