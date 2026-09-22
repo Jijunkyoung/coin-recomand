@@ -7,6 +7,8 @@ Existing recommendation scores and mail remain unchanged. No orders are sent.
 
 After merging, manually run **Analyze, email and deploy** on main once with
 `initialize_research=true`, `send_email=false`. The first observation has no returns.
+An authorized deployment commit containing `[initialize-research]` is the equivalent
+non-email bootstrap path when workflow dispatch is unavailable.
 Subsequent hourly workflows restore the newest main-branch `research-ledger-v1` artifact,
 settle old records, append the first observation per Korean calendar day, and upload the
 entire cumulative ledger (90-day rolling artifact retention). A restore API failure,
