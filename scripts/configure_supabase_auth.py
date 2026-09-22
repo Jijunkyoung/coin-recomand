@@ -38,7 +38,9 @@ def build_payload(environ: dict[str, str] | None = None) -> dict[str, Any]:
         "mailer_autoconfirm": False,
         "smtp_admin_email": smtp_user,
         "smtp_host": _required("SMTP_HOST", env),
-        "smtp_port": smtp_port,
+        # The hosted Management API currently validates this field as a string,
+        # despite the public SMTP example showing a JSON number.
+        "smtp_port": str(smtp_port),
         "smtp_user": smtp_user,
         "smtp_pass": _required("SMTP_PASSWORD", env),
         "smtp_sender_name": "Coin Signal Desk",

@@ -24,7 +24,7 @@ class ConfigureSupabaseAuthTests(unittest.TestCase):
         self.assertTrue(payload["external_email_enabled"])
         self.assertFalse(payload["mailer_autoconfirm"])
         self.assertEqual(payload["smtp_admin_email"], "sender@example.com")
-        self.assertEqual(payload["smtp_port"], 465)
+        self.assertEqual(payload["smtp_port"], "465")
 
     def test_rejects_invalid_port(self):
         with self.assertRaisesRegex(ValueError, "SMTP_PORT"):
