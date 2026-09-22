@@ -194,5 +194,14 @@ def build_major_events(
             continue
         seen.update({normalized["id"], fingerprint})
         result.append(normalized)
-    result.sort(key=lambda event: (IMPORTANCE_ORDER[event["importance"]], event["date"] or "9999-12-31", event["title"]))
+    def newest_first(event: dict[str, Any]) -> tuple[bool, int, int, str]:
+        event_date = _parse_date(event.get("date"))
+        return (
+            event_date is None,
+            -event_date.toordinal() if event_date else 0,
+            IMPORTANCE_ORDER[event["importance"]],
+            event["title"],
+        )
+
+    result.sort(key=newest_first)
     return result[:18]

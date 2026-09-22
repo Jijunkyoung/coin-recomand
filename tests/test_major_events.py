@@ -61,6 +61,17 @@ class MajorEventTests(unittest.TestCase):
         )
         self.assertEqual(events, [])
 
+    def test_events_are_sorted_by_newest_date_with_unknown_dates_last(self):
+        events = build_major_events([], [], [
+            {"title": "날짜 미정 규제 일정", "importance": "매우 높음"},
+            {"title": "먼저 예정된 FOMC", "date": "2026-09-16", "importance": "매우 높음"},
+            {"title": "나중에 예정된 ETF 승인", "date": "2026-09-20", "importance": "높음"},
+        ], now=self.NOW)
+        self.assertEqual(
+            [event["title"] for event in events],
+            ["나중에 예정된 ETF 승인", "먼저 예정된 FOMC", "날짜 미정 규제 일정"],
+        )
+
     def test_loads_versioned_manual_event_file(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "events.json"
