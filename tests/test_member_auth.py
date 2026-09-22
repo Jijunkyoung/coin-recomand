@@ -12,7 +12,7 @@ class MemberAuthTests(unittest.TestCase):
     def test_all_pages_load_shared_auth(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html"):
             page = (ROOT / "docs" / name).read_text(encoding="utf-8")
-            self.assertIn('src="supabase-config.js?v=20260922-auth2"', page)
+            self.assertIn('src="supabase-runtime-config.js"', page)
             self.assertIn('src="auth.js"', page)
             self.assertIn('href="auth.css"', page)
 
@@ -62,7 +62,7 @@ class MemberAuthTests(unittest.TestCase):
                 env=env,
                 check=True,
             )
-            output = (docs / "supabase-config.js").read_text(encoding="utf-8")
+            output = (docs / "supabase-runtime-config.js").read_text(encoding="utf-8")
             self.assertIn("https://pgtxtnggjqaysjhtdepz.supabase.co", output)
             self.assertIn("sb_publishable_public-key", output)
             self.assertNotIn("service", output.lower())

@@ -66,7 +66,7 @@ def main() -> None:
         "url": url,
         "anonKey": key,
     }
-    target = Path("docs/supabase-config.js")
+    target = Path("docs/supabase-runtime-config.js")
     target.write_text(
         "window.COIN_RECOMAND_SUPABASE = Object.freeze("
         + json.dumps(config, ensure_ascii=False)
