@@ -48,7 +48,7 @@
           <div class="auth-profile-actions"><button type="submit" class="auth-submit">내 설정 저장</button><button type="button" id="logoutButton" class="auth-logout">로그아웃</button></div>
           <p class="auth-help">설정은 로그인한 회원 본인만 읽고 수정할 수 있습니다.</p>
         </form>
-        <div id="authConfigNote" class="auth-config-note" hidden>회원 기능 연결 전입니다. 저장소에 <code>SUPABASE_URL</code>과 <code>SUPABASE_ANON_KEY</code>를 등록하고 배포하면 활성화됩니다.</div>
+        <div id="authConfigNote" class="auth-config-note" hidden>회원 인증 연결을 준비 중입니다. 잠시 후 새로고침해 주세요.</div>
         <p id="authStatus" class="auth-status" aria-live="polite"></p>
       </div>
     </dialog>`);
@@ -72,6 +72,7 @@
   }
   function authErrorMessage(error) {
     const message = String(error?.message || "회원 인증 요청에 실패했습니다.");
+    if (/invalid api key/i.test(message)) return "회원 인증 공개키가 올바르지 않습니다. 새로고침 후 다시 시도해 주세요.";
     if (/rate limit/i.test(message)) return "요청 횟수가 많습니다. 잠시 후 다시 시도해 주세요.";
     if (/failed to fetch|network/i.test(message)) return "Supabase 인증 서버에 연결하지 못했습니다. 네트워크 또는 보안 프로그램을 확인해 주세요.";
     return message;
