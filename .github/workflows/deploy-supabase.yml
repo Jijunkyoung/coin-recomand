@@ -22,6 +22,7 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: pgtxtnggjqaysjhtdepz
+      KIS_OWNER_EMAIL_CANDIDATE: ${{ secrets.KIS_OWNER_EMAIL || secrets.STOCK_EMAIL_TO }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,5 +39,18 @@ jobs:
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
       - name: Apply database migrations
         run: supabase db push --linked
+      - name: Bind KIS access to the owner's email
+        shell: bash
+        run: |
+          owner_email="$(printf '%s' "$KIS_OWNER_EMAIL_CANDIDATE" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          if [ -z "$owner_email" ]; then
+            echo "KIS_OWNER_EMAIL or STOCK_EMAIL_TO secret is required"
+            exit 1
+          fi
+          if [[ ! "$owner_email" =~ ^[^,@\;]+@[^,@\;]+\.[^,@\;]+$ ]]; then
+            echo "KIS owner email must contain exactly one valid address"
+            exit 1
+          fi
+          supabase secrets set KIS_OWNER_EMAIL="$owner_email" --project-ref "$SUPABASE_PROJECT_REF"
       - name: Deploy KIS portfolio function
         run: supabase functions deploy kis-portfolio --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt

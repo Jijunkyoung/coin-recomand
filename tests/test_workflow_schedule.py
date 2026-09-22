@@ -26,6 +26,7 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("STOCK_SECTORS: ${{ secrets.STOCK_SECTORS }}", workflow)
         self.assertIn("SUPABASE_URL: ${{ secrets.SUPABASE_URL }}", workflow)
         self.assertIn("SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}", workflow)
+        self.assertIn("SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}", workflow)
         self.assertIn("SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}", workflow)
         self.assertIn("KIS_SCHEDULER_KEY: ${{ secrets.KIS_SCHEDULER_KEY }}", workflow)
         self.assertIn('REQUIRE_MEMBER_STOCK_PROFILE: "true"', workflow)
@@ -66,6 +67,8 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("supabase db push --linked", workflow)
         self.assertIn("functions deploy kis-portfolio", workflow)
         self.assertIn("--no-verify-jwt", workflow)
+        self.assertIn("KIS_OWNER_EMAIL_CANDIDATE", workflow)
+        self.assertIn('supabase secrets set KIS_OWNER_EMAIL=', workflow)
 
 
 if __name__ == "__main__":

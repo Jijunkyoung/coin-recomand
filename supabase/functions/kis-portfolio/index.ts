@@ -138,6 +138,7 @@ Deno.serve(async (request) => {
   try {
     const authorization = request.headers.get("Authorization") || "";
     const ownerId = env("KIS_OWNER_USER_ID");
+    const ownerEmail = env("KIS_OWNER_EMAIL").toLowerCase();
     const schedulerSecret = env("KIS_SCHEDULER_KEY");
     const requestApiKey = request.headers.get("apikey") || "";
     const serverAdminKey = adminKey();
@@ -149,16 +150,21 @@ Deno.serve(async (request) => {
       (serverAdminKey && requestApiKey === serverAdminKey)
     );
     if (!schedulerMode && !authorization.startsWith("Bearer ")) throw new Error("로그인이 필요합니다.");
-    const supabase = schedulerMode
-      ? createClient(env("SUPABASE_URL"), serverAdminKey)
-      : createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { global: { headers: { Authorization: authorization } } });
+    if (!serverAdminKey) throw new Error("Supabase 서버 인증값이 설정되지 않았습니다.");
+    const supabase = createClient(env("SUPABASE_URL"), serverAdminKey);
     let userId = ownerId;
     if (!schedulerMode) {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const accessToken = authorization.replace(/^Bearer\s+/i, "");
+      const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
       if (userError || !user) throw new Error("로그인 세션을 확인할 수 없습니다.");
       userId = user.id;
+      const email = (user.email || "").trim().toLowerCase();
+      const ownerConfigured = Boolean(ownerId || ownerEmail);
+      const idMatches = !ownerId || user.id === ownerId;
+      const emailMatches = !ownerEmail || email === ownerEmail;
+      if (!ownerConfigured || !idMatches || !emailMatches) return new Response(JSON.stringify({ error: "이 회원에는 증권계좌가 연결되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
     }
-    if (!ownerId || userId !== ownerId) return new Response(JSON.stringify({ error: "이 회원에는 증권계좌가 연결되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
+    if (!userId) return new Response(JSON.stringify({ error: "증권계좌 소유자 설정이 완료되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
 
     const appKey = env("KIS_APP_KEY"), appSecret = env("KIS_APP_SECRET");
     const account = env("KIS_ACCOUNT_NO"), productCode = env("KIS_ACCOUNT_PRODUCT_CODE") || "01";

@@ -12,7 +12,7 @@ class MemberAuthTests(unittest.TestCase):
     def test_all_pages_load_shared_auth(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html"):
             page = (ROOT / "docs" / name).read_text(encoding="utf-8")
-            self.assertIn('src="supabase-config.js"', page)
+            self.assertIn('src="supabase-config.js?v=20260922"', page)
             self.assertIn('src="auth.js"', page)
             self.assertIn('href="auth.css"', page)
 
@@ -50,7 +50,12 @@ class MemberAuthTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             docs = Path(directory) / "docs"
             docs.mkdir()
-            env = dict(os.environ, SUPABASE_URL="https://sample.supabase.co", SUPABASE_ANON_KEY="public-key")
+            env = dict(
+                os.environ,
+                SUPABASE_PROJECT_REF="pgtxtnggjqaysjhtdepz",
+                SUPABASE_URL="https://pgtxtnggjqaysjhtdepz.supabase.co",
+                SUPABASE_ANON_KEY="sb_publishable_public-key",
+            )
             subprocess.run(
                 ["python", str(ROOT / "scripts/write_supabase_config.py")],
                 cwd=directory,
@@ -58,15 +63,17 @@ class MemberAuthTests(unittest.TestCase):
                 check=True,
             )
             output = (docs / "supabase-config.js").read_text(encoding="utf-8")
-            self.assertIn("https://sample.supabase.co", output)
-            self.assertIn("public-key", output)
+            self.assertIn("https://pgtxtnggjqaysjhtdepz.supabase.co", output)
+            self.assertIn("sb_publishable_public-key", output)
             self.assertNotIn("service", output.lower())
 
     def test_kis_portfolio_is_owner_only_and_keeps_secrets_server_side(self):
         edge = (ROOT / "supabase" / "functions" / "kis-portfolio" / "index.ts").read_text(encoding="utf-8")
         browser = (ROOT / "docs" / "auth.js").read_text(encoding="utf-8")
         self.assertIn('env("KIS_OWNER_USER_ID")', edge)
-        self.assertIn("userId !== ownerId", edge)
+        self.assertIn('env("KIS_OWNER_EMAIL")', edge)
+        self.assertIn("user.id === ownerId", edge)
+        self.assertIn("email === ownerEmail", edge)
         self.assertIn('env("KIS_ACCOUNT_NO")', edge)
         self.assertIn('client.functions.invoke("kis-portfolio"', browser)
         self.assertNotIn("KIS_APP_SECRET", browser)
@@ -80,7 +87,7 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn('data.error_description || data.msg1 || data.error', edge)
         self.assertIn('한국투자증권 토큰 발급 실패:', edge)
         self.assertIn('if (!schedulerMode && !authorization.startsWith("Bearer "))', edge)
-        self.assertIn("supabase.auth.getUser()", edge)
+        self.assertIn("supabase.auth.getUser(accessToken)", edge)
         config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
         self.assertIn("verify_jwt = false", config)
 
