@@ -159,10 +159,8 @@ Deno.serve(async (request) => {
       if (userError || !user) throw new Error("로그인 세션을 확인할 수 없습니다.");
       userId = user.id;
       const email = (user.email || "").trim().toLowerCase();
-      const ownerConfigured = Boolean(ownerId || ownerEmail);
-      const idMatches = !ownerId || user.id === ownerId;
-      const emailMatches = !ownerEmail || email === ownerEmail;
-      if (!ownerConfigured || !idMatches || !emailMatches) return new Response(JSON.stringify({ error: "이 회원에는 증권계좌가 연결되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
+      const ownerMatches = ownerEmail ? email === ownerEmail : Boolean(ownerId && user.id === ownerId);
+      if (!ownerMatches) return new Response(JSON.stringify({ error: "이 회원에는 증권계좌가 연결되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
     }
     if (!userId) return new Response(JSON.stringify({ error: "증권계좌 소유자 설정이 완료되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
 

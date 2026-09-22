@@ -96,9 +96,9 @@ python -m http.server 8000 --directory docs
    - `KIS_ACCOUNT_NO`: 계좌번호 앞 8자리(하이픈 제외)
    - `KIS_ACCOUNT_PRODUCT_CODE`: 계좌번호 뒤 2자리(일반적으로 `01`)
    - `KIS_OWNER_EMAIL`: 1단계에서 가입할 이메일
-   - `KIS_OWNER_USER_ID`: 가입 후 생성된 Supabase 회원 UUID(권장, 이메일과 함께 이중 확인)
+   - `KIS_OWNER_USER_ID`: 소유자 이메일을 쓰지 않을 때의 대체 회원 UUID 및 예약 조회 대상
 3. Supabase **Edge Functions → Deploy a new function → Via Editor**에서 함수명을 `kis-portfolio`로 만들고 [`supabase/functions/kis-portfolio/index.ts`](supabase/functions/kis-portfolio/index.ts)의 내용을 붙여넣어 배포합니다.
-4. 함수 설정의 **Verify JWT with legacy secret**은 끕니다. 새 `sb_secret_...` 키는 JWT가 아니므로 플랫폼의 구형 JWT 검증을 사용하지 않습니다. 대신 함수 내부에서 일반 호출은 회원 토큰을 직접 검증하고 소유자 이메일·UUID가 설정된 경우 모두 일치해야 하며, 예약 호출은 별도 `KIS_SCHEDULER_KEY`와 `KIS_OWNER_USER_ID`를 검증합니다. 저장소의 [`supabase/config.toml`](supabase/config.toml)에도 같은 설정이 포함돼 있습니다.
+4. 함수 설정의 **Verify JWT with legacy secret**은 끕니다. 새 `sb_secret_...` 키는 JWT가 아니므로 플랫폼의 구형 JWT 검증을 사용하지 않습니다. 대신 함수 내부에서 일반 호출은 회원 토큰을 직접 검증하고 소유자 이메일이 설정되면 그 이메일만, 없으면 `KIS_OWNER_USER_ID`만 허용합니다. 예약 호출은 별도 `KIS_SCHEDULER_KEY`와 `KIS_OWNER_USER_ID`를 검증합니다. 저장소의 [`supabase/config.toml`](supabase/config.toml)에도 같은 설정이 포함돼 있습니다.
 5. 대시보드에서 로그아웃 후 다시 로그인하고 미국주식 또는 국내주식 페이지를 열어 `내 보유현황` 카드와 동기화 시각을 확인합니다.
 
 GitHub Actions에 등록한 `KIS_APP_KEY`, `KIS_APP_SECRET`은 Supabase로 자동 복사되지 않으므로 2단계에 별도로 한 번 등록해야 합니다. 실전투자용 TR ID를 사용하므로 모의투자 App Key와 계좌는 지원하지 않습니다.
@@ -114,7 +114,7 @@ GitHub Actions에 등록한 `KIS_APP_KEY`, `KIS_APP_SECRET`은 Supabase로 자�
 5. 내 계정으로 로그인해 `내 설정 → 주식 보고서 수신목록`을 확인하고 저장합니다. 비어 있으면 가입 이메일을 사용합니다.
 6. 다음 예약메일 또는 Actions 수동 메일 발송에서 실시간 보유현황과 변동내역이 포함되는지 확인합니다. 첫 실행은 비교 기준을 만드는 날이므로 두 번째 날부터 24시간 변동이 표시됩니다.
 
-GitHub Actions는 service role key와 별도의 scheduler key가 모두 있어야 예약용 조회를 호출합니다. Edge Function은 고정된 소유자 이메일과, 설정된 경우 `KIS_OWNER_USER_ID`까지 일치하는 한 명만 처리하며 주문 API는 호출하지 않습니다.
+GitHub Actions는 service role key와 별도의 scheduler key가 모두 있어야 예약용 조회를 호출합니다. Edge Function은 고정된 소유자 이메일 한 명만 처리하며, 이메일 설정이 없을 때만 `KIS_OWNER_USER_ID`를 대신 사용합니다. 주문 API는 호출하지 않습니다.
 
 신규 `sb_secret_...` 키는 JWT가 아니므로 GitHub Actions가 Supabase 프로젝트를 호출할 때 `apikey` 헤더로만 전달합니다. 별도의 `KIS_SCHEDULER_KEY`가 예약 작업 자체를 인증하며, 브라우저에서 호출할 때는 로그인 회원의 Bearer 토큰을 함수 내부에서 검증합니다.
 
@@ -126,7 +126,7 @@ GitHub Actions는 service role key와 별도의 scheduler key가 모두 있어�
 2. 프로젝트의 데이터베이스 비밀번호를 GitHub Repository secret `SUPABASE_DB_PASSWORD`로 저장합니다. 이 값은 SQL 마이그레이션 연결에만 사용되며 로그와 정적 페이지에는 포함되지 않습니다.
 3. GitHub **Actions → Deploy Supabase backend → Run workflow**를 실행합니다.
 4. 배포 성공 후에만 GitHub의 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`를 새 프로젝트 값으로 교체합니다.
-5. 가입할 본인 이메일을 GitHub secret `KIS_OWNER_EMAIL`로 설정합니다. 백엔드 배포가 같은 값을 Supabase Function secret으로 전달하며, 가입 후 내 회원 UUID도 `KIS_OWNER_USER_ID`로 추가하면 이메일과 UUID를 함께 검사합니다.
+5. 가입할 본인 이메일을 GitHub secret `KIS_OWNER_EMAIL`로 설정합니다. 백엔드 배포가 같은 값을 Supabase Function secret으로 전달하며, 브라우저 조회는 이 이메일을 소유자 기준으로 사용합니다.
 
 프로젝트를 먼저 배포하고 마지막에 연결값을 바꾸는 이유는, 새 프로젝트에 테이블이나 함수가 없는 상태에서 운영 대시보드가 전환돼 회원가입과 주식메일이 동시에 중단되는 것을 막기 위해서입니다.
 
