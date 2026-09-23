@@ -7,6 +7,8 @@ import re
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from scripts.write_supabase_config import _fetch_public_key
+
 
 EMAIL_PATTERN = re.compile(r"^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$")
 DEFAULT_REDIRECT_URL = "https://jijunkyoung.github.io/coin-recomand/"
@@ -42,7 +44,12 @@ def _safe_error(exc: HTTPError, email: str, secrets: list[str]) -> str:
 def resend_confirmation(environ: dict[str, str] | None = None) -> dict:
     env = dict(os.environ if environ is None else environ)
     supabase_url = _required("SUPABASE_URL", env).rstrip("/")
-    anon_key = _required("SUPABASE_ANON_KEY", env)
+    access_token = env.get("SUPABASE_ACCESS_TOKEN", "").strip()
+    project_ref = env.get("SUPABASE_PROJECT_REF", "").strip()
+    if access_token and project_ref:
+        anon_key = _fetch_public_key(project_ref, access_token)
+    else:
+        anon_key = _required("SUPABASE_ANON_KEY", env)
     email = _required("KIS_OWNER_EMAIL_CANDIDATE", env).lower()
     if not EMAIL_PATTERN.fullmatch(email):
         raise ValueError("KIS owner email must contain exactly one valid address")
