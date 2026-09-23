@@ -70,6 +70,8 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("--no-verify-jwt", workflow)
         self.assertIn("KIS_OWNER_EMAIL_CANDIDATE", workflow)
         self.assertIn('supabase secrets set KIS_OWNER_EMAIL=', workflow)
+        self.assertIn("[resend-auth-email]", workflow)
+        self.assertIn("resend_owner_confirmation.py", workflow)
 
 
 if __name__ == "__main__":
