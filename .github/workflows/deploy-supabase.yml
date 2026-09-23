@@ -46,7 +46,7 @@ jobs:
         if: contains(github.event.head_commit.message, '[resend-auth-email]')
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        run: python scripts/resend_owner_confirmation.py
+        run: python -m scripts.resend_owner_confirmation
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
