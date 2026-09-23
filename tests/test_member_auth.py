@@ -12,14 +12,14 @@ class MemberAuthTests(unittest.TestCase):
     def test_all_pages_load_shared_auth(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html"):
             page = (ROOT / "docs" / name).read_text(encoding="utf-8")
-            self.assertRegex(page, r'src="supabase-runtime-config\\.js\\?v=[^"]+"')
-            self.assertRegex(page, r'src="auth\\.js\\?v=[^"]+"')
+            self.assertIn('src="supabase-runtime-config.js?v=', page)
+            self.assertIn('src="auth.js?v=', page)
             self.assertIn('href="auth.css"', page)
 
     def test_auth_library_is_served_locally_and_signup_recovers_from_errors(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html"):
             page = (ROOT / "docs" / name).read_text(encoding="utf-8")
-            self.assertRegex(page, r'src="vendor/supabase\\.min\\.js\\?v=[^"]+"')
+            self.assertIn('src="vendor/supabase.min.js?v=', page)
             self.assertNotIn("cdn.jsdelivr.net/npm/@supabase", page)
         self.assertGreater((ROOT / "docs" / "vendor" / "supabase.min.js").stat().st_size, 100_000)
         script = (ROOT / "docs" / "auth.js").read_text(encoding="utf-8")
