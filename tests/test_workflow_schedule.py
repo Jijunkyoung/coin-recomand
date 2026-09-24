@@ -74,6 +74,9 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("resend_owner_confirmation.py", workflow)
         self.assertIn("[confirm-owner-email]", workflow)
         self.assertIn("confirm_owner_user", workflow)
+        self.assertIn("[bind-sole-owner]", workflow)
+        self.assertIn("bind_sole_owner", workflow)
+        self.assertIn('supabase secrets set KIS_OWNER_USER_ID=', workflow)
 
 
 if __name__ == "__main__":

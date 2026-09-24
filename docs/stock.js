@@ -52,6 +52,24 @@ function renderPortfolio(data) {
   panel.innerHTML=`<div class="section-head"><div><span class="eyebrow">MY KIS PORTFOLIO</span><h2>내 ${label}주식 보유현황</h2></div><p>${escapeHTML(new Date(data.synced_at).toLocaleString("ko-KR"))} 기준</p></div><div class="portfolio-summary">${metric("보유 종목",`${positions.length}개`)}${metric("평가금액",portfolioCurrency(evaluation,currencyCode))}${metric("평가손익",`<span class="price-change ${profit>=0?"up":"down"}">${portfolioCurrency(profit,currencyCode)}</span>`)}${metric("수익률",`<span class="price-change ${rate>=0?"up":"down"}">${pct(rate)}</span>`)}</div><div class="portfolio-changes"><b>${comparison}</b>${changeItems.length?changeItems.join(""):`<span class="portfolio-change unchanged">보유수량 변동 없음</span>`}</div>${positions.length?`<div class="portfolio-list">${positions.map(item=>`<div class="portfolio-row"><span><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.symbol)} · ${fmt(item.quantity,4)}주</small></span><span><small>현재가</small><strong>${portfolioCurrency(item.current_price,item.currency)}</strong></span><span><small>평가금액</small><strong>${portfolioCurrency(item.evaluation_amount,item.currency)}</strong></span><span><small>평가손익</small><strong class="price-change ${Number(item.profit_loss)>=0?"up":"down"}">${portfolioCurrency(item.profit_loss,item.currency)} · ${pct(item.profit_rate)}</strong></span></div>`).join("")}</div>`:`<p class="portfolio-empty">조회된 ${label}주식 보유잔고가 없습니다.</p>`}${(data.warnings||[]).length?`<p class="portfolio-warning">일부 해외시장 조회 경고: ${escapeHTML(data.warnings.join(" · "))}</p>`:""}`;
 }
 
+function parseManualHoldings(value) {
+  return String(value || "").split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
+    const [symbol, ...nameParts] = line.split("|");
+    return { symbol: symbol.trim().toUpperCase(), name: nameParts.join("|").trim() || symbol.trim().toUpperCase() };
+  }).filter(item => item.symbol);
+}
+
+function renderManualHoldings(profile, signedIn = Boolean(window.CoinAuth?.user)) {
+  const panel = $("#manualPortfolio"); if (!panel) return;
+  if (!signedIn) { panel.hidden = true; panel.innerHTML = ""; return; }
+  const key = market === "us" ? "holdings_us" : "holdings_kr";
+  const items = parseManualHoldings(profile?.[key]);
+  const label = market === "us" ? "미국" : "국내";
+  panel.hidden = false;
+  panel.innerHTML = `<div class="section-head"><div><span class="eyebrow">MANUAL HOLDINGS</span><h2>내 ${label}주식 수동 등록</h2></div><button type="button" class="secondary-button" id="manualHoldingsEdit">${items.length ? "수정" : "종목 등록"}</button></div>${items.length ? `<div class="manual-holdings-list">${items.map(item => `<span><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.symbol)}</small></span>`).join("")}</div>` : `<p class="portfolio-empty">직접 등록한 종목이 없습니다. 종목 등록을 눌러 ${label} 보유주식을 추가할 수 있습니다.</p>`}`;
+  $("#manualHoldingsEdit")?.addEventListener("click", () => { renderStockSettings(); settingsDialog.showModal(); });
+}
+
 function showSetup(){
   const panel=$("#setupPanel"); panel.hidden=false; panel.innerHTML=`<h2>주식 데이터 연결을 위한 최초 설정이 필요합니다</h2><p>API 키는 대시보드에 저장하지 않으며 GitHub Actions에서만 사용합니다. 주문 기능은 연결하지 않습니다.</p><ol><li><a href="https://apiportal.koreainvestment.com/" target="_blank" rel="noopener">한국투자증권 Open API</a>에서 API 서비스를 신청합니다.</li><li>GitHub 저장소의 <b>Settings → Secrets and variables → Actions</b>로 이동합니다.</li><li><code>KIS_APP_KEY</code>와 <code>KIS_APP_SECRET</code>을 각각 Repository secret으로 등록합니다.</li><li>Actions에서 <b>Analyze, email and deploy → Run workflow</b>를 한 번 실행합니다.</li></ol>`;
   if(report?.configured&&report?.selected_sectors?.length){panel.innerHTML=`<h2>선택한 종목의 데이터를 수집하지 못했습니다</h2><p>한국투자증권 API는 연결됐지만 선택 섹터의 시세가 비어 있습니다. 아래 데이터 상태에서 종목별 오류를 확인해 주세요.</p>`;}
@@ -108,12 +126,12 @@ async function copySetting(value,name){
 $("#stockSettingsOpen").addEventListener("click",()=>{renderStockSettings();settingsDialog.showModal()});
 $("#stockSettingsClose").addEventListener("click",()=>settingsDialog.close());
 settingsDialog.addEventListener("click",event=>{if(event.target===settingsDialog)settingsDialog.close()});
-$("#saveStockSettings").addEventListener("click",async()=>{const holdings=$("#stockHoldings").value.trim(),sector_ids=selectedSectorIds(),stock_email=$("#stockEmailRecipients").value.trim()||null;localStorage.setItem(holdingsKey,holdings);localStorage.setItem(sectorsKey,sector_ids.join(","));localStorage.setItem(emailKey,stock_email||"");if(!window.CoinAuth?.user){setSettingsStatus("이 브라우저에 저장했습니다. 로그인하면 회원별 설정으로 안전하게 저장할 수 있습니다.");return}try{await window.CoinAuth.savePreferences({[market==="us"?"holdings_us":"holdings_kr"]:holdings,sector_ids,stock_email});setSettingsStatus("로그인 회원의 보유주식·관심분야·주식 메일 주소를 저장했습니다.")}catch(error){setSettingsStatus(`회원 설정 저장 실패: ${error.message}`,true)}});
+$("#saveStockSettings").addEventListener("click",async()=>{const holdings=$("#stockHoldings").value.trim(),sector_ids=selectedSectorIds(),stock_email=$("#stockEmailRecipients").value.trim()||null;localStorage.setItem(holdingsKey,holdings);localStorage.setItem(sectorsKey,sector_ids.join(","));localStorage.setItem(emailKey,stock_email||"");if(!window.CoinAuth?.user){setSettingsStatus("이 브라우저에 저장했습니다. 로그인하면 회원별 설정으로 안전하게 저장할 수 있습니다.");return}try{const saved=await window.CoinAuth.savePreferences({[market==="us"?"holdings_us":"holdings_kr"]:holdings,sector_ids,stock_email});renderManualHoldings(saved,true);setSettingsStatus("로그인 계정의 수동 보유종목과 맞춤 설정을 저장했습니다.")}catch(error){setSettingsStatus(`회원 설정 저장 실패: ${error.message}`,true)}});
 $("#copyStockHoldings").addEventListener("click",()=>copySetting($("#stockHoldings").value,market==="us"?"STOCK_HOLDINGS_US":"STOCK_HOLDINGS_KR"));
 $("#copyStockSectors").addEventListener("click",()=>copySetting(selectedSectorIds().join(","),"STOCK_SECTORS"));
 $("#copyStockEmail").addEventListener("click",()=>copySetting($("#stockEmailRecipients").value,"STOCK_EMAIL_TO"));
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&settingsDialog.open)settingsDialog.close()});
-window.addEventListener("coin-auth-change",event=>{if(settingsDialog.open)renderStockSettings();if(!event.detail?.user)renderPortfolio(null)});
+window.addEventListener("coin-auth-change",event=>{if(settingsDialog.open)renderStockSettings();renderManualHoldings(event.detail?.profile,Boolean(event.detail?.user));if(!event.detail?.user)renderPortfolio(null)});
 window.addEventListener("kis-portfolio-sync",event=>renderPortfolio(event.detail));
 if(window.CoinAuth?.portfolio)renderPortfolio(window.CoinAuth.portfolio);
 

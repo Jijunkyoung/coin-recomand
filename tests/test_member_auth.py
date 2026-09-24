@@ -12,14 +12,14 @@ class MemberAuthTests(unittest.TestCase):
     def test_all_pages_load_shared_auth(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html"):
             page = (ROOT / "docs" / name).read_text(encoding="utf-8")
-            self.assertIn('src="supabase-runtime-config.js?v=', page)
-            self.assertIn('src="auth.js?v=', page)
+            self.assertRegex(page, r'src="supabase-runtime-config\.js\?v=[^"]+"')
+            self.assertRegex(page, r'src="auth\.js\?v=[^"]+"')
             self.assertIn('href="auth.css"', page)
 
     def test_auth_library_is_served_locally_and_signup_recovers_from_errors(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html"):
             page = (ROOT / "docs" / name).read_text(encoding="utf-8")
-            self.assertIn('src="vendor/supabase.min.js?v=', page)
+            self.assertRegex(page, r'src="vendor/supabase\.min\.js\?v=[^"]+"')
             self.assertNotIn("cdn.jsdelivr.net/npm/@supabase", page)
         self.assertGreater((ROOT / "docs" / "vendor" / "supabase.min.js").stat().st_size, 100_000)
         script = (ROOT / "docs" / "auth.js").read_text(encoding="utf-8")
@@ -74,7 +74,7 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn('env("KIS_OWNER_EMAIL")', edge)
         self.assertIn("user.id === ownerId", edge)
         self.assertIn("email === ownerEmail", edge)
-        self.assertIn("ownerEmail ? email === ownerEmail", edge)
+        self.assertIn("ownerId ? user.id === ownerId", edge)
         self.assertIn('env("KIS_ACCOUNT_NO")', edge)
         self.assertIn('client.functions.invoke("kis-portfolio"', browser)
         self.assertNotIn("KIS_APP_SECRET", browser)
@@ -106,7 +106,16 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn('addEventListener("kis-portfolio-sync"', script)
         self.assertIn("changes.quantity_changes", script)
         for name in ("us-stocks.html", "kr-stocks.html"):
-            self.assertIn('id="accountPortfolio"', (ROOT / "docs" / name).read_text(encoding="utf-8"))
+            page = (ROOT / "docs" / name).read_text(encoding="utf-8")
+            self.assertIn('id="accountPortfolio"', page)
+            self.assertIn('id="manualPortfolio"', page)
+        self.assertIn("renderManualHoldings", script)
+
+    def test_research_tab_is_next_to_coin(self):
+        for name in ("index.html", "us-stocks.html", "kr-stocks.html", "research.html"):
+            page = (ROOT / "docs" / name).read_text(encoding="utf-8")
+            self.assertLess(page.index('href="index.html"'), page.index('href="research.html"'))
+            self.assertLess(page.index('href="research.html"'), page.index('href="us-stocks.html"'))
 
 
 if __name__ == "__main__":
