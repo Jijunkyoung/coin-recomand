@@ -1,6 +1,7 @@
 import unittest
 from datetime import datetime, timezone
 from email.utils import format_datetime
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from src.stock_analysis import build_stock_report, collect_stock_news, market_regime, parse_holdings, parse_sector_selection, selected_universe, stock_score, technical_metrics
@@ -61,6 +62,7 @@ class StockAnalysisTests(unittest.TestCase):
         }
         self.assertEqual(parse_sector_selection("SEMICONDUCTOR,unknown,energy", self.settings), ["semiconductor", "energy"])
         self.assertEqual([item["symbol"] for item in selected_universe("kr", self.settings, ["semiconductor"])], ["005930"])
+        self.assertEqual([item["symbol"] for item in selected_universe("kr", self.settings, [])], ["005930"])
         holdings = parse_holdings("005930, 000660|하이닉스,invalid symbol", self.settings["kr"])
         self.assertEqual(holdings, [{"symbol": "005930", "name": "삼성전자"}, {"symbol": "000660", "name": "하이닉스"}])
 
@@ -69,6 +71,10 @@ class StockAnalysisTests(unittest.TestCase):
         report = build_stock_report("kr", self.settings, FakeKisClient(), universe=[], selected_sectors=[])
         self.assertEqual(report["status"], "선택 필요")
         self.assertEqual(report["rankings"], [])
+
+    def test_report_generator_keeps_full_catalog_searchable(self):
+        source = Path("src/stock_analysis.py").read_text(encoding="utf-8")
+        self.assertIn('list(settings[market].get("universe", []))', source)
 
     def test_stock_news_is_limited_to_holdings_and_selected_sectors(self):
         self.settings["sectors"] = {"semiconductor": {"label": "반도체", "news_terms": ["반도체"], "us": ["AAPL"], "kr": []}}

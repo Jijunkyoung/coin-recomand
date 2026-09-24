@@ -32,6 +32,7 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("KIS_SCHEDULER_KEY: ${{ secrets.KIS_SCHEDULER_KEY }}", workflow)
         self.assertIn('REQUIRE_MEMBER_STOCK_PROFILE: "true"', workflow)
         self.assertIn("load_member_stock_profile.py", workflow)
+        self.assertNotIn("id: kis_profile\n        if:", workflow)
         self.assertIn('REQUIRE_MEMBER_STOCK_PROFILE: "true"', workflow)
         self.assertIn("python scripts/write_supabase_config.py", workflow)
         self.assertIn("id: coin_delivery", workflow)

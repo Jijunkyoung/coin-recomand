@@ -247,6 +247,8 @@ def parse_holdings(value: str, market_settings: dict[str, Any]) -> list[dict[str
 
 
 def selected_universe(market: str, settings: dict[str, Any], sector_ids: list[str]) -> list[dict[str, Any]]:
+    if not sector_ids:
+        return list(settings[market].get("universe", []))
     symbols: set[str] = set()
     for sector_id in sector_ids:
         symbols.update(str(symbol).upper() for symbol in settings["sectors"][sector_id].get(market, []))
@@ -403,7 +405,9 @@ def generate_stock_reports(settings_path: str | Path = "config/stocks.json", out
         "kr": parse_holdings(os.getenv("MEMBER_STOCK_HOLDINGS_KR") or os.getenv("STOCK_HOLDINGS_KR", ""), settings["kr"]),
     }
     reports = {
-        market: build_stock_report(market, settings, client, selected_universe(market, settings, sector_ids), sector_ids)
+        # Keep the full configured catalog searchable. Member sectors narrow
+        # personalized news, not the symbols available in the lookup box.
+        market: build_stock_report(market, settings, client, list(settings[market].get("universe", [])), sector_ids)
         for market in ("us", "kr")
     }
     try:

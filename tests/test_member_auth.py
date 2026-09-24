@@ -113,6 +113,8 @@ class MemberAuthTests(unittest.TestCase):
             self.assertIn('id="accountPortfolio"', page)
             self.assertIn('id="manualPortfolio"', page)
         self.assertIn("renderManualHoldings", script)
+        self.assertIn("일간 등락률", script)
+        self.assertNotIn('if(settingsDialog.open)renderStockSettings()', script)
 
     def test_research_tab_is_next_to_coin(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html", "research.html"):
