@@ -206,10 +206,6 @@ Deno.serve(async (request) => {
     const changes = portfolioChanges(unique, baseline as Snapshot | null);
     const holdingsKr = unique.filter((item) => item.market === "kr").map((item) => `${item.symbol}|${item.name}`).join("\n");
     const holdingsUs = unique.filter((item) => item.market === "us").map((item) => `${item.symbol}|${item.name}`).join("\n");
-    const { error: saveError } = await supabase.from("user_preferences").upsert({
-      user_id: userId, holdings_kr: holdingsKr, holdings_us: holdingsUs, updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" });
-    if (saveError) throw new Error(`보유종목 저장 실패: ${saveError.message}`);
     const capturedAt = new Date().toISOString();
     const { error: snapshotError } = await supabase.from("kis_portfolio_snapshots").insert({
       user_id: userId, positions: unique, totals: marketTotals(unique), captured_at: capturedAt,
@@ -224,7 +220,8 @@ Deno.serve(async (request) => {
       const { data: authData, error: authError } = await supabase.auth.admin.getUserById(userId);
       if (authError) throw new Error(`회원 이메일 조회 실패: ${authError.message}`);
       mailProfile = {
-        holdings_us: holdingsUs, holdings_kr: holdingsKr,
+        holdings_us: [holdingsUs, preferences?.holdings_us || ""].filter(Boolean).join("\n"),
+        holdings_kr: [holdingsKr, preferences?.holdings_kr || ""].filter(Boolean).join("\n"),
         sector_ids: preferences?.sector_ids || [],
         stock_email: preferences?.stock_email || authData.user?.email || null,
       };

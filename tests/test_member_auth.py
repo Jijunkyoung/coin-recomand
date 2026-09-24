@@ -89,6 +89,9 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn('한국투자증권 토큰 발급 실패:', edge)
         self.assertIn('if (!schedulerMode && !authorization.startsWith("Bearer "))', edge)
         self.assertIn("supabase.auth.getUser(accessToken)", edge)
+        self.assertNotIn("user_id: userId, holdings_kr: holdingsKr", edge)
+        self.assertIn('preferences?.holdings_us || ""', edge)
+        self.assertNotIn("profile = { ...defaultProfile(), ...(profile || {}), holdings_us:", browser)
         config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
         self.assertIn("verify_jwt = false", config)
 
