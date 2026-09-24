@@ -114,11 +114,7 @@
       if (data?.error) throw new Error(data.error);
       portfolio = data;
       sessionStorage.setItem(portfolioCacheKey(), JSON.stringify(data));
-      const holdings = { holdings_us: [], holdings_kr: [] };
-      for (const item of data.positions || []) holdings[item.market === "us" ? "holdings_us" : "holdings_kr"].push(`${item.symbol}|${item.name}`);
-      profile = { ...defaultProfile(), ...(profile || {}), holdings_us: holdings.holdings_us.join("\n"), holdings_kr: holdings.holdings_kr.join("\n") };
-      syncLocal(profile); renderProfile(); dispatchPortfolio();
-      window.dispatchEvent(new CustomEvent("coin-auth-change", { detail: { user, profile } }));
+      dispatchPortfolio();
       setBrokerStatus(`${new Date(data.synced_at).toLocaleString("ko-KR")} 동기화 완료`);
       return data;
     })().catch(error => { setBrokerStatus(error.message, true); throw error; }).finally(() => { portfolioSync = null; });
