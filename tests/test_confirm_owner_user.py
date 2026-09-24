@@ -46,7 +46,7 @@ class ConfirmOwnerUserTests(unittest.TestCase):
     def test_refuses_when_owner_account_does_not_exist(self, mock_urlopen):
         mock_urlopen.return_value = response({"users": [{"id": "other-id", "email": "other@example.com"}]})
 
-        with self.assertRaisesRegex(RuntimeError, "found 0"):
+        with self.assertRaisesRegex(RuntimeError, r"found 0 \\(total users: 1, unconfirmed users: 1\\)"):
             confirm_owner(ENV)
 
     @patch("scripts.confirm_owner_user.urlopen")
