@@ -66,7 +66,15 @@ def confirm_owner(environ: dict[str, str] | None = None) -> str:
         if isinstance(user, dict) and str(user.get("email") or "").strip().lower() == owner_email
     ]
     if len(matches) != 1:
-        raise RuntimeError(f"Expected exactly one existing owner account; found {len(matches)}")
+        unconfirmed_count = sum(
+            1
+            for user in users
+            if isinstance(user, dict) and not user.get("email_confirmed_at")
+        )
+        raise RuntimeError(
+            "Expected exactly one existing owner account; "
+            f"found {len(matches)} (total users: {len(users)}, unconfirmed users: {unconfirmed_count})"
+        )
 
     user = matches[0]
     user_id = str(user.get("id") or "").strip()
