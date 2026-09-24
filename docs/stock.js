@@ -111,25 +111,20 @@ $("#detailChart").addEventListener("pointermove",event=>{if(!detailPlot)return;c
 const settingsDialog=$("#stockSettingsDialog"), holdingsKey=`stock-holdings-${market}-v1`, sectorsKey="stock-sectors-v1", emailKey="stock-email-recipients-v1";
 function selectedSectorIds(){return [...$("#stockSectorOptions").querySelectorAll("input:checked")].map(input=>input.value)}
 function setSettingsStatus(message,error=false){const node=$("#stockSettingsStatus");node.textContent=message;node.classList.toggle("error",error)}
+function validEmailList(value){const addresses=value.split(/[,;\n]+/).map(item=>item.trim()).filter(Boolean);return addresses.length>0&&addresses.every(item=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item))}
 function renderStockSettings(){
   const options=report?.sector_options?.length?report.sector_options:sectorFallback;
   const member=window.CoinAuth?.profile, stored=localStorage.getItem(sectorsKey), selected=member?.sector_ids||(stored!==null?stored.split(",").filter(Boolean):(report?.selected_sectors||[]));
   $("#stockSectorOptions").innerHTML=options.map(item=>`<label><input type="checkbox" value="${escapeHTML(item.id)}" ${selected.includes(item.id)?"checked":""}><span>${escapeHTML(item.label)}</span></label>`).join("");
   $("#stockHoldings").value=(member?.[market==="us"?"holdings_us":"holdings_kr"]??localStorage.getItem(holdingsKey))||"";
   $("#stockEmailRecipients").value=(member?.stock_email??localStorage.getItem(emailKey))||"";
-  setSettingsStatus(window.CoinAuth?.user?"현재 로그인 회원의 맞춤 설정입니다. 저장하면 회원 계정에 반영됩니다.":"비로그인 상태에서는 이 브라우저에만 저장됩니다.");
-}
-async function copySetting(value,name){
-  if(!value.trim()){setSettingsStatus(`${name}에 복사할 값이 없습니다.`,true);return}
-  try{await navigator.clipboard.writeText(value.trim());setSettingsStatus(`${name} 값을 복사했습니다. GitHub의 같은 이름 Secret에 저장하세요.`)}catch{setSettingsStatus("클립보드 복사에 실패했습니다. 브라우저 권한을 확인해 주세요.",true)}
+  $("#saveStockSettings").disabled=!window.CoinAuth?.user;
+  setSettingsStatus(window.CoinAuth?.user?"저장하면 GitHub Actions 설정 없이 다음 자동 분석과 오전 7시 30분 메일부터 적용됩니다.":"자동 적용하려면 먼저 로그인해 주세요.",!window.CoinAuth?.user);
 }
 $("#stockSettingsOpen").addEventListener("click",()=>{renderStockSettings();settingsDialog.showModal()});
 $("#stockSettingsClose").addEventListener("click",()=>settingsDialog.close());
 settingsDialog.addEventListener("click",event=>{if(event.target===settingsDialog)settingsDialog.close()});
-$("#saveStockSettings").addEventListener("click",async()=>{const holdings=$("#stockHoldings").value.trim(),sector_ids=selectedSectorIds(),stock_email=$("#stockEmailRecipients").value.trim()||null;localStorage.setItem(holdingsKey,holdings);localStorage.setItem(sectorsKey,sector_ids.join(","));localStorage.setItem(emailKey,stock_email||"");if(!window.CoinAuth?.user){setSettingsStatus("이 브라우저에 저장했습니다. 로그인하면 회원별 설정으로 안전하게 저장할 수 있습니다.");return}try{const saved=await window.CoinAuth.savePreferences({[market==="us"?"holdings_us":"holdings_kr"]:holdings,sector_ids,stock_email});renderManualHoldings(saved,true);setSettingsStatus("로그인 계정의 수동 보유종목과 맞춤 설정을 저장했습니다.")}catch(error){setSettingsStatus(`회원 설정 저장 실패: ${error.message}`,true)}});
-$("#copyStockHoldings").addEventListener("click",()=>copySetting($("#stockHoldings").value,market==="us"?"STOCK_HOLDINGS_US":"STOCK_HOLDINGS_KR"));
-$("#copyStockSectors").addEventListener("click",()=>copySetting(selectedSectorIds().join(","),"STOCK_SECTORS"));
-$("#copyStockEmail").addEventListener("click",()=>copySetting($("#stockEmailRecipients").value,"STOCK_EMAIL_TO"));
+$("#saveStockSettings").addEventListener("click",async event=>{if(!window.CoinAuth?.user){setSettingsStatus("자동 적용하려면 먼저 로그인해 주세요.",true);return}const holdings=$("#stockHoldings").value.trim(),sector_ids=selectedSectorIds(),stock_email=$("#stockEmailRecipients").value.trim();if(!validEmailList(stock_email)){setSettingsStatus("수신 메일 주소를 올바르게 입력해 주세요. 여러 주소는 쉼표나 줄바꿈으로 구분할 수 있습니다.",true);return}const button=event.currentTarget,original=button.textContent;button.disabled=true;button.textContent="저장 중…";try{const saved=await window.CoinAuth.savePreferences({[market==="us"?"holdings_us":"holdings_kr"]:holdings,sector_ids,stock_email});renderManualHoldings(saved,true);setSettingsStatus("저장 완료. GitHub Actions 설정 없이 다음 자동 분석과 오전 7시 30분 메일부터 적용됩니다.")}catch(error){setSettingsStatus(`회원 설정 저장 실패: ${error.message}`,true)}finally{button.disabled=false;button.textContent=original}});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&settingsDialog.open)settingsDialog.close()});
 window.addEventListener("coin-auth-change",event=>{renderManualHoldings(event.detail?.profile,Boolean(event.detail?.user));if(!event.detail?.user)renderPortfolio(null)});
 window.addEventListener("kis-portfolio-sync",event=>renderPortfolio(event.detail));

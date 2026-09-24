@@ -49,15 +49,6 @@ jobs:
           FORCE_SEND: ${{ github.event_name == 'workflow_dispatch' && inputs.force_send }}
           DELIVERY_MARKER_SCOPE: stock
         run: python scripts/check_daily_email_delivery.py
-      - name: Validate mail settings
-        if: steps.coin_delivery.outputs.should_send == 'true' || steps.stock_delivery.outputs.should_send == 'true'
-        env:
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          STOCK_EMAIL_TO: ${{ secrets.STOCK_EMAIL_TO }}
-        run: python scripts/validate_email_config.py
       - name: Load owner's live KIS portfolio for mail
         id: kis_profile
         if: steps.stock_delivery.outputs.should_send == 'true'
@@ -68,6 +59,15 @@ jobs:
           KIS_SCHEDULER_KEY: ${{ secrets.KIS_SCHEDULER_KEY }}
           REQUIRE_MEMBER_STOCK_PROFILE: "true"
         run: python scripts/load_member_stock_profile.py
+      - name: Validate mail settings
+        if: steps.coin_delivery.outputs.should_send == 'true' || steps.stock_delivery.outputs.should_send == 'true'
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          STOCK_EMAIL_TO: ${{ secrets.STOCK_EMAIL_TO }}
+        run: python scripts/validate_email_config.py
       - name: Generate and send today's reports
         if: steps.coin_delivery.outputs.should_send == 'true' || (steps.stock_delivery.outputs.should_send == 'true' && steps.kis_profile.outcome == 'success')
         env:

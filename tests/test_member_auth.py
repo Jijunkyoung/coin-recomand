@@ -115,6 +115,13 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn("renderManualHoldings", script)
         self.assertIn("일간 등락률", script)
         self.assertNotIn('if(settingsDialog.open)renderStockSettings()', script)
+        self.assertIn("GitHub Actions 설정 없이", script)
+        self.assertNotIn("copyStockEmail", script)
+        self.assertNotIn("copyStockSectors", script)
+        for name in ("us-stocks.html", "kr-stocks.html"):
+            page = (ROOT / "docs" / name).read_text(encoding="utf-8")
+            self.assertIn("저장하고 자동 적용", page)
+            self.assertNotIn("settings/secrets/actions", page)
 
     def test_research_tab_is_next_to_coin(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html", "research.html"):
