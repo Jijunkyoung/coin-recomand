@@ -70,7 +70,6 @@ jobs:
           node tests/research_ui.cjs
       - name: Load owner's live KIS portfolio for mail
         id: kis_profile
-        if: (steps.stock_delivery.outputs.should_send == 'true' && !contains(github.event.head_commit.message, '[record-daily-email]')) || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[send-test-email]') || contains(github.event.head_commit.message, '[send-stock-test-email]'))) || (github.event_name == 'workflow_dispatch' && inputs.send_email)
         continue-on-error: ${{ !(github.event_name == 'push' && contains(github.event.head_commit.message, '[send-stock-test-email]')) }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
