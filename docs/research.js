@@ -27,9 +27,10 @@ async function loadSurge() {
       : `실제 추적 ${feedback.completed || 0}건 축적 · ${feedback.minimum_for_adjustment || 20}건부터 완료 사례의 신호별 성과를 다음 후보 순위에 반영합니다.`;
     const body = document.querySelector("#surgeCandidates"); body.replaceChildren();
     data.candidates.forEach((candidate,index) => {
-      const context = [candidate.development_signal, ...(candidate.related_events || []).map(event => `${event.title} [${event.importance}]`)].filter(Boolean).join(" · ") || "확인된 보조 신호 없음";
+      const context = [candidate.development_signal, ...(candidate.related_events || []).map(event => `${event.title} [${event.impact?.startsWith("악재") ? "🚨 악재 · " : ""}중요도 ${event.importance}${event.score_penalty ? ` · -${event.score_penalty}점` : ""}]`)].filter(Boolean).join(" · ") || "확인된 보조 신호 없음";
       const risk = [candidate.watch_status, ...(candidate.risks || [])].filter(Boolean).join(" · ");
-      row(body,[index+1,`${candidate.name} (${candidate.symbol})`,percent(candidate.model_probability_pct),(candidate.reasons || []).join(" · "),`${candidate.volume_ratio_20d}×`,percent(candidate.relative_7d_pct),context,risk]);
+      const adjusted = Number.isFinite(candidate.feedback_adjusted_score) ? `${percent(candidate.model_probability_pct)} / ${candidate.feedback_adjusted_score.toFixed(1)}점` : percent(candidate.model_probability_pct);
+      row(body,[index+1,`${candidate.name} (${candidate.symbol})`,adjusted,(candidate.reasons || []).join(" · "),`${candidate.volume_ratio_20d}×`,percent(candidate.relative_7d_pct),context,risk]);
     });
     if (!data.candidates.length) row(body,["—","학습 자료 축적 중","—","—","—","—","—","—"]);
     const limitations = document.querySelector("#surgeLimitations"); limitations.replaceChildren();

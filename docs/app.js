@@ -184,7 +184,7 @@ function renderMajorEvents() {
     return `<article class="major-event-card ${importanceClass}">
       <div class="major-event-date-block"><strong>${escapeHTML(event.date || "날짜 확인 중")}</strong><span>${escapeHTML(event.time_kst || "시각 미정")} KST</span><em>${escapeHTML(eventDday(event.days_until))}</em></div>
       <div class="major-event-body">
-        <div class="major-event-badges"><span class="major-event-badge status">${escapeHTML(event.status || "확인 필요")}</span><span class="major-event-badge">${escapeHTML(event.event_kind || "일정")}</span><span class="major-event-badge">${escapeHTML(event.event_type || "시장 일정")}</span></div>
+        <div class="major-event-badges"><span class="major-event-badge status">${escapeHTML(event.status || "확인 필요")}</span><span class="major-event-badge">${escapeHTML(event.event_kind || "일정")}</span><span class="major-event-badge">${escapeHTML(event.event_type || "시장 일정")}</span>${String(event.impact || "").startsWith("악재") ? `<span class="major-event-badge negative">🚨 악재 · -${escapeHTML(event.score_penalty || 0)}점</span>` : ""}</div>
         <h3>${escapeHTML(event.title || "제목 없는 일정")} <span class="major-event-badge importance">중요도 ${escapeHTML(event.importance || "보통")}</span></h3>
         <p class="major-event-date">관련 자산 · ${escapeHTML(symbols)}</p>
         <p class="major-event-summary">${escapeHTML(event.summary || "시장 영향을 확인 중입니다.")}</p>
@@ -602,9 +602,9 @@ function renderCoin(coin, index) {
   const developmentText = coin.development?.status || "미수집";
   const unlockText = coin.tokenomics?.next_unlock?.date || (coin.tokenomics?.unlock_data_available ? "예정 없음" : "미수집");
   $(".coin-metrics", node).innerHTML = metric("RSI", fmt(coin.rsi)) + metric("7일", pct(coin.return_7d)) + metric("30일", pct(coin.return_30d)) + metric("거래량 비율", coin.volume_ratio == null ? "—" : `${fmt(coin.volume_ratio,2)}×`) + metric("변동성", pct(coin.volatility)) + metric("커뮤니티", communityText) + metric("개발 진척", developmentText) + metric("다음 언락", unlockText);
-  $(".reasons", node).innerHTML = (coin.reasons?.length ? coin.reasons : ["정량 점수 상위 종목입니다."]).map(x => `<li>${x}</li>`).join("");
+  $(".reasons", node).innerHTML = (coin.reasons?.length ? coin.reasons : ["정량 점수 상위 종목입니다."]).map(x => `<li>${escapeHTML(x)}</li>`).join("");
   const risks = coin.risks?.length ? coin.risks : ["뚜렷한 정량 위험 신호 없음 — 시장 변동성은 별도 관리 필요"];
-  $(".risks", node).innerHTML = risks.map(x => `<li>${x}</li>`).join("");
+  $(".risks", node).innerHTML = risks.map(x => `<li>${escapeHTML(x)}</li>`).join("");
   const canvas = $("canvas", node); requestAnimationFrame(() => drawLine(canvas, coin.sparkline, coin.return_30d >= 0 ? "#31d8c5" : "#ff6b78"));
   return node;
 }

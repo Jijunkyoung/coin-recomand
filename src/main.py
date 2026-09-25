@@ -12,7 +12,7 @@ from typing import Any
 
 from .email_report import send_email
 from .indicators import annualized_volatility, ema, macd, pct_change, rsi, volume_ratio
-from .major_events import build_major_events, load_manual_events
+from .major_events import build_major_events, load_manual_events, negative_event_risk
 from .providers import MarketDataClient
 from .research import surge_feedback
 from .scoring import alt_score, market_regime, recommendation_label, timeframe_score
@@ -20,6 +20,25 @@ from .stock_analysis import generate_stock_reports
 from .surge_prediction import build_surge_research
 
 KST = timezone(timedelta(hours=9))
+
+
+def apply_negative_event_penalties(coins: list[dict[str, Any]], events: list[dict[str, Any]], regime: str) -> None:
+    """Apply bounded event-risk deductions after news collection, without altering technical inputs."""
+    for coin in coins:
+        event_risk = negative_event_risk(str(coin.get("symbol") or ""), events)
+        penalty = event_risk["penalty"]
+        coin["negative_events"] = event_risk["events"]
+        coin["event_risk_penalty"] = penalty
+        if not penalty:
+            continue
+        coin["score_before_event_risk"] = coin["score"]
+        coin["score"] = max(0, coin["score"] - penalty)
+        coin["decision"] = recommendation_label(coin["score"], regime)
+        markers = [
+            f"🚨 [악재] {event.get('title')} (중요도 {event.get('importance', '보통')} · -{event['score_penalty']}점)"
+            for event in event_risk["events"][:2]
+        ]
+        coin["risks"] = [*markers, *(coin.get("risks") or [])][:6]
 
 
 class InsufficientHistoryError(ValueError):
@@ -435,6 +454,17 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     except Exception as exc:
         major_events = []
         warnings.append(f"주요 시장 이벤트 구성 실패: {warning_reason(exc)}")
+    apply_negative_event_penalties(analyzed, major_events, regime)
+    analyzed.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
+    for rank, coin in enumerate(analyzed, start=1):
+        coin["rank"] = rank
+        coin["timeframe_scores"] = {
+            "hourly": timeframe_score(coin["score"], None, "hourly"),
+            "daily": timeframe_score(coin["score"], coin.get("return_1d"), "daily"),
+            "weekly": timeframe_score(coin["score"], coin.get("return_7d"), "weekly"),
+        }
+    enriched.sort(key=lambda coin: (coin["score"], coin["trade_value_24h"]), reverse=True)
+    top = enriched[: settings["recommendation_count"]]
     try:
         research_path = Path("research-state/state.json")
         research_state = json.loads(research_path.read_text(encoding="utf-8")) if research_path.exists() else {}
@@ -463,6 +493,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         "price", "ema20", "ema50", "rsi", "macd_histogram", "return_1d", "return_7d", "return_30d", "volume_ratio",
         "volatility", "trending_rank", "community_mentions", "community_total", "community_sources", "timeframe_scores",
         "community_exposure_rate", "trade_value_24h", "development", "tokenomics", "coingecko_id", "sparkline", "history",
+        "score_before_event_risk", "event_risk_penalty", "negative_events",
     )
     alt_rankings = [{field: coin.get(field) for field in ranking_fields} for coin in analyzed]
     now = datetime.now(timezone.utc)
@@ -529,6 +560,15 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                     ],
                 },
                 {
+                    "title": "뉴스·주요 이벤트 위험",
+                    "range": "최종점수 0 ~ -16",
+                    "items": [
+                        "코인과 직접 연결된 악재 기사·이벤트만 감점하고 관련 자산이 확인되지 않은 시장 뉴스는 개별 코인에 적용하지 않음",
+                        "중요도 보통 -4 / 높음 -8 / 매우 높음 -12, 복수 악재 합계는 최대 -16",
+                        "동일 기사·이벤트는 ID·출처·제목 기준으로 한 번만 반영하며 사유에 🚨 [악재]로 표시",
+                    ],
+                },
+                {
                     "title": "비트코인 시장 국면",
                     "range": "원점수 0 ~ -20",
                     "items": [
@@ -542,7 +582,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
                 "중립 국면: 94점 이상 분할매수 후보 / 68~93점 관찰 / 67점 이하 보류",
                 "하락 국면: 71점 이상 관찰 / 70점 이하 보류",
             ],
-            "execution": "실제 주문은 실행하지 않으며, 주요 이벤트는 결과 확인 전 점수에 가산하지 않습니다. 분할매수 후보도 손절·비중·호재 출처를 다시 확인하는 연구용 신호입니다.",
+            "execution": "실제 주문은 실행하지 않습니다. 주요 이벤트는 결과 확인 전 가산하지 않지만, 코인과 직접 연결된 확인 가능한 악재는 제한적으로 감점합니다. 분할매수 후보도 손절·비중·출처를 다시 확인하는 연구용 신호입니다.",
         },
         "data_quality": {"status": "주의" if warnings else "정상", "warnings": warnings, "notices": notices},
         "sources": [

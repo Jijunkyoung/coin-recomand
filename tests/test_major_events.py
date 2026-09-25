@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.major_events import build_major_events, load_manual_events
+from src.major_events import build_major_events, load_manual_events, negative_event_risk
 
 
 class MajorEventTests(unittest.TestCase):
@@ -71,6 +71,18 @@ class MajorEventTests(unittest.TestCase):
             [event["title"] for event in events],
             ["나중에 예정된 ETF 승인", "먼저 예정된 FOMC", "날짜 미정 규제 일정"],
         )
+
+    def test_xrp_hack_news_is_marked_negative_and_penalized_once(self):
+        title = "리플(XRP), 비트겟 해킹에 1억 290만 개 탈취…3억 5100만 달러 피해, 북한 라자루스 배후 의혹도"
+        events = build_major_events([], [{
+            "title": title, "source": "테스트 뉴스", "url": "https://example.com/xrp-hack",
+            "published_at": "2026-09-14T01:00:00+00:00", "related_symbols": ["XRP"],
+        }], [], now=self.NOW)
+        self.assertEqual(events[0]["impact"], "악재 가능")
+        self.assertEqual(events[0]["score_penalty"], 8)
+        risk = negative_event_risk("XRP", [events[0], events[0]])
+        self.assertEqual(risk["penalty"], 8)
+        self.assertEqual(len(risk["events"]), 1)
 
     def test_loads_versioned_manual_event_file(self):
         with tempfile.TemporaryDirectory() as directory:
