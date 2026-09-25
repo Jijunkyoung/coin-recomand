@@ -1,10 +1,39 @@
 const labels = {existing:"기존 추천",trend:"단순 추세",attention_news:"관심 확산·공식 뉴스",learned:"실험 학습 모델",universe:"관측 전체"};
 const states = {pending_entry:"다음 관측 진입 대기",entry_missing:"진입 가격 누락",tracking:"추적 중",closed:"평가 종료"};
 const percent = n => Number.isFinite(n) ? `${n.toFixed(2)}%` : "—";
+const integer = n => Number.isFinite(n) ? n.toLocaleString("ko-KR") : "—";
 function row(target, values) {
   const tr = document.createElement("tr");
   values.forEach(value => { const td=document.createElement("td"); td.textContent=String(value); tr.append(td); });
   target.append(tr);
+}
+async function loadSurge() {
+  try {
+    const response = await fetch("data/latest.json", {cache:"no-store"});
+    if (!response.ok) throw new Error("unavailable");
+    const report = await response.json();
+    const data = report.surge_research;
+    if (!data) throw new Error("missing");
+    document.querySelector("#surgeStatus").textContent = `${data.status} · ${data.observed_days || 0}개 과거 날짜를 시간순으로 학습했습니다.`;
+    document.querySelector("#surgeConfidence").textContent = `신뢰도 ${data.confidence || "낮음"}`;
+    document.querySelector("#surgeSamples").textContent = integer(data.samples);
+    document.querySelector("#surgePositives").textContent = integer(data.positive_samples);
+    document.querySelector("#surgeAuc").textContent = Number.isFinite(data.validation?.auc) ? data.validation.auc.toFixed(3) : "—";
+    document.querySelector("#surgePrecision").textContent = percent(data.validation?.precision_top_10pct);
+    document.querySelector("#surgeTarget").textContent = `급등 판정: ${data.target}`;
+    const body = document.querySelector("#surgeCandidates"); body.replaceChildren();
+    data.candidates.forEach((candidate,index) => {
+      const context = [candidate.development_signal, ...(candidate.related_events || []).map(event => `${event.title} [${event.importance}]`)].filter(Boolean).join(" · ") || "확인된 보조 신호 없음";
+      const risk = [candidate.watch_status, ...(candidate.risks || [])].filter(Boolean).join(" · ");
+      row(body,[index+1,`${candidate.name} (${candidate.symbol})`,percent(candidate.model_probability_pct),(candidate.reasons || []).join(" · "),`${candidate.volume_ratio_20d}×`,percent(candidate.relative_7d_pct),context,risk]);
+    });
+    if (!data.candidates.length) row(body,["—","학습 자료 축적 중","—","—","—","—","—","—"]);
+    const limitations = document.querySelector("#surgeLimitations"); limitations.replaceChildren();
+    (data.limitations || []).forEach(text=>{const li=document.createElement("li");li.textContent=text;limitations.append(li);});
+  } catch {
+    document.querySelector("#surgeStatus").textContent="급등 연구 결과가 아직 없거나 불러오지 못했습니다. 기존 추천에는 영향이 없습니다.";
+    document.querySelector("#surgeConfidence").textContent="자료 확인 필요";
+  }
 }
 async function loadResearch() {
   try {
@@ -29,4 +58,4 @@ async function loadResearch() {
     document.querySelector("#status").textContent="연구 기록이 아직 없거나 불러오지 못했습니다. 첫 수집 완료 후 표시됩니다. 성과를 0%로 간주하지 마세요.";
   }
 }
-loadResearch();
+Promise.all([loadSurge(),loadResearch()]);
