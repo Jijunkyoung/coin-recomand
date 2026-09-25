@@ -2,7 +2,8 @@ import copy
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from src.research import COSTS, VERSION, features, net_return, settle, summary, train, update
+from src.research import (COSTS, VERSION, features, net_return, settle, summary,
+                          surge_feedback, train, update, update_surge_tracking)
 
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -16,6 +17,23 @@ def report(at=NOW):
                               "community_exposure_rate": 3, "decision": "분할매수 후보", "score": 90,
                               "tokenomics": {"unlock_data_available": True, "next_unlock": None}}],
             "major_events": [{"official_source": True, "related_symbols": ["ETH"], "source_url": "https://example.org/a"}]}
+
+
+def surge_report(at=NOW, extra_event=False):
+    doc = report(at)
+    doc["surge_research"] = {"candidates": [{
+        "market": "KRW-ETH", "symbol": "ETH", "name": "이더리움",
+        "model_probability_pct": 32.5, "feedback_adjusted_score": 32.5,
+        "reasons": ["20일 대비 거래대금"], "watch_status": "관찰 후보",
+        "volume_ratio_20d": 2.0, "relative_7d_pct": 8.0,
+        "development_signal": "공식 GitHub 30일 커밋 30건",
+    }]}
+    doc["alt_rankings"][0]["development"] = {"status": "활발", "commits_30d": 30}
+    doc["alt_rankings"][0]["volume_ratio"] = 2.2
+    if extra_event:
+        doc["major_events"].append({"id": "new-event", "title": "예측 후 메인넷 발표",
+                                    "importance": "높음", "related_symbols": ["ETH"]})
+    return doc
 
 
 class ResearchTests(unittest.TestCase):
@@ -84,6 +102,38 @@ class ResearchTests(unittest.TestCase):
         self.assertEqual(model["samples"],280)
         future=copy.deepcopy(records[0]);future["outcomes"]["3"]["exit_at"]=(NOW+timedelta(days=101)).isoformat()
         self.assertEqual(train(records+[future],NOW+timedelta(days=100)),model)
+
+    def test_surge_recommendation_tracks_real_horizons_and_observed_drivers(self):
+        state = {}
+        update_surge_tracking(state, surge_report(), {"KRW-ETH": 100, "KRW-BTC": 100}, NOW)
+        tracked = state["surge_records"][0]
+        self.assertEqual(tracked["status"], "pending_entry")
+        update_surge_tracking(state, surge_report(NOW+timedelta(hours=1)), {"KRW-ETH": 100, "KRW-BTC": 100}, NOW+timedelta(hours=1))
+        self.assertEqual(tracked["entry_price"], 100)
+        update_surge_tracking(state, surge_report(NOW+timedelta(hours=5), True), {"KRW-ETH": 111, "KRW-BTC": 101}, NOW+timedelta(hours=5))
+        self.assertAlmostEqual(tracked["outcomes"]["4"]["gross_pct"], 11)
+        update_surge_tracking(state, surge_report(NOW+timedelta(hours=25), True), {"KRW-ETH": 112, "KRW-BTC": 104}, NOW+timedelta(hours=25))
+        self.assertEqual(tracked["status"], "closed")
+        self.assertAlmostEqual(tracked["outcomes"]["24"]["gross_pct"], 12)
+        self.assertIn("예측 후 관련 뉴스·이벤트", tracked["observed_drivers"]["labels"])
+        self.assertIn("코인 고유 거래대금 확대", tracked["observed_drivers"]["labels"])
+        self.assertIn("인과관계", tracked["observed_drivers"]["note"])
+
+    def test_forward_feedback_waits_for_twenty_closed_results(self):
+        records = []
+        for index in range(20):
+            reason = "강한 신호" if index < 10 else "약한 신호"
+            peak = 12 if index < 10 else 2
+            records.append({"status": "closed", "closed_at": (NOW-timedelta(hours=1)).isoformat(),
+                            "peak_gross_pct": peak, "reasons": [reason],
+                            "outcomes": {"24": {"status": "complete", "exit_at": NOW.isoformat(), "gross_pct": peak}}})
+        small = surge_feedback({"surge_records": records[:19]}, NOW)
+        self.assertEqual(small["status"], "자료 축적 중")
+        self.assertEqual(small["reason_adjustments"], {})
+        learned = surge_feedback({"surge_records": records}, NOW)
+        self.assertEqual(learned["status"], "실제 추적 반영")
+        self.assertGreater(learned["reason_adjustments"]["강한 신호"], 0)
+        self.assertLess(learned["reason_adjustments"]["약한 신호"], 0)
 
 
 if __name__ == "__main__":

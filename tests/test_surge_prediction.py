@@ -105,6 +105,18 @@ class SurgePredictionTests(unittest.TestCase):
         self.assertEqual(result["candidates"], [])
         self.assertIsNone(result["validation"])
 
+    def test_completed_forward_results_adjust_ranking_without_rewriting_probability(self):
+        baseline = build_surge_research(self.coins, self.bitcoin)
+        feedback = {"status": "실제 추적 반영", "completed": 30, "hits": 8,
+                    "hit_rate_pct": 26.67, "minimum_for_adjustment": 20,
+                    "reason_adjustments": {name: 3.0 for name in baseline["feature_names"]}}
+        learned = build_surge_research(self.coins, self.bitcoin, forward_feedback=feedback)
+        base_by_market = {row["market"]: row for row in baseline["candidates"]}
+        candidate = learned["candidates"][0]
+        self.assertEqual(candidate["model_probability_pct"], base_by_market[candidate["market"]]["model_probability_pct"])
+        self.assertEqual(candidate["feedback_adjustment_pct_points"], 3.0)
+        self.assertAlmostEqual(candidate["feedback_adjusted_score"], candidate["model_probability_pct"] + 3.0, places=1)
+
 
 if __name__ == "__main__":
     unittest.main()
