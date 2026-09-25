@@ -93,6 +93,14 @@ class MajorEventTests(unittest.TestCase):
         self.assertEqual(events[0]["impact"], "호재 가능")
         self.assertEqual(events[0]["score_penalty"], 0)
 
+        resilient = build_major_events([], [{
+            "title": "비트겟 해킹에도 버틴 리플(XRP)…고래 4억7,000만개 매집에 상승세 이어가나",
+            "importance": "높음", "impact": "악재 가능",
+            "published_at": "2026-09-14T01:00:00+00:00", "related_symbols": ["XRP"],
+        }], [], now=self.NOW)
+        self.assertEqual(resilient[0]["impact"], "호재 가능")
+        self.assertEqual(resilient[0]["score_penalty"], 0)
+
     def test_loads_versioned_manual_event_file(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "events.json"
