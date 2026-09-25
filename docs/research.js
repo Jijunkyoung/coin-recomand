@@ -21,6 +21,10 @@ async function loadSurge() {
     document.querySelector("#surgeAuc").textContent = Number.isFinite(data.validation?.auc) ? data.validation.auc.toFixed(3) : "—";
     document.querySelector("#surgePrecision").textContent = percent(data.validation?.precision_top_10pct);
     document.querySelector("#surgeTarget").textContent = `급등 판정: ${data.target}`;
+    const feedback = data.forward_feedback || {};
+    document.querySelector("#surgeFeedback").textContent = feedback.completed >= feedback.minimum_for_adjustment
+      ? `실제 추적 ${feedback.completed}건 반영 · 10% 도달률 ${percent(feedback.hit_rate_pct)} · 완료 사례의 신호별 성과로 순위를 최대 ±5점 보정합니다.`
+      : `실제 추적 ${feedback.completed || 0}건 축적 · ${feedback.minimum_for_adjustment || 20}건부터 완료 사례의 신호별 성과를 다음 후보 순위에 반영합니다.`;
     const body = document.querySelector("#surgeCandidates"); body.replaceChildren();
     data.candidates.forEach((candidate,index) => {
       const context = [candidate.development_signal, ...(candidate.related_events || []).map(event => `${event.title} [${event.importance}]`)].filter(Boolean).join(" · ") || "확인된 보조 신호 없음";
@@ -53,6 +57,21 @@ async function loadResearch() {
     render(); document.querySelector("#horizon").addEventListener("change",render);
     const recent=document.querySelector("#recent");
     data.recent.forEach(r=>row(recent,[new Date(r.observed_at).toLocaleString("ko-KR",{timeZone:"Asia/Seoul"}),r.market,r.strategies.filter(s=>s!=="universe").map(s=>labels[s]).join(" · ") || "관측만",Number.isFinite(r.prediction)?percent(r.prediction*100):"자료 부족",states[r.status],percent(r.outcomes["3"]?.net_pct)]));
+    const tracking = data.surge_tracking || {};
+    const feedback = tracking.feedback || {};
+    document.querySelector("#trackingStatus").textContent = `${feedback.status || "자료 축적 중"} · 완료된 24시간 결과만 다음 후보 학습 보정에 사용합니다.`;
+    document.querySelector("#trackingSignals").textContent = integer(tracking.signals);
+    document.querySelector("#trackingCompleted").textContent = integer(tracking.completed_24h);
+    document.querySelector("#trackingHitRate").textContent = percent(tracking.hit_rate_pct);
+    document.querySelector("#trackingPeak").textContent = percent(tracking.mean_peak_pct);
+    document.querySelector("#trackingCauseNote").textContent = `* ${tracking.cause_note || "가격과 함께 관찰된 정황이며 인과관계를 확정하지 않습니다."}`;
+    const trackingRows=document.querySelector("#trackingRows"); trackingRows.replaceChildren();
+    (tracking.recent || []).slice(0,30).forEach(record=>{
+      const result=hours=>record.outcomes?.[String(hours)]?.status==="complete"?percent(record.outcomes[String(hours)].gross_pct):record.outcomes?.[String(hours)]?.status==="price_missing"?"가격 누락":"추적 중";
+      const drivers=(record.observed_drivers?.labels || []).join(" · ") || (record.status==="closed"?"단일 요인 미확인":"분석 대기");
+      row(trackingRows,[new Date(record.observed_at).toLocaleString("ko-KR",{timeZone:"Asia/Seoul"}),`${record.name || record.symbol} (${record.symbol})`,percent(record.model_probability_pct),result(1),result(4),result(12),result(24),percent(record.peak_gross_pct),drivers]);
+    });
+    if (!(tracking.recent || []).length) row(trackingRows,["—","첫 추천 기록 대기","—","—","—","—","—","—","—"]);
     data.limitations.forEach(text=>{const li=document.createElement("li");li.textContent=text;document.querySelector("#limitations").append(li);});
   } catch {
     document.querySelector("#status").textContent="연구 기록이 아직 없거나 불러오지 못했습니다. 첫 수집 완료 후 표시됩니다. 성과를 0%로 간주하지 마세요.";

@@ -14,6 +14,7 @@ from .email_report import send_email
 from .indicators import annualized_volatility, ema, macd, pct_change, rsi, volume_ratio
 from .major_events import build_major_events, load_manual_events
 from .providers import MarketDataClient
+from .research import surge_feedback
 from .scoring import alt_score, market_regime, recommendation_label, timeframe_score
 from .stock_analysis import generate_stock_reports
 from .surge_prediction import build_surge_research
@@ -435,7 +436,15 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         major_events = []
         warnings.append(f"주요 시장 이벤트 구성 실패: {warning_reason(exc)}")
     try:
-        surge_research = build_surge_research(analyzed, bitcoin.get("history") or [], major_events)
+        research_path = Path("research-state/state.json")
+        research_state = json.loads(research_path.read_text(encoding="utf-8")) if research_path.exists() else {}
+        forward_feedback = surge_feedback(research_state)
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        forward_feedback = surge_feedback({})
+    try:
+        surge_research = build_surge_research(
+            analyzed, bitcoin.get("history") or [], major_events, forward_feedback
+        )
     except Exception as exc:
         surge_research = {
             "status": "생성 실패",

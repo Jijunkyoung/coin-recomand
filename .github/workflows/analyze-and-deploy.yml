@@ -84,6 +84,13 @@ jobs:
           KIS_SCHEDULER_KEY: ${{ secrets.KIS_SCHEDULER_KEY }}
           REQUIRE_MEMBER_STOCK_PROFILE: "true"
         run: python scripts/load_member_stock_profile.py
+      - name: Restore paper research ledger
+        id: research_restore
+        continue-on-error: true
+        env:
+          GH_API_TOKEN: ${{ github.token }}
+          RESEARCH_ALLOW_BOOTSTRAP: ${{ ((github.event_name == 'workflow_dispatch' && inputs.initialize_research) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[initialize-research]'))) && 'true' || 'false' }}
+        run: python scripts/restore_research.py
       - name: Generate latest analysis
         env:
           COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
@@ -132,15 +139,11 @@ jobs:
           path: stock-delivery-marker/status.txt
           retention-days: 3
           if-no-files-found: error
-      - name: Restore and evaluate paper research
+      - name: Evaluate paper research
         id: research
+        if: steps.research_restore.outcome == 'success'
         continue-on-error: true
-        env:
-          GH_API_TOKEN: ${{ github.token }}
-          RESEARCH_ALLOW_BOOTSTRAP: ${{ ((github.event_name == 'workflow_dispatch' && inputs.initialize_research) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[initialize-research]'))) && 'true' || 'false' }}
-        run: |
-          python scripts/restore_research.py
-          python -m src.research
+        run: python -m src.research
       - name: Preserve paper research ledger
         if: steps.research.outcome == 'success'
         uses: actions/upload-artifact@v4

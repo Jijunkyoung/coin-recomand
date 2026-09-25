@@ -24,5 +24,8 @@ select { background:var(--surface-2); color:var(--text); padding:8px; border:1px
 .surge-table td:nth-child(3) { color:#8fdfff; font-weight:700; }
 .compact-limitations { margin-top:18px; padding-left:20px; }
 .compact-limitations li { margin-top:4px; font-size:.82rem; }
+.tracking-table { min-width:1080px; }
+.tracking-table th:last-child,.tracking-table td:last-child { text-align:left; min-width:240px; }
+.tracking-panel #trackingCauseNote { font-size:.82rem; }
 @media(max-width:600px) { main { padding:20px 12px; } .panel { padding:16px; } }
 @media(max-width:760px) { .surge-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .surge-heading { align-items:center; } }

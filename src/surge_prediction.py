@@ -321,6 +321,7 @@ def _candidate_row(
     model: dict[str, Any],
     btc: dict[str, dict[str, float]],
     major_events: list[dict[str, Any]],
+    forward_feedback: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     rows = _clean_history(coin.get("history") or [])
     if not rows:
@@ -350,13 +351,21 @@ def _candidate_row(
         for event in major_events
         if coin.get("symbol") in (event.get("related_symbols") or [])
     ][:2]
+    adjustments = (forward_feedback or {}).get("reason_adjustments") or {}
+    matched_adjustments = [(reason, adjustments[reason]) for reason in reasons if reason in adjustments]
+    feedback_adjustment = mean(value for _, value in matched_adjustments) if matched_adjustments else 0.0
+    feedback_adjustment = _clip(feedback_adjustment, -5.0, 5.0)
+    adjusted_score = _clip(probability * 100 + feedback_adjustment, 0.0, 100.0)
     return {
         "market": coin.get("market"),
         "symbol": coin.get("symbol"),
         "name": coin.get("name"),
         "price": coin.get("price"),
         "model_probability_pct": round(probability * 100, 1),
-        "signal_score": round(probability * 100),
+        "signal_score": round(adjusted_score, 1),
+        "feedback_adjusted_score": round(adjusted_score, 1),
+        "feedback_adjustment_pct_points": round(feedback_adjustment, 2),
+        "feedback_notes": [f"{reason} 과거 추적 {value:+.2f}점" for reason, value in matched_adjustments],
         "reasons": reasons or ["복합 기술신호"],
         "risks": risks,
         "watch_status": "추격 주의" if risks and return_1d >= 10 else "관찰 후보",
@@ -372,6 +381,7 @@ def build_surge_research(
     coins: list[dict[str, Any]],
     bitcoin_history: list[dict[str, Any]],
     major_events: list[dict[str, Any]] | None = None,
+    forward_feedback: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     samples = build_samples(coins, bitcoin_history)
     dates = {row["date"] for row in samples}
@@ -384,6 +394,10 @@ def build_surge_research(
         "positive_samples": positives,
         "observed_days": len(dates),
         "validation": None,
+        "forward_feedback": {
+            key: (forward_feedback or {}).get(key)
+            for key in ("status", "completed", "hits", "hit_rate_pct", "minimum_for_adjustment")
+        },
         "candidates": [],
         "limitations": [
             "급등 가능성은 통계적 연구 점수이며 매수 성공 확률이나 수익을 보장하지 않습니다.",
@@ -399,10 +413,10 @@ def build_surge_research(
     btc = _btc_context(bitcoin_history)
     candidates = [
         row for row in (
-            _candidate_row(coin, model, btc, major_events or []) for coin in coins
+            _candidate_row(coin, model, btc, major_events or [], forward_feedback) for coin in coins
         ) if row is not None
     ]
-    candidates.sort(key=lambda row: (row["model_probability_pct"], row.get("trade_value_24h") or 0), reverse=True)
+    candidates.sort(key=lambda row: (row["feedback_adjusted_score"], row["model_probability_pct"], row.get("trade_value_24h") or 0), reverse=True)
     auc = validation.get("auc")
     confidence = "높음" if len(samples) >= 2500 and positives >= 40 and auc is not None and auc >= 0.65 else "보통" if auc is not None else "낮음"
     base.update({
