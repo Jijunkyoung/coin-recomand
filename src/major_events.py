@@ -9,6 +9,15 @@ from typing import Any
 
 KST = timezone(timedelta(hours=9))
 IMPORTANCE_ORDER = {"매우 높음": 0, "높음": 1, "보통": 2}
+NEGATIVE_EVENT_POINTS = {"매우 높음": 12, "높음": 8, "보통": 4}
+NEGATIVE_TERMS = (
+    "해킹", "해커", "탈취", "공격", "취약점", "exploit", "hack", "상장폐지", "거래 중단",
+    "피소", "기소", "금지", "급락", "폭락", "청산", "파산", "횡령", "유출", "배후 의혹",
+)
+POSITIVE_TERMS = (
+    "승인", "승소", "기각", "무혐의", "복구", "회수", "피해 차단", "해결", "상장", "파트너십",
+    "출시", "업그레이드", "투자 유치", "신고가", "급등", "소각",
+)
 
 EVENT_TYPES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("법안·규제", ("clarity", "클래리티", "법안", "표결", "투표", "의회", "규제", "sec", "cftc", "금융위원회", "금융감독원", "판결", "소송", "과세", "세금")),
@@ -57,6 +66,39 @@ def _importance(text: str, supplied: Any = None) -> str:
     if any(term in lowered for term in HIGH_TERMS):
         return "높음"
     return "보통"
+
+
+def _impact(text: str, supplied: Any = None) -> str:
+    supplied_text = _clean(supplied)
+    if supplied_text.startswith("악재"):
+        return "악재 가능"
+    if supplied_text.startswith("호재"):
+        return "호재 가능"
+    lowered = text.lower()
+    negative = sum(term in lowered for term in NEGATIVE_TERMS)
+    positive = sum(term in lowered for term in POSITIVE_TERMS)
+    if "상장폐지" in lowered:
+        positive -= int("상장" in lowered)
+    return "악재 가능" if negative > positive else "호재 가능" if positive > negative else "중립·혼재"
+
+
+def negative_event_risk(symbol: str, events: list[dict[str, Any]], cap: int = 16) -> dict[str, Any]:
+    """Return deduplicated, bounded penalties for current negative events related to a coin."""
+    related: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for event in events:
+        if str(symbol).upper() not in {str(item).upper() for item in event.get("related_symbols") or []}:
+            continue
+        if not str(event.get("impact") or "").startswith("악재"):
+            continue
+        key = str(event.get("id") or event.get("source_url") or event.get("title") or "")
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        penalty = NEGATIVE_EVENT_POINTS.get(str(event.get("importance") or "보통"), 4)
+        related.append({**event, "score_penalty": penalty})
+    related.sort(key=lambda event: (IMPORTANCE_ORDER.get(str(event.get("importance")), 3), event.get("title") or ""))
+    return {"penalty": min(cap, sum(event["score_penalty"] for event in related)), "events": related}
 
 
 def _parse_date(value: Any) -> date | None:
@@ -120,6 +162,7 @@ def _normalize_event(row: dict[str, Any], today: date, origin: str) -> dict[str,
         event_date = _date_from_headline(title, today) or _parse_date(row.get("published_at"))
     event_type = _clean(row.get("event_type")) or _event_type(" ".join([title, *map(str, row.get("categories") or [])]))
     importance = _importance(title, row.get("importance"))
+    impact = _impact(" ".join([title, _clean(row.get("summary"))]), row.get("impact"))
     bull_case, bear_case = _scenarios(event_type)
     days_until = (event_date - today).days if event_date else None
     is_news = origin in {"news", "official"}
@@ -137,6 +180,8 @@ def _normalize_event(row: dict[str, Any], today: date, origin: str) -> dict[str,
         "title": title[:220],
         "event_type": event_type,
         "importance": importance,
+        "impact": impact,
+        "score_penalty": NEGATIVE_EVENT_POINTS.get(importance, 4) if impact == "악재 가능" else 0,
         "status": status,
         "verification": _clean(row.get("verification")) or ("고정 등록" if origin == "manual" else "정부·규제기관 공식 발표" if origin == "official" else "공식 일정 확인 필요" if is_scheduled_news else "보도 원문 확인" if origin == "news" else "외부 일정 참고"),
         "date": event_date.isoformat() if event_date else None,

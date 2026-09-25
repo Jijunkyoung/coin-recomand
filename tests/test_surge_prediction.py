@@ -117,6 +117,19 @@ class SurgePredictionTests(unittest.TestCase):
         self.assertEqual(candidate["feedback_adjustment_pct_points"], 3.0)
         self.assertAlmostEqual(candidate["feedback_adjusted_score"], candidate["model_probability_pct"] + 3.0, places=1)
 
+    def test_current_negative_event_marks_and_reduces_risk_adjusted_score(self):
+        baseline = build_surge_research(self.coins, self.bitcoin)
+        event = {"id": "c0-hack", "title": "C0 해킹 탈취 피해", "importance": "높음",
+                 "impact": "악재 가능", "score_penalty": 8, "related_symbols": ["C0"]}
+        adjusted = build_surge_research(self.coins, self.bitcoin, [event])
+        before = next(row for row in baseline["candidates"] if row["symbol"] == "C0")
+        after = next(row for row in adjusted["candidates"] if row["symbol"] == "C0")
+        self.assertEqual(after["model_probability_pct"], before["model_probability_pct"])
+        self.assertEqual(after["event_risk_penalty"], 8)
+        self.assertAlmostEqual(after["feedback_adjusted_score"], before["feedback_adjusted_score"] - 8, places=1)
+        self.assertEqual(after["watch_status"], "악재 주의")
+        self.assertIn("🚨 [악재]", after["risks"][0])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -11,6 +11,8 @@ from collections import defaultdict
 from statistics import mean, pstdev
 from typing import Any
 
+from .major_events import negative_event_risk
+
 
 FEATURES = (
     "return_1d",
@@ -346,16 +348,24 @@ def _candidate_row(
         {
             "title": event.get("title"),
             "importance": event.get("importance") or event.get("impact") or "보통",
+            "impact": event.get("impact") or "중립·혼재",
+            "score_penalty": event.get("score_penalty") or 0,
             "source_url": event.get("source_url") or event.get("url"),
         }
         for event in major_events
         if coin.get("symbol") in (event.get("related_symbols") or [])
     ][:2]
+    event_risk = negative_event_risk(str(coin.get("symbol") or ""), major_events)
+    if event_risk["penalty"]:
+        risks = [
+            f"🚨 [악재] {event.get('title')} (중요도 {event.get('importance', '보통')} · -{event['score_penalty']}점)"
+            for event in event_risk["events"][:2]
+        ] + risks
     adjustments = (forward_feedback or {}).get("reason_adjustments") or {}
     matched_adjustments = [(reason, adjustments[reason]) for reason in reasons if reason in adjustments]
     feedback_adjustment = mean(value for _, value in matched_adjustments) if matched_adjustments else 0.0
     feedback_adjustment = _clip(feedback_adjustment, -5.0, 5.0)
-    adjusted_score = _clip(probability * 100 + feedback_adjustment, 0.0, 100.0)
+    adjusted_score = _clip(probability * 100 + feedback_adjustment - event_risk["penalty"], 0.0, 100.0)
     return {
         "market": coin.get("market"),
         "symbol": coin.get("symbol"),
@@ -366,9 +376,10 @@ def _candidate_row(
         "feedback_adjusted_score": round(adjusted_score, 1),
         "feedback_adjustment_pct_points": round(feedback_adjustment, 2),
         "feedback_notes": [f"{reason} 과거 추적 {value:+.2f}점" for reason, value in matched_adjustments],
+        "event_risk_penalty": event_risk["penalty"],
         "reasons": reasons or ["복합 기술신호"],
         "risks": risks,
-        "watch_status": "추격 주의" if risks and return_1d >= 10 else "관찰 후보",
+        "watch_status": "악재 주의" if event_risk["penalty"] else "추격 주의" if risks and return_1d >= 10 else "관찰 후보",
         "volume_ratio_20d": round(values["volume_ratio"], 2),
         "relative_7d_pct": round(values["relative_7d"] * 100, 2),
         "development_signal": development,
@@ -402,8 +413,8 @@ def build_surge_research(
         "limitations": [
             "급등 가능성은 통계적 연구 점수이며 매수 성공 확률이나 수익을 보장하지 않습니다.",
             "일봉 기반이므로 장중 급등 후 급락과 실제 체결 가능성을 완전히 반영하지 못합니다.",
-            "개발·뉴스 신호는 과거 시점 데이터 누락으로 가격모델 학습에는 넣지 않고 현재 보조 근거로만 표시합니다.",
-            "실제 주문과 기존 추천점수에는 반영하지 않으며 시간순 모의검증 결과를 먼저 축적합니다.",
+            "개발·뉴스 신호는 과거 시점 데이터 누락으로 가격모델 학습에는 넣지 않습니다. 현재 직접 관련된 악재만 중요도별 4·8·12점, 합계 최대 16점 감점합니다.",
+            "급등 모델 확률은 기존 추천점수나 실제 주문에 반영하지 않으며 시간순 모의검증 결과를 먼저 축적합니다.",
         ],
     }
     if len(samples) < 400 or positives < 12 or len(dates) < 60:

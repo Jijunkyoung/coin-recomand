@@ -1,10 +1,22 @@
 import unittest
 from unittest.mock import patch
 
-from src.main import InsufficientHistoryError, build_report, technical_metrics, warning_reason
+from src.main import (InsufficientHistoryError, apply_negative_event_penalties,
+                      build_report, technical_metrics, warning_reason)
 
 
 class MainAnalysisTests(unittest.TestCase):
+    def test_negative_event_reduces_score_and_marks_reason(self):
+        coins = [{"symbol": "XRP", "score": 90, "risks": [], "decision": "분할매수 후보"}]
+        events = [{"id": "xrp-hack", "title": "XRP 탈취 피해", "importance": "높음",
+                   "impact": "악재 가능", "related_symbols": ["XRP"]}]
+        apply_negative_event_penalties(coins, events, "상승")
+        self.assertEqual(coins[0]["score_before_event_risk"], 90)
+        self.assertEqual(coins[0]["score"], 82)
+        self.assertEqual(coins[0]["event_risk_penalty"], 8)
+        self.assertEqual(coins[0]["decision"], "관찰")
+        self.assertIn("🚨 [악재]", coins[0]["risks"][0])
+
     @staticmethod
     def candles():
         return [
