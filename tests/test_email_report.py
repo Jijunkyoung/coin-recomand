@@ -116,6 +116,14 @@ class EmailReportTests(unittest.TestCase):
         messages = [call.args[0] for call in smtp_ssl.return_value.__enter__.return_value.send_message.call_args_list]
         self.assertEqual(messages[1]["To"], "owner@example.com")
 
+    @patch.dict("os.environ", {"SMTP_HOST": "smtp.example.com", "SMTP_PORT": "465", "SMTP_USERNAME": "sender@example.com", "SMTP_PASSWORD": "secret", "EMAIL_TO": "fallback@example.com", "MEMBER_COIN_EMAIL_TO": "browser@example.com", "EMAIL_REPORT_SCOPE": "coin"}, clear=True)
+    @patch("src.email_report.smtplib.SMTP_SSL")
+    def test_member_coin_recipient_overrides_global_list(self, smtp_ssl):
+        report = {"generated_at_kst": "2026-09-17 07:30 KST", "market": {"regime": "중립", "score": 50, "bitcoin": {"price": 100, "mvrv_z": 1.2}, "liquidity": {}}, "recommendations": [], "news_issues": [], "upcoming_events": []}
+        self.assertTrue(send_email(report))
+        message = smtp_ssl.return_value.__enter__.return_value.send_message.call_args.args[0]
+        self.assertEqual(message["To"], "browser@example.com")
+
     @patch.dict("os.environ", {"SMTP_HOST": "smtp.example.com", "SMTP_PORT": "465", "SMTP_USERNAME": "sender@example.com", "SMTP_PASSWORD": "secret", "EMAIL_TO": "coin@example.com", "MEMBER_STOCK_EMAIL_TO": "owner@example.com", "EMAIL_REPORT_SCOPE": "stock", "TEST_EMAIL": "true"}, clear=True)
     @patch("src.email_report.smtplib.SMTP_SSL")
     def test_stock_only_scope_never_sends_coin_email(self, smtp_ssl):

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="비트코인 시장 국면과 알트코인 정량 지표 분석 대시보드">
   <title>Coin Signal Desk</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="auth.css">
+  <link rel="stylesheet" href="styles.css?v=20260925-2">
+  <link rel="stylesheet" href="auth.css?v=20260925-2">
 </head>
 <body>
   <header class="topbar">
@@ -61,15 +61,7 @@
         <span class="detail-hint">상세차트 보기 <span aria-hidden="true">↗</span></span>
       </article>
     </section>
-
-    <section class="major-events-section" aria-labelledby="majorEventsTitle">
-      <div class="major-events-head">
-        <div><span class="eyebrow">MARKET MOVING EVENTS</span><h2 id="majorEventsTitle">주요 시장 이벤트</h2><p>법안·FOMC·경제지표·ETF·대규모 언락처럼 시장 영향이 큰 일정만 별도로 추적합니다.</p></div>
-        <div class="major-event-controls"><span id="majorEventCount">—건 추적</span><div id="majorEventFilters" class="major-event-filters" role="tablist" aria-label="주요 이벤트 필터"><button type="button" class="active" data-event-filter="all" role="tab" aria-selected="true">전체</button><button type="button" data-event-filter="soon" role="tab" aria-selected="false">7일 이내</button><button type="button" data-event-filter="verify" role="tab" aria-selected="false">확인 필요</button></div></div>
-      </div>
-      <div id="majorEventsGrid" class="major-events-grid" aria-live="polite"><p class="major-event-empty">주요 이벤트를 확인하고 있습니다.</p></div>
-      <p class="major-events-note">일정 존재만으로 추천점수를 올리지 않습니다. 공식 결과가 확인되기 전에는 변동성·위험 관리 정보로만 사용합니다.</p>
-    </section>
+    <section id="upbitPortfolio" class="account-portfolio" hidden aria-live="polite"></section>
 
     <section class="section-block" aria-labelledby="recommendTitle">
       <div class="section-head">
@@ -120,6 +112,15 @@
       </article>
     </section>
 
+    <section class="major-events-section" aria-labelledby="majorEventsTitle">
+      <div class="major-events-head">
+        <div><span class="eyebrow">MARKET MOVING EVENTS</span><h2 id="majorEventsTitle">주요 시장 이벤트</h2><p>법안·FOMC·경제지표·ETF·대규모 언락처럼 시장 영향이 큰 일정만 별도로 추적합니다.</p></div>
+        <div class="major-event-controls"><span id="majorEventCount">—건 추적</span><div id="majorEventFilters" class="major-event-filters" role="tablist" aria-label="주요 이벤트 필터"><button type="button" class="active" data-event-filter="all" role="tab" aria-selected="true">전체</button><button type="button" data-event-filter="soon" role="tab" aria-selected="false">7일 이내</button><button type="button" data-event-filter="verify" role="tab" aria-selected="false">확인 필요</button></div></div>
+      </div>
+      <div id="majorEventsGrid" class="major-events-grid" aria-live="polite"><p class="major-event-empty">주요 이벤트를 확인하고 있습니다.</p></div>
+      <p class="major-events-note">일정 존재만으로 추천점수를 올리지 않습니다. 공식 결과가 확인되기 전에는 변동성·위험 관리 정보로만 사용합니다.</p>
+    </section>
+
     <section class="panel methodology-panel" aria-labelledby="methodologyTitle">
       <div class="methodology-head">
         <div><span class="eyebrow">SCORING METHODOLOGY</span><h2 id="methodologyTitle">판정 원칙</h2></div>
@@ -162,20 +163,11 @@
       </div>
       <label for="emailRecipients">코인 보고서를 받을 이메일 주소</label>
       <textarea id="emailRecipients" rows="5" placeholder="me@example.com&#10;team@example.com"></textarea>
-      <p class="email-help">한 줄에 하나씩 입력하거나 쉼표로 구분할 수 있습니다. 입력값은 이 브라우저에만 저장되며 공개되지 않습니다.</p>
-      <div class="email-secret-warning"><strong>중요</strong><span>아래 입력란은 주소 작성·복사용입니다. 실제 예약 발송 주소는 GitHub의 <code>EMAIL_TO</code> Secret을 수정해야 변경됩니다.</span></div>
+      <p class="email-help">한 줄에 하나씩 입력하거나 쉼표로 구분할 수 있습니다. 로그인 계정에 저장되며 다른 회원에게 공개되지 않습니다.</p>
       <div id="emailRecipientPreview" class="email-recipient-preview" aria-live="polite"></div>
       <div class="email-dialog-actions">
-        <button type="button" id="saveEmailRecipients" class="secondary-button">브라우저 목록만 저장</button>
-        <button type="button" id="copyEmailSecret" class="primary-button">EMAIL_TO 값 복사</button>
-        <a href="https://github.com/Jijunkyoung/coin-recomand/settings/secrets/actions" target="_blank" rel="noopener" class="secret-link">실제 발송주소 변경</a>
-        <a id="testEmailButton" href="https://github.com/Jijunkyoung/coin-recomand/actions/workflows/analyze-and-deploy.yml" target="_blank" rel="noopener" class="test-email-link">테스트 발송 화면 열기</a>
+        <button type="button" id="saveEmailRecipients" class="primary-button">저장하고 자동 적용</button>
       </div>
-      <div class="secret-guide">
-        <strong>실제 발송주소 변경 방법</strong>
-        <ol><li>새 주소 입력 후 <b>EMAIL_TO 값 복사</b></li><li><b>실제 발송주소 변경</b>에서 기존 <code>EMAIL_TO</code> 선택</li><li><b>Update secret</b> → 복사한 주소 붙여넣기 → <b>Save changes</b></li><li>테스트 메일로 적용 여부 확인</li></ol>
-      </div>
-      <div class="test-email-guide"><strong>테스트 발송</strong><p><b>버튼을 누르는 것만으로는 메일이 발송되지 않습니다.</b> 입력란이 아니라 현재 GitHub <code>EMAIL_TO</code> Secret으로 발송됩니다. <b>테스트 발송 화면 열기</b> → <b>Run workflow</b> → <b>메일 발송</b> 체크 → 초록색 <b>Run workflow</b> 순서로 실행하세요.</p></div>
       <p id="emailSettingsStatus" class="email-settings-status" aria-live="polite"></p>
     </div>
   </dialog>
@@ -191,9 +183,9 @@
       <span class="detail-hint">상세차트 보기 <span aria-hidden="true">↗</span></span>
     </article>
   </template>
-  <script src="supabase-runtime-config.js?v=20260923-2" defer></script>
-  <script src="vendor/supabase.min.js?v=20260923-2" defer></script>
-  <script src="auth.js?v=20260924-2" defer></script>
-  <script src="app.js" defer></script>
+  <script src="supabase-runtime-config.js?v=20260925-2" defer></script>
+  <script src="vendor/supabase.min.js?v=20260925-2" defer></script>
+  <script src="auth.js?v=20260925-2" defer></script>
+  <script src="app.js?v=20260925-2" defer></script>
 </body>
 </html>

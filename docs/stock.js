@@ -41,7 +41,7 @@ function portfolioCurrency(value, code) { return code === "USD" ? `$${fmt(value,
 function renderPortfolio(data) {
   const panel=$("#accountPortfolio"); if(!panel)return;
   if(!data){panel.hidden=true;return}
-  const positions=(data.positions||[]).filter(item=>item.market===market), label=market==="us"?"미국":"국내", currencyCode=market==="us"?"USD":"KRW";
+  const positions=(data.positions||[]).filter(item=>item.market===market).sort((left,right)=>Number(right.evaluation_amount||0)-Number(left.evaluation_amount||0)), label=market==="us"?"미국":"국내", currencyCode=market==="us"?"USD":"KRW";
   const evaluation=positions.reduce((sum,item)=>sum+Number(item.evaluation_amount||0),0), profit=positions.reduce((sum,item)=>sum+Number(item.profit_loss||0),0), cost=evaluation-profit, rate=cost?profit/cost*100:0;
   const changes=data.changes||{}, changeItems=[];
   for(const item of changes.added||[])if(item.market===market)changeItems.push(`<span class="portfolio-change added">신규 ${escapeHTML(item.name||item.symbol)}</span>`);

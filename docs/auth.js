@@ -15,6 +15,8 @@
   let profile = null;
   let portfolio = null;
   let portfolioSync = null;
+  let upbitPortfolio = null;
+  let upbitPortfolioSync = null;
 
   const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
   const local = key => localStorage.getItem(key) || "";
@@ -44,6 +46,7 @@
           <div class="profile-grid"><label class="auth-field">코인 보고서 수신목록<textarea id="profileCoinEmail" rows="3" placeholder="coin@example.com&#10;team@example.com"></textarea></label><label class="auth-field">주식 보고서 수신목록<textarea id="profileStockEmail" rows="3" placeholder="stock@example.com&#10;team@example.com"></textarea></label></div>
           <div class="profile-grid"><label class="auth-field">미국 보유주식<textarea id="profileHoldingsUs" rows="4" placeholder="AAPL|애플&#10;NVDA|엔비디아"></textarea></label><label class="auth-field">국내 보유주식<textarea id="profileHoldingsKr" rows="4" placeholder="005930|삼성전자&#10;000660|SK하이닉스"></textarea></label></div>
           <div class="broker-sync-row"><div><strong>한국투자증권 계좌 자동 동기화</strong><span id="brokerSyncStatus">주식 페이지에 로그인하면 자동으로 갱신합니다.</span></div><button type="button" id="brokerSyncButton">지금 동기화</button></div>
+          <div class="broker-sync-row"><div><strong>업비트 계좌 자동 동기화</strong><span id="upbitSyncStatus">코인 페이지에 로그인하면 자동으로 갱신합니다.</span></div><button type="button" id="upbitSyncButton">지금 동기화</button></div>
           <label class="auth-field">관심분야</label><div id="profileSectors" class="profile-sectors">${sectors.map(([id,label]) => `<label><input type="checkbox" value="${id}"><span>${label}</span></label>`).join("")}</div>
           <div class="auth-profile-actions"><button type="submit" class="auth-submit">내 설정 저장</button><button type="button" id="logoutButton" class="auth-logout">로그아웃</button></div>
           <p class="auth-help">설정은 로그인한 회원 본인만 읽고 수정할 수 있습니다.</p>
@@ -91,6 +94,8 @@
   }
   function portfolioCacheKey() { return user ? `kis-portfolio-${user.id}` : ""; }
   function dispatchPortfolio() { window.dispatchEvent(new CustomEvent("kis-portfolio-sync", { detail: portfolio })); }
+  function upbitCacheKey() { return user ? `upbit-portfolio-${user.id}` : ""; }
+  function dispatchUpbitPortfolio() { window.dispatchEvent(new CustomEvent("upbit-portfolio-sync", { detail: upbitPortfolio })); }
   function setBrokerStatus(message, error = false) { const node = $("#brokerSyncStatus"); if (!node) return; node.textContent = message; node.classList.toggle("error", error); }
   function cachedPortfolio() {
     try { return JSON.parse(sessionStorage.getItem(portfolioCacheKey()) || "null"); } catch { return null; }
@@ -120,6 +125,26 @@
     })().catch(error => { setBrokerStatus(error.message, true); throw error; }).finally(() => { portfolioSync = null; });
     return portfolioSync;
   }
+  async function syncCryptoHoldings({ force = false } = {}) {
+    if (!client || !user) throw new Error("로그인이 필요합니다.");
+    if (!document.querySelector("#upbitPortfolio") && !force) return null;
+    let cached = null; try { cached = JSON.parse(sessionStorage.getItem(upbitCacheKey()) || "null"); } catch { /* ignore invalid cache */ }
+    if (cached) { upbitPortfolio = cached; dispatchUpbitPortfolio(); }
+    if (!force && cached?.synced_at && Date.now() - Date.parse(cached.synced_at) < 5 * 60 * 1000) {
+      setUpbitStatus(`${new Date(cached.synced_at).toLocaleString("ko-KR")} 동기화 완료`); return cached;
+    }
+    if (upbitPortfolioSync) return upbitPortfolioSync;
+    setUpbitStatus("업비트 계좌를 불러오는 중입니다.");
+    upbitPortfolioSync = (async () => {
+      const { data, error } = await client.functions.invoke("upbit-portfolio", { body: {} });
+      if (error) throw new Error(await functionErrorMessage(error));
+      if (data?.error) throw new Error(data.error);
+      upbitPortfolio = data; sessionStorage.setItem(upbitCacheKey(), JSON.stringify(data)); dispatchUpbitPortfolio();
+      setUpbitStatus(`${new Date(data.synced_at).toLocaleString("ko-KR")} 동기화 완료`); return data;
+    })().catch(error => { setUpbitStatus(error.message, true); throw error; }).finally(() => { upbitPortfolioSync = null; });
+    return upbitPortfolioSync;
+  }
+  function setUpbitStatus(message, error = false) { const node = $("#upbitSyncStatus"); if (!node) return; node.textContent = message; node.classList.toggle("error", error); }
   function renderProfile() {
     $("#profileAccountEmail").textContent = `로그인 계정 · ${user?.email || ""}`;
     $("#profileCoinEmail").value = profile?.coin_email || user?.email || ""; $("#profileStockEmail").value = profile?.stock_email || user?.email || "";
@@ -146,6 +171,7 @@
     profile = data || defaultProfile(); syncLocal(profile); renderProfile();
     window.dispatchEvent(new CustomEvent("coin-auth-change", { detail: { user, profile } }));
     syncBrokerageHoldings().catch(() => {});
+    syncCryptoHoldings().catch(() => {});
   }
   async function savePreferences(partial) {
     if (!client || !user) throw new Error("로그인이 필요합니다.");
@@ -154,7 +180,7 @@
     if (error) throw error; profile = data; syncLocal(profile); renderProfile();
     window.dispatchEvent(new CustomEvent("coin-auth-change", { detail: { user, profile } })); return profile;
   }
-  window.CoinAuth = { configured, get user() { return user; }, get profile() { return profile; }, get portfolio() { return portfolio; }, savePreferences, syncBrokerageHoldings, open: openDialog };
+  window.CoinAuth = { configured, get user() { return user; }, get profile() { return profile; }, get portfolio() { return portfolio; }, get upbitPortfolio() { return upbitPortfolio; }, savePreferences, syncBrokerageHoldings, syncCryptoHoldings, open: openDialog };
   renderActions();
   $("#authClose").addEventListener("click", () => dialog.close()); dialog.addEventListener("click", e => { if (e.target === dialog) dialog.close(); });
   document.querySelectorAll("[data-auth-mode]").forEach(b => b.addEventListener("click", () => showMode(b.dataset.authMode)));
@@ -163,8 +189,9 @@
   $("#profileForm").addEventListener("submit", async event => { event.preventDefault(); setBusy(event.currentTarget, true); try { await savePreferences({ coin_email: $("#profileCoinEmail").value.trim() || null, stock_email: $("#profileStockEmail").value.trim() || null, holdings_us: $("#profileHoldingsUs").value.trim(), holdings_kr: $("#profileHoldingsKr").value.trim(), sector_ids: [...$("#profileSectors").querySelectorAll("input:checked")].map(x => x.value) }); status("회원별 맞춤 설정을 저장했습니다."); } catch (error) { status(error.message, true); } finally { setBusy(event.currentTarget, false); } });
   $("#logoutButton").addEventListener("click", async () => { await client?.auth.signOut(); dialog.close(); });
   $("#brokerSyncButton").addEventListener("click", async event => { const button=event.currentTarget; button.disabled=true; try { await syncBrokerageHoldings({force:true}); status("계좌 보유현황을 갱신했습니다."); } catch(error) { status(error.message,true); } finally { button.disabled=false; } });
+  $("#upbitSyncButton").addEventListener("click", async event => { const button=event.currentTarget; button.disabled=true; try { await syncCryptoHoldings({force:true}); status("업비트 보유현황을 갱신했습니다."); } catch(error) { status(error.message,true); } finally { button.disabled=false; } });
   if (client) {
     client.auth.getSession().then(({ data }) => { user = data.session?.user || null; renderActions(); if (user) loadProfile(); });
-    client.auth.onAuthStateChange((_event, session) => { user = session?.user || null; profile = user ? profile : null; portfolio = user ? portfolio : null; renderActions(); if (user) setTimeout(loadProfile, 0); window.dispatchEvent(new CustomEvent("coin-auth-change", { detail: { user, profile } })); });
+    client.auth.onAuthStateChange((_event, session) => { user = session?.user || null; profile = user ? profile : null; portfolio = user ? portfolio : null; upbitPortfolio = user ? upbitPortfolio : null; renderActions(); if (user) setTimeout(loadProfile, 0); window.dispatchEvent(new CustomEvent("coin-auth-change", { detail: { user, profile } })); if(!user)dispatchUpbitPortfolio(); });
   }
 })();
