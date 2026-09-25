@@ -49,6 +49,13 @@ jobs:
           FORCE_SEND: ${{ github.event_name == 'workflow_dispatch' && inputs.force_send }}
           DELIVERY_MARKER_SCOPE: stock
         run: python scripts/check_daily_email_delivery.py
+      - name: Load browser-saved member settings
+        if: steps.coin_delivery.outputs.should_send == 'true' || steps.stock_delivery.outputs.should_send == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          KIS_SCHEDULER_KEY: ${{ secrets.KIS_SCHEDULER_KEY }}
+        run: python scripts/load_member_settings.py
       - name: Load owner's live KIS portfolio for mail
         id: kis_profile
         if: steps.stock_delivery.outputs.should_send == 'true'

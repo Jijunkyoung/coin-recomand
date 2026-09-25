@@ -14,7 +14,7 @@ class MemberAuthTests(unittest.TestCase):
             page = (ROOT / "docs" / name).read_text(encoding="utf-8")
             self.assertRegex(page, r'src="supabase-runtime-config\.js\?v=[^"]+"')
             self.assertRegex(page, r'src="auth\.js\?v=[^"]+"')
-            self.assertIn('href="auth.css"', page)
+            self.assertRegex(page, r'href="auth\.css(?:\?v=[^"]+)?"')
 
     def test_auth_library_is_served_locally_and_signup_recovers_from_errors(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html"):
@@ -38,6 +38,11 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn('id="profileCoinEmail"', auth)
         self.assertIn('id="profileStockEmail"', auth)
         self.assertIn('coin_email: parsed.valid.join("\\n")', coin_page)
+        self.assertIn("GitHub Actions 설정 없이", coin_page)
+        self.assertNotIn("copyEmailSecret", coin_page)
+        index = (ROOT / "docs/index.html").read_text(encoding="utf-8")
+        self.assertIn("저장하고 자동 적용", index)
+        self.assertNotIn("settings/secrets/actions", index)
 
     def test_rls_is_limited_to_authenticated_owner(self):
         sql = (ROOT / "supabase/migrations/20260915_user_preferences.sql").read_text(encoding="utf-8")
@@ -94,6 +99,29 @@ class MemberAuthTests(unittest.TestCase):
         self.assertNotIn("profile = { ...defaultProfile(), ...(profile || {}), holdings_us:", browser)
         config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
         self.assertIn("verify_jwt = false", config)
+
+    def test_upbit_portfolio_is_owner_only_and_secrets_stay_server_side(self):
+        edge = (ROOT / "supabase/functions/upbit-portfolio/index.ts").read_text(encoding="utf-8")
+        browser = (ROOT / "docs/auth.js").read_text(encoding="utf-8")
+        self.assertIn('env("KIS_OWNER_USER_ID")', edge)
+        self.assertIn("user.id === ownerId", edge)
+        self.assertIn('env("UPBIT_ACCESS_KEY")', edge)
+        self.assertIn('env("UPBIT_SECRET_KEY")', edge)
+        self.assertIn('env("UPBIT_PROXY_URL")', edge)
+        self.assertIn('client.functions.invoke("upbit-portfolio"', browser)
+        self.assertNotIn("UPBIT_SECRET_KEY", browser)
+        self.assertIn('id="upbitPortfolio"', (ROOT / "docs/index.html").read_text(encoding="utf-8"))
+        self.assertIn('addEventListener("upbit-portfolio-sync"', (ROOT / "docs/app.js").read_text(encoding="utf-8"))
+
+    def test_asset_rows_are_sorted_by_current_value(self):
+        stock = (ROOT / "docs/stock.js").read_text(encoding="utf-8")
+        coin = (ROOT / "docs/app.js").read_text(encoding="utf-8")
+        self.assertIn("right.evaluation_amount", stock)
+        self.assertIn("right.evaluation_amount", coin)
+
+    def test_major_events_are_before_methodology(self):
+        page = (ROOT / "docs/index.html").read_text(encoding="utf-8")
+        self.assertLess(page.index('class="major-events-section"'), page.index('class="panel methodology-panel"'))
 
     def test_kis_snapshots_are_owner_only_and_used_for_changes(self):
         migration = (ROOT / "supabase" / "migrations" / "20260917_kis_portfolio_snapshots.sql").read_text(encoding="utf-8")

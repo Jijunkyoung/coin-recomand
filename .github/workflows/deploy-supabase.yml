@@ -87,3 +87,7 @@ jobs:
         run: supabase secrets set KIS_OWNER_USER_ID="$BOUND_KIS_OWNER_USER_ID" --project-ref "$SUPABASE_PROJECT_REF"
       - name: Deploy KIS portfolio function
         run: supabase functions deploy kis-portfolio --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
+      - name: Deploy owner settings function
+        run: supabase functions deploy owner-settings --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
+      - name: Deploy Upbit portfolio function
+        run: supabase functions deploy upbit-portfolio --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt

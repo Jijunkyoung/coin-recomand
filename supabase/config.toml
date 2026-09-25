@@ -2,3 +2,9 @@ project_id = "coin-recomand"
 
 [functions.kis-portfolio]
 verify_jwt = false
+
+[functions.owner-settings]
+verify_jwt = false
+
+[functions.upbit-portfolio]
+verify_jwt = false

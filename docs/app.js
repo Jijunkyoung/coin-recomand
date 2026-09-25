@@ -101,9 +101,27 @@ function updateEmailPreview() {
 }
 
 function openEmailSettings() {
-  $("#emailRecipients").value = localStorage.getItem(EMAIL_STORAGE_KEY) || "";
+  $("#emailRecipients").value = window.CoinAuth?.profile?.coin_email || localStorage.getItem(EMAIL_STORAGE_KEY) || "";
+  $("#saveEmailRecipients").disabled = !window.CoinAuth?.user;
   updateEmailPreview();
+  if (!window.CoinAuth?.user) {
+    $("#emailSettingsStatus").classList.add("error");
+    $("#emailSettingsStatus").textContent = "자동 적용하려면 먼저 로그인해 주세요.";
+  }
   $("#emailDialog").showModal();
+}
+
+function renderUpbitPortfolio(data) {
+  const panel = $("#upbitPortfolio"); if (!panel) return;
+  if (!data || !window.CoinAuth?.user) { panel.hidden = true; panel.innerHTML = ""; return; }
+  const positions = [...(data.positions || [])].sort((left, right) => Number(right.evaluation_amount || 0) - Number(left.evaluation_amount || 0));
+  const evaluation = positions.reduce((sum, item) => sum + Number(item.evaluation_amount || 0), 0);
+  const profit = positions.filter(item => item.symbol !== "KRW").reduce((sum, item) => sum + Number(item.profit_loss || 0), 0);
+  const coinName = item => altRankings.find(coin => String(coin.symbol).toUpperCase() === String(item.symbol).toUpperCase())?.name || item.name || item.symbol;
+  panel.hidden = false;
+  panel.innerHTML = `<div class="section-head"><div><span class="eyebrow">MY UPBIT PORTFOLIO</span><h2>내 업비트 보유현황</h2></div><p>${escapeHTML(new Date(data.synced_at).toLocaleString("ko-KR"))} 기준 · 평가금액순</p></div>
+    <div class="portfolio-summary"><div><span>보유 자산</span><strong>${positions.length}개</strong></div><div><span>총 평가금액</span><strong>₩${fmt(evaluation,0)}</strong></div><div><span>평가손익</span><strong class="price-change ${profit >= 0 ? "up" : "down"}">₩${fmt(profit,0)}</strong></div></div>
+    ${positions.length ? `<div class="portfolio-list">${positions.map(item => `<div class="crypto-portfolio-row"><span><strong>${escapeHTML(coinName(item))}</strong><small>${escapeHTML(item.symbol)} · ${fmt(item.quantity,8)}</small></span><span><small>현재가</small><strong>₩${fmt(item.current_price,4)}</strong></span><span><small>일간 등락률</small><strong class="price-change ${Number(item.daily_change_rate)>=0?"up":"down"}">${pct(item.daily_change_rate)}</strong></span><span><small>평가금액</small><strong>₩${fmt(item.evaluation_amount,0)}</strong></span><span><small>평가손익</small><strong class="price-change ${Number(item.profit_loss)>=0?"up":"down"}">₩${fmt(item.profit_loss,0)} · ${pct(item.profit_rate)}</strong></span></div>`).join("")}</div>` : `<p class="portfolio-empty">조회된 업비트 보유자산이 없습니다.</p>`}`;
 }
 
 function toggleQualityNote(forceOpen) {
@@ -748,43 +766,28 @@ $("#emailSettingsButton").addEventListener("click", openEmailSettings);
 $("#emailDialogClose").addEventListener("click", () => $("#emailDialog").close());
 $("#emailDialog").addEventListener("click", event => { if (event.target === event.currentTarget) event.currentTarget.close(); });
 $("#emailRecipients").addEventListener("input", updateEmailPreview);
-$("#saveEmailRecipients").addEventListener("click", async () => {
+$("#saveEmailRecipients").addEventListener("click", async event => {
   const parsed = updateEmailPreview();
   if (parsed.invalid.length || !parsed.valid.length) return;
-  localStorage.setItem(EMAIL_STORAGE_KEY, parsed.valid.join("\n"));
-  if (window.CoinAuth?.user) {
-    try {
-      await window.CoinAuth.savePreferences({ coin_email: parsed.valid.join("\n") });
-      $("#emailSettingsStatus").classList.remove("error");
-      $("#emailSettingsStatus").textContent = "로그인 회원의 코인 보고서 주소를 저장했습니다.";
-    } catch (error) {
-      $("#emailSettingsStatus").classList.add("error");
-      $("#emailSettingsStatus").textContent = `회원 설정 저장 실패: ${error.message}`;
-    }
-  } else {
+  if (!window.CoinAuth?.user) {
     $("#emailSettingsStatus").classList.add("error");
-    $("#emailSettingsStatus").textContent = "브라우저에만 저장했습니다. 로그인하면 회원별 주소로 저장됩니다.";
+    $("#emailSettingsStatus").textContent = "자동 적용하려면 먼저 로그인해 주세요.";
+    return;
   }
-});
-$("#copyEmailSecret").addEventListener("click", async () => {
-  const parsed = updateEmailPreview();
-  if (parsed.invalid.length || !parsed.valid.length) return;
-  const value = parsed.valid.join(",");
-  localStorage.setItem(EMAIL_STORAGE_KEY, parsed.valid.join("\n"));
+  const button=event.currentTarget, original=button.textContent; button.disabled=true; button.textContent="저장 중…";
   try {
-    await navigator.clipboard.writeText(value);
+    await window.CoinAuth.savePreferences({ coin_email: parsed.valid.join("\n") });
     $("#emailSettingsStatus").classList.remove("error");
-    $("#emailSettingsStatus").textContent = "EMAIL_TO 값이 복사됐습니다. ‘실제 발송주소 변경’에서 기존 EMAIL_TO의 Update secret을 눌러 붙여넣으세요.";
-  } catch {
-    $("#emailRecipients").value = value;
-    $("#emailRecipients").select();
-    $("#emailSettingsStatus").textContent = "자동 복사가 차단됐습니다. 선택된 주소를 직접 복사해 주세요.";
-  }
+    $("#emailSettingsStatus").textContent = "저장 완료. GitHub Actions 설정 없이 다음 오전 7시 30분 코인 메일부터 적용됩니다.";
+  } catch (error) {
+    $("#emailSettingsStatus").classList.add("error");
+    $("#emailSettingsStatus").textContent = `회원 설정 저장 실패: ${error.message}`;
+  } finally { button.disabled=false; button.textContent=original; }
 });
-$("#testEmailButton").addEventListener("click", () => {
-  $("#emailSettingsStatus").classList.remove("error");
-  $("#emailSettingsStatus").textContent = "GitHub Actions에서 Run workflow를 누르고 ‘메일 발송’을 체크하면 현재 EMAIL_TO Secret 주소로 테스트 보고서가 발송됩니다.";
-});
+
+window.addEventListener("upbit-portfolio-sync", event => renderUpbitPortfolio(event.detail));
+window.addEventListener("coin-auth-change", event => { if (!event.detail?.user) renderUpbitPortfolio(null); });
+if (window.CoinAuth?.upbitPortfolio) renderUpbitPortfolio(window.CoinAuth.upbitPortfolio);
 
 async function loadLatestReport() {
   try {
