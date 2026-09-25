@@ -16,6 +16,7 @@ from .major_events import build_major_events, load_manual_events
 from .providers import MarketDataClient
 from .scoring import alt_score, market_regime, recommendation_label, timeframe_score
 from .stock_analysis import generate_stock_reports
+from .surge_prediction import build_surge_research
 
 KST = timezone(timedelta(hours=9))
 
@@ -433,6 +434,21 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
     except Exception as exc:
         major_events = []
         warnings.append(f"주요 시장 이벤트 구성 실패: {warning_reason(exc)}")
+    try:
+        surge_research = build_surge_research(analyzed, bitcoin.get("history") or [], major_events)
+    except Exception as exc:
+        surge_research = {
+            "status": "생성 실패",
+            "model": "정규화 로지스틱 회귀",
+            "target": "다음 24시간 급등 후보",
+            "samples": 0,
+            "positive_samples": 0,
+            "observed_days": 0,
+            "validation": None,
+            "candidates": [],
+            "limitations": ["급등 연구 모델을 생성하지 못했습니다. 기존 추천과 실제 주문에는 영향이 없습니다."],
+        }
+        warnings.append(f"24시간 급등 연구모델 생성 실패: {warning_reason(exc)}")
     ranking_fields = (
         "rank", "market", "symbol", "name", "english_name", "score", "decision", "analysis_scope", "recommendation_eligible", "reasons", "risks",
         "price", "ema20", "ema50", "rsi", "macd_histogram", "return_1d", "return_7d", "return_30d", "volume_ratio",
@@ -457,6 +473,7 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
         "news_issues": news_issues,
         "upcoming_events": upcoming_events,
         "major_events": major_events,
+        "surge_research": surge_research,
         "alt_rankings": alt_rankings,
         "screened": len(analyzed),
         "methodology": {
