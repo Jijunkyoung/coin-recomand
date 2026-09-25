@@ -1,6 +1,25 @@
 {
   "events": [
     {
+      "id": "xrp-bitget-hack-2026-09-25",
+      "title": "리플(XRP), 비트겟 해킹에 1억 290만 개 탈취…3억 5100만 달러 피해, 북한 라자루스 배후 의혹도",
+      "event_type": "보안",
+      "importance": "높음",
+      "impact": "악재 가능",
+      "status": "발표",
+      "verification": "보도 원문 확인",
+      "date": "2026-09-25",
+      "time_kst": null,
+      "related_symbols": ["XRP"],
+      "summary": "비트겟 관련 해킹·탈취 피해 보도로 XRP의 단기 투자심리와 매도 압력 위험을 추적합니다.",
+      "bull_case": "피해 범위 제한과 자금 회수, 추가 유출 방지 확인 시 불안 완화 가능",
+      "bear_case": "탈취 물량 이동·매도 또는 추가 피해 확인 시 XRP 변동성 확대 가능",
+      "source": "Google News 보도",
+      "source_url": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE9PZnZyWjFqaWUzVFVpQllrd1NOdGoyTWVpVmlrdlc4a3huZ09OanZValNjUUlOZFBMUUwyWlNySVUwUGRJMEdPX0NUZ2xGSHU0bEw4UjhZVHhjWlRhWEtpZmZ2SFFYaWtW?oc=5",
+      "official_source": false,
+      "last_verified": "2026-09-25"
+    },
+    {
       "id": "clarity-act-related-vote-2026-09-16",
       "title": "미국 CLARITY 법안 관련 표결 일정",
       "event_type": "법안·규제",

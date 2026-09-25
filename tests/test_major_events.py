@@ -84,6 +84,15 @@ class MajorEventTests(unittest.TestCase):
         self.assertEqual(risk["penalty"], 8)
         self.assertEqual(len(risk["events"]), 1)
 
+    def test_positive_reversal_headline_overrides_crude_negative_keyword(self):
+        events = build_major_events([], [{
+            "title": "ETF 58억달러 순유출서 순유입으로 전환", "importance": "높음",
+            "impact": "악재 가능", "published_at": "2026-09-14T01:00:00+00:00",
+            "related_symbols": ["BTC"],
+        }], [], now=self.NOW)
+        self.assertEqual(events[0]["impact"], "호재 가능")
+        self.assertEqual(events[0]["score_penalty"], 0)
+
     def test_loads_versioned_manual_event_file(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "events.json"

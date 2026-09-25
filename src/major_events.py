@@ -18,6 +18,10 @@ POSITIVE_TERMS = (
     "승인", "승소", "기각", "무혐의", "복구", "회수", "피해 차단", "해결", "상장", "파트너십",
     "출시", "업그레이드", "투자 유치", "신고가", "급등", "소각",
 )
+POSITIVE_REVERSAL_TERMS = (
+    "순유입으로 전환", "순유입 전환", "유입으로 전환", "소송 취하", "피해 복구", "전액 회수",
+    "자금 회수", "취약점 수정", "취약점 해결", "공격 차단",
+)
 
 EVENT_TYPES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("법안·규제", ("clarity", "클래리티", "법안", "표결", "투표", "의회", "규제", "sec", "cftc", "금융위원회", "금융감독원", "판결", "소송", "과세", "세금")),
@@ -69,12 +73,14 @@ def _importance(text: str, supplied: Any = None) -> str:
 
 
 def _impact(text: str, supplied: Any = None) -> str:
+    lowered = text.lower()
+    if any(term in lowered for term in POSITIVE_REVERSAL_TERMS):
+        return "호재 가능"
     supplied_text = _clean(supplied)
     if supplied_text.startswith("악재"):
         return "악재 가능"
     if supplied_text.startswith("호재"):
         return "호재 가능"
-    lowered = text.lower()
     negative = sum(term in lowered for term in NEGATIVE_TERMS)
     positive = sum(term in lowered for term in POSITIVE_TERMS)
     if "상장폐지" in lowered:
