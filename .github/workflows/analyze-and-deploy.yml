@@ -67,6 +67,9 @@ jobs:
         run: |
           python -m unittest discover -s tests -v
           node --check docs/research.js
+          node --check docs/auth.js
+          node --check docs/portfolio-export.js
+          node --check docs/stock.js
           node tests/research_ui.cjs
       - name: Load browser-saved member settings
         continue-on-error: true

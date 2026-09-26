@@ -160,12 +160,13 @@ def build_stock_email_html(stock_reports: dict[str, dict[str, Any]]) -> str:
     position_rows = []
     for item in portfolio.get("positions") or []:
         symbol, name = html.escape(str(item.get("symbol") or "")), html.escape(str(item.get("name") or ""))
+        broker = "토스증권" if item.get("broker") == "toss" else "한국투자증권"
         prefix = "$" if str(item.get("currency") or "KRW") == "USD" else "₩"
         profit = float(item.get("profit_loss") or 0)
         daily_rate = item.get("daily_change_rate")
         daily_color = "#52657d" if daily_rate is None else "#c62828" if float(daily_rate) >= 0 else "#1565c0"
         position_rows.append(
-            f"<tr><td style='padding:8px;border-bottom:1px solid #e3e9f0'><b>{name}</b><br><span style='color:#52657d;font-size:10px'>{symbol} · {float(item.get('quantity') or 0):,.4f}주</span></td>"
+            f"<tr><td style='padding:8px;border-bottom:1px solid #e3e9f0'><span style='color:#1d5fbd;font-size:9px;font-weight:700'>{broker}</span><br><b>{name}</b><br><span style='color:#52657d;font-size:10px'>{symbol} · {float(item.get('quantity') or 0):,.4f}주</span></td>"
             f"<td style='padding:8px;text-align:right;border-bottom:1px solid #e3e9f0'><span style='color:#52657d;font-size:10px'>현재가</span><br>{prefix}{float(item.get('current_price') or 0):,.2f}<br><span style='font-size:10px;color:{daily_color}'>일간 {_pct(daily_rate, 2)}</span></td>"
             f"<td style='padding:8px;text-align:right;border-bottom:1px solid #e3e9f0'><span style='color:#52657d;font-size:10px'>평가액</span><br>{prefix}{float(item.get('evaluation_amount') or 0):,.2f}</td>"
             f"<td style='padding:8px;text-align:right;border-bottom:1px solid #e3e9f0;color:{'#c62828' if profit >= 0 else '#1565c0'}'><span style='color:#52657d;font-size:10px'>평가손익</span><br>{prefix}{profit:+,.2f}<br><span style='font-size:10px'>{_pct(item.get('profit_rate'))}</span></td></tr>"
@@ -183,7 +184,7 @@ def build_stock_email_html(stock_reports: dict[str, dict[str, Any]]) -> str:
         rows = "".join(position_rows) or '<tr><td style="padding:8px">조회된 보유종목이 없습니다.</td></tr>'
         portfolio_html = (
             "<div style='margin-top:24px;padding:17px;border:1px solid #b9cbe0;border-radius:12px;background:#ffffff;color:#10233f'>"
-            "<h2 style='margin:0 0 4px;color:#10233f;font-size:18px'>내 한국투자증권 계좌</h2>"
+            "<h2 style='margin:0 0 4px;color:#10233f;font-size:18px'>내 통합 주식 계좌</h2>"
             f"<p style='margin:0 0 10px;color:#52657d;font-size:11px'>비교 기준 {baseline_text} · {html.escape(str(portfolio.get('synced_at') or ''))} 조회</p>"
             f"<p style='margin:0 0 10px;color:#263b55;font-size:12px'><b>보유 변동</b> {' · '.join(change_labels) if change_labels else '신규·매도·수량 변동 없음'}</p>"
             f"<table role='presentation' style='width:100%;border-collapse:collapse;font-size:12px'>{rows}</table></div>"

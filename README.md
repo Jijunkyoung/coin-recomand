@@ -69,6 +69,9 @@ python -m http.server 8000 --directory docs
 | `STOCK_EMAIL_TO` | 주식 보고서 수신주소, 복수 주소 지원 | `stock@example.com` |
 | `KIS_APP_KEY` | 한국투자증권 Open API App Key | KIS Developers에서 발급 |
 | `KIS_APP_SECRET` | 한국투자증권 Open API App Secret | KIS Developers에서 발급 |
+| `TOSSINVEST_CLIENT_ID` | 토스증권 Open API Client ID | 토스증권 Open API에서 발급 |
+| `TOSSINVEST_CLIENT_SECRET` | 토스증권 Open API Client Secret | 토스증권 Open API에서 발급 |
+| `TOSSINVEST_ACCOUNT` | 토스증권 accountSeq(선택) | 비우면 종합매매 계좌를 자동 선택 |
 | `STOCK_HOLDINGS_US` | 미국 보유종목 뉴스 대상 | `AAPL\|애플,NVDA\|엔비디아` |
 | `STOCK_HOLDINGS_KR` | 국내 보유종목 뉴스 대상 | `005930\|삼성전자,000660\|SK하이닉스` |
 | `STOCK_SECTORS` | 분석·뉴스를 수집할 섹터 ID | `defense,semiconductor,energy` |
@@ -104,6 +107,19 @@ python -m http.server 8000 --directory docs
 5. 대시보드에서 로그아웃 후 다시 로그인하고 미국주식 또는 국내주식 페이지를 열어 `내 보유현황` 카드와 동기화 시각을 확인합니다.
 
 GitHub Actions에 등록한 `KIS_APP_KEY`, `KIS_APP_SECRET`은 Supabase로 자동 복사되지 않으므로 2단계에 별도로 한 번 등록해야 합니다. 실전투자용 TR ID를 사용하므로 모의투자 App Key와 계좌는 지원하지 않습니다.
+
+### 토스증권 계좌를 조회목록에 합치기
+
+토스증권 공식 Open API의 읽기 전용 계좌 목록·보유주식 조회를 사용합니다. 로그인한 소유자 한 명에게만 한국투자증권과 토스증권 종목을 같은 목록으로 보여주며, Client Secret과 accountSeq는 브라우저·정적 JSON·데이터베이스에 저장하지 않습니다. 주문 생성·정정·취소 API는 호출하지 않습니다.
+
+1. 토스증권 계좌를 준비하고 [토스증권 Open API](https://corp.tossinvest.com/ko/open-api)에서 **오픈 API Key 발급**을 누릅니다.
+2. 토스증권 계정으로 본인인증과 이용 동의를 완료한 뒤 발급된 Client ID와 Client Secret을 안전하게 보관합니다.
+3. GitHub 저장소 **Settings → Secrets and variables → Actions → New repository secret**에서 `TOSSINVEST_CLIENT_ID`, `TOSSINVEST_CLIENT_SECRET`을 등록합니다.
+4. 계좌가 하나면 `TOSSINVEST_ACCOUNT`는 등록하지 않아도 됩니다. 여러 종합매매 계좌 중 특정 계좌를 고정하려면 공식 계좌 목록 API에서 확인한 accountSeq를 `TOSSINVEST_ACCOUNT`로 등록합니다.
+5. **Actions → Deploy Supabase backend → Run workflow**를 한 번 실행합니다. 워크플로가 비밀값을 Supabase Edge Function Secret으로 전달하고 함수와 일별 기록 테이블을 배포합니다.
+6. 배포 후 대시보드에서 로그아웃·로그인하고 미국주식 또는 국내주식 페이지의 **지금 동기화**를 누릅니다. 각 행에 한국투자증권 또는 토스증권 표시가 붙고 평가금액 순으로 합쳐집니다.
+
+계좌 동기화가 실행될 때마다 한국시간 날짜 기준으로 그날의 마지막 보유현황을 갱신합니다. 주식 페이지의 **일별 기록 엑셀 다운로드**는 최근 366일의 종목별 수량·현재가·평가금액·평가손익·수익률·일간등락률과 KRW/USD 총액, 두 통화의 추이 차트를 포함한 `.xlsx`를 만듭니다. 원화와 달러는 환율 가정 없이 합산하지 않습니다.
 
 ### 내 KIS 계좌 변동·개인 주식메일 연결
 

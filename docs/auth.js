@@ -45,7 +45,7 @@
           <p id="profileAccountEmail" class="profile-email"></p>
           <div class="profile-grid"><label class="auth-field">코인 보고서 수신목록<textarea id="profileCoinEmail" rows="3" placeholder="coin@example.com&#10;team@example.com"></textarea></label><label class="auth-field">주식 보고서 수신목록<textarea id="profileStockEmail" rows="3" placeholder="stock@example.com&#10;team@example.com"></textarea></label></div>
           <div class="profile-grid"><label class="auth-field">미국 보유주식<textarea id="profileHoldingsUs" rows="4" placeholder="AAPL|애플&#10;NVDA|엔비디아"></textarea></label><label class="auth-field">국내 보유주식<textarea id="profileHoldingsKr" rows="4" placeholder="005930|삼성전자&#10;000660|SK하이닉스"></textarea></label></div>
-          <div class="broker-sync-row"><div><strong>한국투자증권 계좌 자동 동기화</strong><span id="brokerSyncStatus">주식 페이지에 로그인하면 자동으로 갱신합니다.</span></div><button type="button" id="brokerSyncButton">지금 동기화</button></div>
+          <div class="broker-sync-row"><div><strong>한국투자증권·토스증권 통합 동기화</strong><span id="brokerSyncStatus">주식 페이지에 로그인하면 두 계좌를 자동으로 합쳐 갱신합니다.</span></div><button type="button" id="brokerSyncButton">지금 동기화</button></div>
           <div class="broker-sync-row"><div><strong>업비트 계좌 자동 동기화</strong><span id="upbitSyncStatus">코인 페이지에 로그인하면 자동으로 갱신합니다.</span></div><button type="button" id="upbitSyncButton">지금 동기화</button></div>
           <label class="auth-field">관심분야</label><div id="profileSectors" class="profile-sectors">${sectors.map(([id,label]) => `<label><input type="checkbox" value="${id}"><span>${label}</span></label>`).join("")}</div>
           <div class="auth-profile-actions"><button type="submit" class="auth-submit">내 설정 저장</button><button type="button" id="logoutButton" class="auth-logout">로그아웃</button></div>
@@ -112,7 +112,7 @@
       setBrokerStatus(`${new Date(cached.synced_at).toLocaleString("ko-KR")} 동기화 완료`); return cached;
     }
     if (portfolioSync) return portfolioSync;
-    setBrokerStatus("한국투자증권 계좌를 불러오는 중입니다.");
+    setBrokerStatus("연결된 주식 계좌를 불러오는 중입니다.");
     portfolioSync = (async () => {
       const { data, error } = await client.functions.invoke("kis-portfolio", { body: {} });
       if (error) throw new Error(await functionErrorMessage(error));

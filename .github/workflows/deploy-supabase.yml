@@ -27,6 +27,9 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: pgtxtnggjqaysjhtdepz
       KIS_OWNER_EMAIL_CANDIDATE: ${{ secrets.KIS_OWNER_EMAIL || secrets.STOCK_EMAIL_TO }}
+      TOSSINVEST_CLIENT_ID: ${{ secrets.TOSSINVEST_CLIENT_ID }}
+      TOSSINVEST_CLIENT_SECRET: ${{ secrets.TOSSINVEST_CLIENT_SECRET }}
+      TOSSINVEST_ACCOUNT: ${{ secrets.TOSSINVEST_ACCOUNT }}
       SMTP_HOST: ${{ secrets.SMTP_HOST }}
       SMTP_PORT: ${{ secrets.SMTP_PORT }}
       SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
@@ -85,7 +88,20 @@ jobs:
       - name: Bind KIS access to the confirmed account id
         if: contains(github.event.head_commit.message, '[bind-sole-owner]')
         run: supabase secrets set KIS_OWNER_USER_ID="$BOUND_KIS_OWNER_USER_ID" --project-ref "$SUPABASE_PROJECT_REF"
-      - name: Deploy KIS portfolio function
+      - name: Configure optional Toss Securities Open API
+        shell: bash
+        run: |
+          if [ -z "$TOSSINVEST_CLIENT_ID" ] && [ -z "$TOSSINVEST_CLIENT_SECRET" ]; then
+            echo "Toss Securities API is not configured yet; KIS-only portfolio remains active."
+            exit 0
+          fi
+          test -n "$TOSSINVEST_CLIENT_ID" || { echo "TOSSINVEST_CLIENT_ID secret is missing"; exit 1; }
+          test -n "$TOSSINVEST_CLIENT_SECRET" || { echo "TOSSINVEST_CLIENT_SECRET secret is missing"; exit 1; }
+          supabase secrets set TOSSINVEST_CLIENT_ID="$TOSSINVEST_CLIENT_ID" TOSSINVEST_CLIENT_SECRET="$TOSSINVEST_CLIENT_SECRET" --project-ref "$SUPABASE_PROJECT_REF"
+          if [ -n "$TOSSINVEST_ACCOUNT" ]; then
+            supabase secrets set TOSSINVEST_ACCOUNT="$TOSSINVEST_ACCOUNT" --project-ref "$SUPABASE_PROJECT_REF"
+          fi
+      - name: Deploy combined stock portfolio function
         run: supabase functions deploy kis-portfolio --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
       - name: Deploy owner settings function
         run: supabase functions deploy owner-settings --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
