@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import zipfile
 
 
 ROOT = Path(__file__).parents[1]
@@ -150,6 +151,49 @@ class MemberAuthTests(unittest.TestCase):
             page = (ROOT / "docs" / name).read_text(encoding="utf-8")
             self.assertIn("저장하고 자동 적용", page)
             self.assertNotIn("settings/secrets/actions", page)
+
+    def test_toss_securities_is_server_side_and_merged_with_kis(self):
+        edge = (ROOT / "supabase/functions/kis-portfolio/index.ts").read_text(encoding="utf-8")
+        browser = (ROOT / "docs/auth.js").read_text(encoding="utf-8") + (ROOT / "docs/stock.js").read_text(encoding="utf-8")
+        self.assertIn('env("TOSSINVEST_CLIENT_ID")', edge)
+        self.assertIn('env("TOSSINVEST_CLIENT_SECRET")', edge)
+        self.assertIn('"https://openapi.tossinvest.com/oauth2/token"', edge)
+        self.assertIn('tossGet("/api/v1/accounts"', edge)
+        self.assertIn('tossGet("/api/v1/holdings"', edge)
+        self.assertIn('headers["X-Tossinvest-Account"]', edge)
+        self.assertIn('broker: "toss"', edge)
+        self.assertIn("positionKey", edge)
+        self.assertIn("토스증권", browser)
+        self.assertNotIn("TOSSINVEST_CLIENT_SECRET", browser)
+
+    def test_daily_stock_history_is_owner_only(self):
+        migration = (ROOT / "supabase/migrations/20260926_stock_portfolio_daily_snapshots.sql").read_text(encoding="utf-8")
+        edge = (ROOT / "supabase/functions/kis-portfolio/index.ts").read_text(encoding="utf-8")
+        self.assertIn("unique (user_id, snapshot_date)", migration)
+        self.assertIn("enable row level security", migration.lower())
+        self.assertIn("(select auth.uid()) = user_id", migration)
+        self.assertIn("revoke all on table public.stock_portfolio_daily_snapshots from anon", migration)
+        self.assertIn('.from("stock_portfolio_daily_snapshots")', edge)
+        self.assertIn('onConflict: "user_id,snapshot_date"', edge)
+        self.assertIn("history: (history || []).reverse()", edge)
+
+    def test_excel_history_download_keeps_native_charts(self):
+        exporter = (ROOT / "docs/portfolio-export.js").read_text(encoding="utf-8")
+        template = ROOT / "docs/assets/stock-portfolio-history-template.xlsx"
+        self.assertIn('stock-portfolio-history-${latest.snapshot_date}.xlsx', exporter)
+        self.assertIn('xl/worksheets/sheet2.xml', exporter)
+        self.assertIn('xl/worksheets/sheet3.xml', exporter)
+        self.assertIn("latestTotals", exporter)
+        self.assertGreater(template.stat().st_size, 50_000)
+        with zipfile.ZipFile(template) as workbook:
+            names = set(workbook.namelist())
+            self.assertIn("xl/drawings/charts/chart1.xml", names)
+            self.assertIn("xl/drawings/charts/chart2.xml", names)
+        for name in ("us-stocks.html", "kr-stocks.html"):
+            page = (ROOT / "docs" / name).read_text(encoding="utf-8")
+            self.assertIn('src="vendor/jszip.min.js', page)
+            self.assertIn('src="portfolio-export.js', page)
+        self.assertGreater((ROOT / "docs/vendor/jszip.min.js").stat().st_size, 50_000)
 
     def test_research_tab_is_next_to_coin(self):
         for name in ("index.html", "us-stocks.html", "kr-stocks.html", "research.html"):
