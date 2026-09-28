@@ -38,8 +38,40 @@ type Position = {
   currency: Currency;
 };
 type Snapshot = { positions?: Position[]; captured_at?: string; snapshot_date?: string };
+type Connection = { configured: boolean; ok: boolean; source?: "direct" | "local_pc"; synced_at?: string | null };
 
 function positionKey(item: Position) { return `${item.broker}:${item.market}:${item.symbol}`; }
+
+async function sameSecret(expected: string, supplied: string) {
+  if (!expected || !supplied) return false;
+  const encoder = new TextEncoder();
+  const [left, right] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
+    crypto.subtle.digest("SHA-256", encoder.encode(supplied)),
+  ]);
+  const leftBytes = new Uint8Array(left), rightBytes = new Uint8Array(right);
+  let difference = leftBytes.length ^ rightBytes.length;
+  for (let index = 0; index < leftBytes.length; index += 1) difference |= leftBytes[index] ^ (rightBytes[index] || 0);
+  return difference === 0;
+}
+
+function localTossPositions(value: unknown): Position[] {
+  if (!Array.isArray(value) || value.length > 500) throw new Error("토스증권 업로드 종목 형식이 올바르지 않습니다.");
+  const positions: Position[] = [];
+  for (const row of value as Record<string, unknown>[]) {
+    const market = textValue(row.market).toLowerCase(), symbol = textValue(row.symbol).toUpperCase().slice(0, 32);
+    const quantity = numberValue(row.quantity), currency = market === "us" ? "USD" : market === "kr" ? "KRW" : "";
+    if (!symbol || !currency || quantity <= 0) continue;
+    positions.push({
+      broker: "toss", market: market as Market, symbol, name: (textValue(row.name) || symbol).slice(0, 120), quantity,
+      average_price: Math.max(0, numberValue(row.average_price)), current_price: Math.max(0, numberValue(row.current_price)),
+      evaluation_amount: Math.max(0, numberValue(row.evaluation_amount)), profit_loss: numberValue(row.profit_loss),
+      profit_rate: numberValue(row.profit_rate), daily_change_rate: row.daily_change_rate == null ? null : numberValue(row.daily_change_rate),
+      currency: currency as Currency,
+    });
+  }
+  return positions;
+}
 
 function marketTotals(positions: Position[]) {
   const result = {
@@ -213,12 +245,28 @@ function kstDate(value = new Date()) {
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
+    const body = request.method === "POST" ? await request.json().catch(() => ({})) as Record<string, unknown> : {};
     const authorization = request.headers.get("Authorization") || "", ownerId = env("KIS_OWNER_USER_ID"), ownerEmail = env("KIS_OWNER_EMAIL").toLowerCase();
     const schedulerSecret = env("KIS_SCHEDULER_KEY"), requestApiKey = request.headers.get("apikey") || "", serverAdminKey = adminKey();
-    const schedulerMode = Boolean((schedulerSecret && request.headers.get("x-kis-scheduler-key") === schedulerSecret) || (serverAdminKey && requestApiKey === serverAdminKey));
-    if (!schedulerMode && !authorization.startsWith("Bearer ")) throw new Error("로그인이 필요합니다.");
     if (!serverAdminKey) throw new Error("Supabase 서버 인증값이 설정되지 않았습니다.");
     const supabase = createClient(env("SUPABASE_URL"), serverAdminKey);
+
+    if (body.action === "upload_toss_positions") {
+      const allowed = await sameSecret(env("TOSS_LOCAL_SYNC_KEY"), request.headers.get("x-toss-local-sync-key") || "");
+      if (!allowed) return new Response(JSON.stringify({ error: "토스 로컬 동기화 인증값이 올바르지 않습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
+      if (!ownerId) return new Response(JSON.stringify({ error: "증권계좌 소유자 ID 설정이 필요합니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
+      const uploaded = localTossPositions(body.positions), syncedAt = new Date().toISOString();
+      const { error: uploadError } = await supabase.from("stock_broker_sync_state").upsert({
+        user_id: ownerId, broker: "toss", positions: uploaded, source: "local_pc", synced_at: syncedAt,
+      }, { onConflict: "user_id,broker" });
+      if (uploadError) throw new Error(`토스증권 로컬 자료 저장 실패: ${uploadError.message}`);
+      return new Response(JSON.stringify({ ok: true, broker: "toss", positions_count: uploaded.length, synced_at: syncedAt }), {
+        headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "no-store" },
+      });
+    }
+
+    const schedulerMode = Boolean((schedulerSecret && request.headers.get("x-kis-scheduler-key") === schedulerSecret) || (serverAdminKey && requestApiKey === serverAdminKey));
+    if (!schedulerMode && !authorization.startsWith("Bearer ")) throw new Error("로그인이 필요합니다.");
     let userId = ownerId;
     if (!schedulerMode) {
       const accessToken = authorization.replace(/^Bearer\s+/i, "");
@@ -230,16 +278,33 @@ Deno.serve(async (request) => {
     }
     if (!userId) return new Response(JSON.stringify({ error: "증권계좌 소유자 설정이 완료되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
 
-    const warnings: string[] = [], connections = { kis: { configured: false, ok: false }, toss: { configured: false, ok: false } };
+    const warnings: string[] = [], connections: Record<Broker, Connection> = {
+      kis: { configured: false, ok: false, source: "direct" },
+      toss: { configured: false, ok: false, source: env("TOSS_SYNC_MODE") === "local" ? "local_pc" : "direct", synced_at: null },
+    };
     let positions: Position[] = [];
     try {
       const kis = await loadKisPositions(); connections.kis.configured = kis.configured; connections.kis.ok = kis.configured;
       positions.push(...kis.positions); warnings.push(...kis.warnings);
     } catch (error) { connections.kis.configured = true; warnings.push(`한국투자증권: ${error instanceof Error ? error.message : "조회 실패"}`); }
-    try {
-      const toss = await loadTossPositions(); connections.toss.configured = toss.configured; connections.toss.ok = toss.configured;
-      positions.push(...toss.positions);
-    } catch (error) { connections.toss.configured = true; warnings.push(`토스증권: ${error instanceof Error ? error.message : "조회 실패"}`); }
+    if (env("TOSS_SYNC_MODE") === "local") {
+      connections.toss.configured = true;
+      try {
+        const { data: localToss, error: localTossError } = await supabase.from("stock_broker_sync_state")
+          .select("positions,synced_at").eq("user_id", userId).eq("broker", "toss").maybeSingle();
+        if (localTossError) throw new Error(localTossError.message);
+        if (localToss) {
+          positions.push(...localTossPositions(localToss.positions)); connections.toss.ok = true; connections.toss.synced_at = localToss.synced_at;
+          const ageHours = (Date.now() - Date.parse(localToss.synced_at)) / 3_600_000;
+          if (ageHours > 36) warnings.push(`토스증권: 집 PC 마지막 동기화가 ${Math.floor(ageHours)}시간 전입니다.`);
+        } else warnings.push("토스증권: 집 PC에서 첫 동기화를 실행해 주세요.");
+      } catch (error) { warnings.push(`토스증권: 로컬 동기화 자료 조회 실패: ${error instanceof Error ? error.message : "조회 실패"}`); }
+    } else {
+      try {
+        const toss = await loadTossPositions(); connections.toss.configured = toss.configured; connections.toss.ok = toss.configured; connections.toss.source = "direct";
+        positions.push(...toss.positions);
+      } catch (error) { connections.toss.configured = true; warnings.push(`토스증권: ${error instanceof Error ? error.message : "조회 실패"}`); }
+    }
     if (!connections.kis.configured && !connections.toss.configured) throw new Error("연결된 주식 계좌 API가 없습니다.");
     if (!connections.kis.ok && !connections.toss.ok) throw new Error(warnings.join(" · ") || "주식 계좌 조회에 실패했습니다.");
 

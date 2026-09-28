@@ -165,6 +165,35 @@ class MemberAuthTests(unittest.TestCase):
         self.assertIn("positionKey", edge)
         self.assertIn("토스증권", browser)
         self.assertNotIn("TOSSINVEST_CLIENT_SECRET", browser)
+        self.assertIn("brokerSyncSummary", (ROOT / "docs/auth.js").read_text(encoding="utf-8"))
+        self.assertIn('tossConnection.source==="local_pc"', (ROOT / "docs/stock.js").read_text(encoding="utf-8"))
+
+    def test_toss_local_pc_sync_is_owner_scoped_and_secret_authenticated(self):
+        edge = (ROOT / "supabase/functions/kis-portfolio/index.ts").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/deploy-supabase.yml").read_text(encoding="utf-8")
+        migration = (ROOT / "supabase/migrations/20260928_stock_broker_sync_state.sql").read_text(encoding="utf-8")
+        sync_script = (ROOT / "tools/toss-local-sync/Sync-TossPortfolio.ps1").read_text(encoding="utf-8")
+        setup_script = (ROOT / "tools/toss-local-sync/Setup-TossSync.ps1").read_text(encoding="utf-8")
+
+        self.assertIn('body.action === "upload_toss_positions"', edge)
+        self.assertIn('env("TOSS_LOCAL_SYNC_KEY")', edge)
+        self.assertIn('env("TOSS_SYNC_MODE") === "local"', edge)
+        self.assertIn('.from("stock_broker_sync_state")', edge)
+        self.assertIn('user_id: ownerId, broker: "toss"', edge)
+        self.assertIn('TOSS_LOCAL_SYNC_KEY: ${{ secrets.TOSS_LOCAL_SYNC_KEY }}', workflow)
+        self.assertIn('TOSS_SYNC_MODE="local"', workflow)
+        self.assertIn("enable row level security", migration.lower())
+        self.assertIn("(select auth.uid()) = user_id", migration)
+        self.assertIn("revoke all on table public.stock_broker_sync_state from anon", migration)
+        self.assertIn('action = "upload_toss_positions"', sync_script)
+        self.assertNotIn("/api/v1/orders", sync_script)
+        self.assertIn("ConvertFrom-SecureString", setup_script)
+        self.assertIn("New-ScheduledTaskTrigger -Daily", setup_script)
+        installer = ROOT / "docs/downloads/toss-local-sync.zip"
+        self.assertGreater(installer.stat().st_size, 5_000)
+        with zipfile.ZipFile(installer) as archive:
+            self.assertIn("install-toss-sync.cmd", archive.namelist())
+            self.assertIn("Sync-TossPortfolio.ps1", archive.namelist())
 
     def test_daily_stock_history_is_owner_only(self):
         migration = (ROOT / "supabase/migrations/20260926_stock_portfolio_daily_snapshots.sql").read_text(encoding="utf-8")

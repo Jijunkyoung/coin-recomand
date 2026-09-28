@@ -72,6 +72,7 @@ python -m http.server 8000 --directory docs
 | `TOSSINVEST_CLIENT_ID` | 토스증권 Open API Client ID | 토스증권 Open API에서 발급 |
 | `TOSSINVEST_CLIENT_SECRET` | 토스증권 Open API Client Secret | 토스증권 Open API에서 발급 |
 | `TOSSINVEST_ACCOUNT` | 토스증권 accountSeq(선택) | 비우면 종합매매 계좌를 자동 선택 |
+| `TOSS_LOCAL_SYNC_KEY` | 고정 IP가 없는 Supabase 대신 집 PC에서 결과를 올릴 때 사용하는 임의 인증키 | `tools/toss-local-sync` 설치 프로그램이 생성 |
 | `STOCK_HOLDINGS_US` | 미국 보유종목 뉴스 대상 | `AAPL\|애플,NVDA\|엔비디아` |
 | `STOCK_HOLDINGS_KR` | 국내 보유종목 뉴스 대상 | `005930\|삼성전자,000660\|SK하이닉스` |
 | `STOCK_SECTORS` | 분석·뉴스를 수집할 섹터 ID | `defense,semiconductor,energy` |
@@ -120,6 +121,18 @@ GitHub Actions에 등록한 `KIS_APP_KEY`, `KIS_APP_SECRET`은 Supabase로 자�
 6. 배포 후 대시보드에서 로그아웃·로그인하고 미국주식 또는 국내주식 페이지의 **지금 동기화**를 누릅니다. 각 행에 한국투자증권 또는 토스증권 표시가 붙고 평가금액 순으로 합쳐집니다.
 
 계좌 동기화가 실행될 때마다 한국시간 날짜 기준으로 그날의 마지막 보유현황을 갱신합니다. 주식 페이지의 **일별 기록 엑셀 다운로드**는 최근 366일의 종목별 수량·현재가·평가금액·평가손익·수익률·일간등락률과 KRW/USD 총액, 두 통화의 추이 차트를 포함한 `.xlsx`를 만듭니다. 원화와 달러는 환율 가정 없이 합산하지 않습니다.
+
+#### 허용 IP 오류가 날 때: 집 PC 무료 동기화
+
+`토스증권 토큰 발급 실패: IP address not allowed`가 표시되면 Supabase Edge Function의 발신 IP가 고정되어 있지 않아 토스증권 허용 IP에 등록할 수 없는 경우입니다. 집 PC의 공인 IP를 허용하고 조회 결과만 서버에 올리는 [`tools/toss-local-sync`](tools/toss-local-sync/README.md)를 사용합니다.
+
+1. `tools/toss-local-sync/install-toss-sync.cmd`를 집 Windows PC에서 실행합니다.
+2. 안내된 공인 IP를 토스증권 WTS 허용 IP에 등록하고 API 키를 입력합니다.
+3. 설치 프로그램이 생성한 값을 GitHub Secret `TOSS_LOCAL_SYNC_KEY`로 등록합니다.
+4. **Actions → Deploy Supabase backend → Run workflow**를 실행합니다.
+5. 배포 성공 후 설치창으로 돌아와 첫 동기화를 실행합니다.
+
+API 키는 Windows DPAPI로 암호화되어 해당 Windows 로그인 계정에서만 복호화됩니다. 예약 작업은 매일 오전 7시 10분에 실행되며 주문 관련 API는 호출하지 않습니다. 서버에는 토스 API 키가 아니라 보유종목 조회 결과만 저장됩니다.
 
 ### 내 KIS 계좌 변동·개인 주식메일 연결
 

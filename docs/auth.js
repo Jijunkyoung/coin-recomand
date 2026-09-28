@@ -97,6 +97,17 @@
   function upbitCacheKey() { return user ? `upbit-portfolio-${user.id}` : ""; }
   function dispatchUpbitPortfolio() { window.dispatchEvent(new CustomEvent("upbit-portfolio-sync", { detail: upbitPortfolio })); }
   function setBrokerStatus(message, error = false) { const node = $("#brokerSyncStatus"); if (!node) return; node.textContent = message; node.classList.toggle("error", error); }
+  function brokerSyncSummary(data) {
+    const kis = data?.connections?.kis, toss = data?.connections?.toss, parts = [];
+    if (kis?.configured) parts.push(`한국투자 ${kis.ok ? "성공" : "실패"}`);
+    if (toss?.configured) {
+      const source = toss.source === "local_pc" ? "집 PC" : "서버";
+      const time = toss.synced_at ? ` · ${new Date(toss.synced_at).toLocaleString("ko-KR")}` : "";
+      parts.push(`토스 ${toss.ok ? `${source} 성공${time}` : `${source} 대기`}`);
+    }
+    const warnings = data?.warnings || [], fallback = data?.synced_at ? `${new Date(data.synced_at).toLocaleString("ko-KR")} 동기화 완료` : "계좌 동기화 상태를 확인할 수 없습니다.";
+    return { message: parts.length ? parts.join(" · ") : fallback, error: Boolean(warnings.length || kis?.configured && !kis.ok || toss?.configured && !toss.ok) };
+  }
   function cachedPortfolio() {
     try { return JSON.parse(sessionStorage.getItem(portfolioCacheKey()) || "null"); } catch { return null; }
   }
@@ -120,7 +131,7 @@
       portfolio = data;
       sessionStorage.setItem(portfolioCacheKey(), JSON.stringify(data));
       dispatchPortfolio();
-      setBrokerStatus(`${new Date(data.synced_at).toLocaleString("ko-KR")} 동기화 완료`);
+      const summary = brokerSyncSummary(data); setBrokerStatus(summary.message, summary.error);
       return data;
     })().catch(error => { setBrokerStatus(error.message, true); throw error; }).finally(() => { portfolioSync = null; });
     return portfolioSync;
@@ -150,7 +161,7 @@
     $("#profileCoinEmail").value = profile?.coin_email || user?.email || ""; $("#profileStockEmail").value = profile?.stock_email || user?.email || "";
     $("#profileHoldingsUs").value = profile?.holdings_us || ""; $("#profileHoldingsKr").value = profile?.holdings_kr || "";
     const selected = profile?.sector_ids || []; $("#profileSectors").querySelectorAll("input").forEach(input => input.checked = selected.includes(input.value));
-    if (portfolio?.synced_at) setBrokerStatus(`${new Date(portfolio.synced_at).toLocaleString("ko-KR")} 동기화 완료`);
+    if (portfolio?.synced_at) { const summary = brokerSyncSummary(portfolio); setBrokerStatus(summary.message, summary.error); }
   }
   function renderActions() {
     if (user) actions.innerHTML = `<span class="auth-user" title="${escapeHTML(user.email)}">${escapeHTML(user.email)}</span><button type="button" class="auth-button primary" id="profileOpen">내 설정</button><button type="button" class="auth-button logout" id="logoutTop">로그아웃</button>`;
