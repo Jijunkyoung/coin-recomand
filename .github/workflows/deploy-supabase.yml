@@ -30,6 +30,7 @@ jobs:
       TOSSINVEST_CLIENT_ID: ${{ secrets.TOSSINVEST_CLIENT_ID }}
       TOSSINVEST_CLIENT_SECRET: ${{ secrets.TOSSINVEST_CLIENT_SECRET }}
       TOSSINVEST_ACCOUNT: ${{ secrets.TOSSINVEST_ACCOUNT }}
+      TOSS_LOCAL_SYNC_KEY: ${{ secrets.TOSS_LOCAL_SYNC_KEY }}
       SMTP_HOST: ${{ secrets.SMTP_HOST }}
       SMTP_PORT: ${{ secrets.SMTP_PORT }}
       SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
@@ -91,6 +92,12 @@ jobs:
       - name: Configure optional Toss Securities Open API
         shell: bash
         run: |
+          if [ -n "$TOSS_LOCAL_SYNC_KEY" ]; then
+            supabase secrets set TOSS_LOCAL_SYNC_KEY="$TOSS_LOCAL_SYNC_KEY" TOSS_SYNC_MODE="local" --project-ref "$SUPABASE_PROJECT_REF"
+            echo "Toss Securities will use the owner's local PC snapshot because a local sync key is configured."
+            exit 0
+          fi
+          supabase secrets set TOSS_SYNC_MODE="direct" --project-ref "$SUPABASE_PROJECT_REF"
           if [ -z "$TOSSINVEST_CLIENT_ID" ] && [ -z "$TOSSINVEST_CLIENT_SECRET" ]; then
             echo "Toss Securities API is not configured yet; KIS-only portfolio remains active."
             exit 0
