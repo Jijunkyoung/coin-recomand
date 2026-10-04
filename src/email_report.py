@@ -9,6 +9,7 @@ from typing import Any
 
 
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+HTTP_URL_PATTERN = re.compile(r"^https?://[^\s]+$", re.IGNORECASE)
 
 
 def parse_recipients(value: str) -> list[str]:
@@ -93,17 +94,24 @@ def _major_event_section(events: list[dict[str, Any]]) -> str:
         dday = "일정 확인" if days is None else "D-DAY" if int(days) == 0 else f"D-{int(days)}" if int(days) > 0 else f"D+{abs(int(days))}"
         symbols = " · ".join(event.get("related_symbols") or []) or "시장 전체"
         source_url = str(event.get("source_url") or "")
+        safe_source_url = html.escape(source_url, quote=True) if HTTP_URL_PATTERN.fullmatch(source_url) else ""
         source_name = html.escape(str(event.get("source") or "출처 미상"))
         source = (
-            f"<a href='{html.escape(source_url, quote=True)}' style='color:#1d5fbd;text-decoration:underline'>{source_name} ↗</a>"
-            if re.match(r"^https?://", source_url, re.IGNORECASE)
+            f"<a href='{safe_source_url}' style='color:#1d5fbd;text-decoration:underline'>{source_name} ↗</a>"
+            if safe_source_url
             else source_name
+        )
+        title = html.escape(str(event.get("title", "시장 일정")))
+        linked_title = (
+            f"<a href='{safe_source_url}' style='color:#10233f;text-decoration:underline;text-decoration-color:#8aa8c8'>{title}</a>"
+            if safe_source_url
+            else title
         )
         rows.append(
             f"<div style='margin-top:10px;padding:14px;border-left:3px solid {border};border-radius:8px;background:#f6f8fb;color:#10233f'>"
             f"<p style='margin:0 0 6px;color:#52657d;font-size:11px'><b style='color:{border}'>{html.escape(importance)}</b> · "
             f"{html.escape(str(event.get('status', '확인 필요')))} · {html.escape(dday)} · {html.escape(str(event.get('date') or '일정 확인 중'))} · {html.escape(str(event.get('time_kst') or '시각 미정'))} KST</p>"
-            f"<h3 style='margin:0 0 6px;color:#10233f;font-size:15px'>{html.escape(str(event.get('title', '시장 일정')))} "
+            f"<h3 style='margin:0 0 6px;color:#10233f;font-size:15px'>{linked_title} "
             f"<span style='display:inline-block;margin-left:5px;padding:2px 6px;border-radius:999px;background:{border};color:#ffffff;font-size:10px;vertical-align:2px'>중요도 {html.escape(importance)}</span></h3>"
             f"<p style='margin:0;color:#263b55;font-size:12px;line-height:1.55'>{html.escape(str(event.get('summary') or '시장 영향을 확인 중입니다.'))}</p>"
             f"<p style='margin:7px 0 0;color:#52657d;font-size:11px'>관련 {html.escape(symbols)} · {source}</p>"
