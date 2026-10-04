@@ -134,6 +134,9 @@ class ResearchTests(unittest.TestCase):
         self.assertEqual(learned["status"], "실제 추적 반영")
         self.assertGreater(learned["reason_adjustments"]["강한 신호"], 0)
         self.assertLess(learned["reason_adjustments"]["약한 신호"], 0)
+        self.assertEqual(learned["reason_performance"]["강한 신호"]["samples"], 10)
+        self.assertEqual(learned["reason_performance"]["강한 신호"]["hits"], 10)
+        self.assertEqual(learned["reason_performance"]["강한 신호"]["status"], "반영")
 
 
 if __name__ == "__main__":

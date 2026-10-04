@@ -485,6 +485,8 @@ def build_report(settings: dict[str, Any], client: MarketDataClient | None = Non
             "observed_days": 0,
             "validation": None,
             "candidates": [],
+            "final_recommendations": [],
+            "final_selection": {"status": "생성 실패", "learning_applied": False, "selection_count": 0},
             "limitations": ["급등 연구 모델을 생성하지 못했습니다. 기존 추천과 실제 주문에는 영향이 없습니다."],
         }
         warnings.append(f"24시간 급등 연구모델 생성 실패: {warning_reason(exc)}")

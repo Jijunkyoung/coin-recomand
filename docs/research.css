@@ -19,6 +19,19 @@ select { background:var(--surface-2); color:var(--text); padding:8px; border:1px
 .surge-metrics span { display:block; color:var(--muted); font-size:.75rem; margin-bottom:6px; }
 .surge-metrics strong { font-size:1.1rem; }
 .model-note { border-left:3px solid #56d2ff; padding-left:12px; }
+.final-surge { margin:22px 0; padding:18px; border:1px solid rgba(86,210,255,.36); border-radius:14px; background:linear-gradient(135deg,rgba(32,149,210,.12),rgba(18,25,40,.4)); }
+.final-surge h3 { margin:5px 0 0; font-size:1.2rem; }
+.final-surge-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:14px; }
+.final-surge-card { min-width:0; padding:16px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); }
+.final-surge-rank { color:#8fdfff; font-size:.75rem; font-weight:800; letter-spacing:.08em; }
+.final-surge-card h4 { margin:8px 0 10px; font-size:1.08rem; }
+.final-surge-score { display:flex; align-items:baseline; gap:8px; margin-bottom:9px; }
+.final-surge-score strong { color:#8fdfff; font-size:1.45rem; }
+.final-surge-score span,.final-surge-meta,.final-surge-reason,.final-surge-learning { color:var(--muted); font-size:.8rem; line-height:1.55; }
+.final-surge-reason { color:var(--text); margin-top:8px; }
+.final-surge-learning { margin-top:8px; }
+.final-surge-rule { margin:12px 0 0; font-size:.78rem; }
+.candidate-list-title { margin-top:24px; }
 .surge-table { min-width:1120px; }
 .surge-table th:nth-child(4),.surge-table td:nth-child(4),.surge-table th:nth-child(7),.surge-table td:nth-child(7),.surge-table th:nth-child(8),.surge-table td:nth-child(8) { text-align:left; max-width:260px; }
 .surge-table td:nth-child(3) { color:#8fdfff; font-weight:700; }
@@ -29,3 +42,4 @@ select { background:var(--surface-2); color:var(--text); padding:8px; border:1px
 .tracking-panel #trackingCauseNote { font-size:.82rem; }
 @media(max-width:600px) { main { padding:20px 12px; } .panel { padding:16px; } }
 @media(max-width:760px) { .surge-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .surge-heading { align-items:center; } }
+@media(max-width:900px) { .final-surge-cards { grid-template-columns:1fr; } }

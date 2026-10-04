@@ -366,6 +366,17 @@ def _candidate_row(
     feedback_adjustment = mean(value for _, value in matched_adjustments) if matched_adjustments else 0.0
     feedback_adjustment = _clip(feedback_adjustment, -5.0, 5.0)
     adjusted_score = _clip(probability * 100 + feedback_adjustment - event_risk["penalty"], 0.0, 100.0)
+    performance = (forward_feedback or {}).get("reason_performance") or {}
+    feedback_evidence = [
+        {
+            "signal": reason,
+            "samples": performance[reason].get("samples", 0),
+            "hits": performance[reason].get("hits", 0),
+            "hit_rate_pct": performance[reason].get("hit_rate_pct"),
+            "adjustment": performance[reason].get("adjustment", 0.0),
+        }
+        for reason in reasons if reason in performance
+    ]
     return {
         "market": coin.get("market"),
         "symbol": coin.get("symbol"),
@@ -375,16 +386,70 @@ def _candidate_row(
         "signal_score": round(adjusted_score, 1),
         "feedback_adjusted_score": round(adjusted_score, 1),
         "feedback_adjustment_pct_points": round(feedback_adjustment, 2),
-        "feedback_notes": [f"{reason} 과거 추적 {value:+.2f}점" for reason, value in matched_adjustments],
+        "feedback_notes": [
+            f"{item['signal']} · {item['samples']}건 중 {item['hits']}건 10% 도달"
+            f" · {item['adjustment']:+.2f}점"
+            for item in feedback_evidence
+        ],
+        "feedback_evidence": feedback_evidence,
         "event_risk_penalty": event_risk["penalty"],
         "reasons": reasons or ["복합 기술신호"],
         "risks": risks,
         "watch_status": "악재 주의" if event_risk["penalty"] else "추격 주의" if risks and return_1d >= 10 else "관찰 후보",
         "volume_ratio_20d": round(values["volume_ratio"], 2),
         "relative_7d_pct": round(values["relative_7d"] * 100, 2),
+        "return_1d_pct": round(return_1d, 2),
+        "rsi": round(float(coin["rsi"]), 2) if _finite(coin.get("rsi")) else None,
         "development_signal": development,
         "related_events": related,
         "trade_value_24h": coin.get("trade_value_24h"),
+    }
+
+
+def _final_recommendations(
+    candidates: list[dict[str, Any]],
+    forward_feedback: dict[str, Any] | None,
+    model_confidence: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Build the current top-three shortlist without leaking later outcomes."""
+    feedback = forward_feedback or {}
+    completed = int(feedback.get("completed") or 0)
+    minimum = int(feedback.get("minimum_for_adjustment") or 20)
+    learning_applied = completed >= minimum
+    eligible = [
+        candidate for candidate in candidates
+        if (candidate.get("event_risk_penalty") or 0) < 12
+        and (candidate.get("return_1d_pct") is None or candidate["return_1d_pct"] < 15)
+        and (candidate.get("rsi") is None or candidate["rsi"] < 78)
+    ]
+    picks = []
+    for rank, candidate in enumerate(eligible[:3], start=1):
+        evidence = candidate.get("feedback_evidence") or []
+        learned_signals = [item for item in evidence if item.get("samples", 0) >= 5]
+        candidate_confidence = (
+            "보통" if learning_applied and learned_signals and model_confidence in {"보통", "높음"}
+            else "낮음"
+        )
+        picks.append({
+            **candidate,
+            "final_rank": rank,
+            "final_score": candidate.get("feedback_adjusted_score", candidate.get("signal_score")),
+            "learning_applied": learning_applied,
+            "recommendation_confidence": candidate_confidence,
+            "selection_summary": " · ".join((candidate.get("reasons") or ["복합 기술신호"])[:2]),
+        })
+    status = (
+        "최종 추천·추적학습 반영" if learning_applied and picks
+        else "예비 추천·추적학습 대기" if picks
+        else "현재 위험필터 통과 후보 없음"
+    )
+    return picks, {
+        "status": status,
+        "learning_applied": learning_applied,
+        "completed": completed,
+        "minimum_for_adjustment": minimum,
+        "selection_count": len(picks),
+        "rule": "위험반영 점수 순 · 중요 악재 12점 이상 제외 · 1일 15% 이상/RSI 78 이상 추격 제외",
     }
 
 
@@ -407,14 +472,21 @@ def build_surge_research(
         "validation": None,
         "forward_feedback": {
             key: (forward_feedback or {}).get(key)
-            for key in ("status", "completed", "hits", "hit_rate_pct", "minimum_for_adjustment")
+            for key in ("status", "completed", "hits", "hit_rate_pct", "minimum_for_adjustment", "reason_performance")
+        },
+        "final_recommendations": [],
+        "final_selection": {
+            "status": "학습 자료 부족", "learning_applied": False,
+            "completed": (forward_feedback or {}).get("completed", 0),
+            "minimum_for_adjustment": (forward_feedback or {}).get("minimum_for_adjustment", 20),
+            "selection_count": 0,
         },
         "candidates": [],
         "limitations": [
             "급등 가능성은 통계적 연구 점수이며 매수 성공 확률이나 수익을 보장하지 않습니다.",
             "일봉 기반이므로 장중 급등 후 급락과 실제 체결 가능성을 완전히 반영하지 못합니다.",
             "개발·뉴스 신호는 과거 시점 데이터 누락으로 가격모델 학습에는 넣지 않습니다. 현재 직접 관련된 악재만 중요도별 4·8·12점, 합계 최대 16점 감점합니다.",
-            "급등 모델 확률은 기존 추천점수나 실제 주문에 반영하지 않으며 시간순 모의검증 결과를 먼저 축적합니다.",
+            "추적 결과는 전략 연구실의 최종 급등 예상 순위에만 반영하며 기본 매수 추천·메일·실제 주문에는 반영하지 않습니다.",
         ],
     }
     if len(samples) < 400 or positives < 12 or len(dates) < 60:
@@ -430,11 +502,14 @@ def build_surge_research(
     candidates.sort(key=lambda row: (row["feedback_adjusted_score"], row["model_probability_pct"], row.get("trade_value_24h") or 0), reverse=True)
     auc = validation.get("auc")
     confidence = "높음" if len(samples) >= 2500 and positives >= 40 and auc is not None and auc >= 0.65 else "보통" if auc is not None else "낮음"
+    final_recommendations, final_selection = _final_recommendations(candidates, forward_feedback, confidence)
     base.update({
         "status": "실험 학습 완료·수익성 미검증",
         "confidence": confidence,
         "validation": validation,
         "candidates": candidates[:10],
+        "final_recommendations": final_recommendations,
+        "final_selection": final_selection,
         "feature_names": [FEATURE_LABELS[name] for name in FEATURES],
     })
     return base

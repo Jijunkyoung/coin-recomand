@@ -303,12 +303,28 @@ def surge_feedback(state, now=None):
             stats["samples"] += 1
             stats["hits"] += int(hit)
     adjustments = {}
+    reason_performance = {}
     if base_rate is not None and len(eligible) >= 20:
         for reason, stats in reason_rows.items():
+            hit_rate = stats["hits"] / stats["samples"]
             if stats["samples"] < 5:
+                reason_performance[reason] = {
+                    **stats, "hit_rate_pct": round(hit_rate * 100, 2), "adjustment": 0.0,
+                    "status": "표본 부족",
+                }
                 continue
             smoothed = (stats["hits"] + base_rate * 10) / (stats["samples"] + 10)
             adjustments[reason] = round(max(-5, min(5, (smoothed - base_rate) * 25)), 2)
+            reason_performance[reason] = {
+                **stats, "hit_rate_pct": round(hit_rate * 100, 2),
+                "adjustment": adjustments[reason], "status": "반영",
+            }
+    else:
+        for reason, stats in reason_rows.items():
+            reason_performance[reason] = {
+                **stats, "hit_rate_pct": round(stats["hits"] / stats["samples"] * 100, 2),
+                "adjustment": 0.0, "status": "전체 표본 부족",
+            }
     drivers = {}
     for record in eligible:
         for label in (record.get("observed_drivers") or {}).get("labels", []):
@@ -316,7 +332,8 @@ def surge_feedback(state, now=None):
     return {"status": "실제 추적 반영" if len(eligible) >= 20 else "자료 축적 중",
             "completed": len(eligible), "hits": len(hits),
             "hit_rate_pct": round(base_rate * 100, 2) if base_rate is not None else None,
-            "reason_adjustments": adjustments, "driver_counts": drivers,
+            "reason_adjustments": adjustments, "reason_performance": reason_performance,
+            "driver_counts": drivers,
             "minimum_for_adjustment": 20}
 
 
@@ -402,7 +419,7 @@ def summary(state):
                             "시장당 한국시간 하루 첫 분석을 고정합니다. 다음 수집 가격으로 진입하며 6시간 넘게 지연되면 미평가 처리합니다.",
                             "언락 미수집은 안전으로 간주하지 않습니다. 공식 뉴스 존재는 호재 판정이 아니며, 기사 의미·원문 중복 판별은 후속 과제입니다.",
                             "학습은 7일 간격을 둔 과거 확정 결과만 사용합니다. 최소 60개 관측일·200개 표본 필요. 확률 보정 및 독립 최종시험 전 실험값입니다.",
-                            "학습 모델은 모의 신호만 생성하며 기존 추천·메일·실제 주문을 변경하지 않습니다."]}
+                            "추적학습은 전략 연구실의 최종 급등 예상 순위에만 반영하며 기본 추천·메일·실제 주문을 변경하지 않습니다."]}
 
 
 def main():
