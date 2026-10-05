@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict'), vm=require('node:vm'),fs=require('node:fs');
 const context=vm.createContext({window:{},Date,Map,console});vm.runInContext(fs.readFileSync('docs/chart-data.js','utf8'),context);
-const {aggregate,visible}=context.window.ChartData;
+const {aggregate,visible,axisNumber}=context.window.ChartData;
+assert.equal(axisNumber(0),"0");assert.notEqual(axisNumber(.02345),"0");assert.match(axisNumber(.00000012),/e-/);assert.match(axisNumber(-.00000012),/^-/);
 const rows=[];for(const day of ['2026-03-06','2026-03-09'])for(let i=0;i<7;i++)rows.push({timestamp:Date.parse(`${day}T14:30:00Z`)+i*3600000,date:`${day} ${i}`,session:day,open:10+i,high:12+i,low:9+i,price:11+i,volume:2});
 const four=aggregate(rows,'4h');assert.equal(four.length,4);assert.equal(four[0].open,10);assert.equal(four[0].price,14);assert.equal(four[0].volume,8);assert.equal(four[1].volume,6);assert.equal(four[2].session,'2026-03-09');
 const weekly=aggregate(rows,'1w');assert.equal(weekly.length,2);assert.equal(weekly[0].date,'2026-03-02');assert.equal(weekly[1].date,'2026-03-09');assert.equal(weekly[0].volume,14);

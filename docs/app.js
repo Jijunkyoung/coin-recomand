@@ -524,7 +524,7 @@ function drawDetailedChart(crossIndex = null) {
     ctx.fillRect(x(index) - macdBarWidth / 2, Math.min(macdZeroY, valueY), macdBarWidth, Math.max(1, Math.abs(valueY - macdZeroY)));
   });
   ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillStyle = "#7f93af";
-  [-macdExtent, 0, macdExtent].forEach(value => ctx.fillText(compact(value), pad.left - 8, macdY(value)));
+  [-macdExtent, 0, macdExtent].forEach(value => ctx.fillText(window.ChartData.axisNumber(value), pad.left - 8, macdY(value)));
   plot(macdLine, "#4d8dff", 1.55, macdY); plot(macdSignal, "#ffbf47", 1.35, macdY);
   ctx.fillStyle = "#a8b8ce"; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("MACD(12,26,9)", pad.left + 5, macdTop + 3);
 
