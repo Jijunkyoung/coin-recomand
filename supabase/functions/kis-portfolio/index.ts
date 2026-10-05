@@ -1,3 +1,4 @@
+import { stockChart, coinChart } from "./stock-chart.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -246,6 +247,10 @@ Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const body = request.method === "POST" ? await request.json().catch(() => ({})) as Record<string, unknown> : {};
+    if (body.action === "stock_chart" || body.action === "coin_chart") {
+      const data = body.action === "stock_chart" ? await stockChart(body) : await coinChart(body);
+      return new Response(JSON.stringify(data), { headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "no-store" } });
+    }
     const authorization = request.headers.get("Authorization") || "", ownerId = env("KIS_OWNER_USER_ID"), ownerEmail = env("KIS_OWNER_EMAIL").toLowerCase();
     const schedulerSecret = env("KIS_SCHEDULER_KEY"), requestApiKey = request.headers.get("apikey") || "", serverAdminKey = adminKey();
     if (!serverAdminKey) throw new Error("Supabase 서버 인증값이 설정되지 않았습니다.");
@@ -278,6 +283,11 @@ Deno.serve(async (request) => {
     }
     if (!userId) return new Response(JSON.stringify({ error: "증권계좌 소유자 설정이 완료되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
 
+    if (body.action === "toss_sync_status") {
+      const { data, error } = await supabase.from("stock_broker_sync_state").select("synced_at").eq("user_id", userId).eq("broker", "toss").maybeSingle();
+      if (error) throw new Error("토스 동기화 상태를 확인하지 못했습니다.");
+      return new Response(JSON.stringify({ synced_at: data?.synced_at || null }), { headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "no-store" } });
+    }
     const warnings: string[] = [], connections: Record<Broker, Connection> = {
       kis: { configured: false, ok: false, source: "direct" },
       toss: { configured: false, ok: false, source: env("TOSS_SYNC_MODE") === "local" ? "local_pc" : "direct", synced_at: null },

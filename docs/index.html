@@ -139,19 +139,19 @@
         <div><span class="eyebrow" id="chartSymbol">DETAIL CHART</span><h2 id="chartTitle">상세차트</h2><p id="chartPrice">—</p></div>
         <button type="button" class="dialog-close" id="chartClose" aria-label="상세차트 닫기">×</button>
       </div>
-      <div class="period-tabs" id="periodTabs" aria-label="차트 기간 선택">
+      <div class="period-tabs candle-tabs" id="candleTabs" aria-label="봉 단위 선택"><button type="button" data-interval="1h">1시간봉</button><button type="button" data-interval="4h">4시간봉</button><button type="button" data-interval="1d" class="active">일봉</button><button type="button" data-interval="1w">주봉</button></div><p id="chartDataStatus" class="chart-data-status" role="status"></p><div class="period-tabs" id="periodTabs" aria-label="차트 기간 선택">
         <button type="button" data-days="7">7일</button>
         <button type="button" data-days="30" class="active">30일</button>
         <button type="button" data-days="90">90일</button>
         <button type="button" data-days="all">전체</button>
       </div>
       <div class="detail-chart-wrap">
-        <canvas id="detailChart" height="620" aria-label="선택한 코인의 일봉 캔들, 볼린저밴드, 거래대금, MACD 및 RSI 상세차트"></canvas>
+        <canvas id="detailChart" height="620" aria-label="선택한 코인의 캔들, 볼린저밴드, 거래대금, MACD 및 RSI 상세차트"></canvas>
         <div id="chartTooltip" class="chart-tooltip" hidden></div>
       </div>
       <div class="chart-legend"><span><i class="legend-up"></i>상승봉</span><span><i class="legend-down"></i>하락봉</span><span><i class="legend-band"></i>볼린저밴드</span><span><i class="legend-ema20"></i>EMA20</span><span><i class="legend-ema50"></i>EMA50</span><span><i class="legend-volume"></i>거래대금</span><span><i class="legend-macd"></i>MACD</span><span><i class="legend-signal"></i>Signal</span><span><i class="legend-hist"></i>Histogram</span><span><i class="legend-rsi"></i>RSI(14)</span></div>
       <div class="detail-stats" id="detailStats"></div>
-      <p class="dialog-note">일봉 기준입니다. 볼린저밴드는 20일·2표준편차, MACD는 12·26·9 EMA, RSI는 14일 기준이며 당일 봉은 아직 확정되지 않을 수 있습니다.</p>
+      <p class="dialog-note">선택한 봉 기준입니다. 볼린저밴드는 20개 봉·2표준편차, MACD는 12·26·9 EMA, RSI는 14개 봉 기준입니다. 진행 중인 봉은 미확정입니다.</p>
     </div>
   </dialog>
 
@@ -185,7 +185,7 @@
   </template>
   <script src="supabase-runtime-config.js?v=20260925-2" defer></script>
   <script src="vendor/supabase.min.js?v=20260925-2" defer></script>
-  <script src="auth.js?v=20260928-1" defer></script>
-  <script src="app.js?v=20260925-3" defer></script>
+  <script src="auth.js?v=20261006-1" defer></script>
+  <script src="chart-data.js?v=20261006-1" defer></script><script src="app.js?v=20261006-1" defer></script>
 </body>
 </html>

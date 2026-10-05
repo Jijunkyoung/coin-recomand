@@ -191,7 +191,19 @@
     if (error) throw error; profile = data; syncLocal(profile); renderProfile();
     window.dispatchEvent(new CustomEvent("coin-auth-change", { detail: { user, profile } })); return profile;
   }
-  window.CoinAuth = { configured, get user() { return user; }, get profile() { return profile; }, get portfolio() { return portfolio; }, get upbitPortfolio() { return upbitPortfolio; }, savePreferences, syncBrokerageHoldings, syncCryptoHoldings, open: openDialog };
+  async function stockChart(body, action = "stock_chart") {
+    if (!client) throw new Error("시세 연결 설정을 확인해 주세요.");
+    const { data, error } = await client.functions.invoke("kis-portfolio", { body: { ...body, action } });
+    if (error) throw new Error(await functionErrorMessage(error));
+    if (data?.error) throw new Error(data.error); return data;
+  }
+  async function tossSyncStatus() {
+    if (!client || !user) throw new Error("로그인이 필요합니다.");
+    const { data, error } = await client.functions.invoke("kis-portfolio", { body: { action: "toss_sync_status" } });
+    if (error) throw new Error(await functionErrorMessage(error));
+    if (data?.error) throw new Error(data.error); return data;
+  }
+  window.CoinAuth = { stockChart, coinChart: body => stockChart(body, "coin_chart"), tossSyncStatus, configured, get user() { return user; }, get profile() { return profile; }, get portfolio() { return portfolio; }, get upbitPortfolio() { return upbitPortfolio; }, savePreferences, syncBrokerageHoldings, syncCryptoHoldings, open: openDialog };
   renderActions();
   $("#authClose").addEventListener("click", () => dialog.close()); dialog.addEventListener("click", e => { if (e.target === dialog) dialog.close(); });
   document.querySelectorAll("[data-auth-mode]").forEach(b => b.addEventListener("click", () => showMode(b.dataset.authMode)));
