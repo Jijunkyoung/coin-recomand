@@ -40,5 +40,11 @@
     const cutoff = last - Number(days) * 86400000;
     return rows.filter(row => (row.timestamp || Date.parse(row.date)) >= cutoff);
   }
-  window.ChartData = { labels, aggregate, loadCoin, loadStock, visible };
+  function axisNumber(value) {
+    if (!Number.isFinite(value)) return "—";
+    const magnitude = Math.abs(value); if (magnitude === 0) return "0";
+    if (magnitude < .01) return value.toExponential(1);
+    return Intl.NumberFormat("ko-KR", { notation: magnitude >= 1000 ? "compact" : "standard", maximumFractionDigits: magnitude < 1 ? 4 : magnitude >= 1000 ? 1 : 2 }).format(value);
+  }
+  window.ChartData = { axisNumber, labels, aggregate, loadCoin, loadStock, visible };
 })();
