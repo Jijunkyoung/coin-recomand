@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const fs = require('node:fs');
 class Element {
   constructor() { this.children=[]; this.textContent=''; this.value='3'; this.events={}; }
-  append(child) { this.children.push(child); }
+  append(...children) { this.children.push(...children); }
   replaceChildren() { this.children=[]; }
   addEventListener(type, fn) { this.events[type]=fn; }
 }
@@ -18,8 +18,11 @@ async function run(ok) {
       recent:[{observed_at:new Date().toISOString(),name:'<b>코인</b>',symbol:'SAFE',model_probability_pct:22,status:'closed',peak_gross_pct:11.2,
         outcomes:{'1':{status:'complete',gross_pct:1.2},'4':{status:'complete',gross_pct:3.4},'12':{status:'complete',gross_pct:8},'24':{status:'complete',gross_pct:10.1}},
         observed_drivers:{labels:['거래대금 확대']}}]}};
-  const latest={surge_research:{status:'실험 학습 완료·수익성 미검증',confidence:'보통',observed_days:90,samples:500,positive_samples:20,
+  const latest={generated_at:new Date().toISOString(),surge_research:{status:'실험 학습 완료·수익성 미검증',confidence:'보통',observed_days:90,samples:500,positive_samples:20,
     target:'다음 24시간 급등',validation:{auc:.612,precision_top_10pct:18.5},
+    final_selection:{status:'최종 추천·추적학습 반영',learning_applied:true,completed:25,minimum_for_adjustment:20,rule:'위험반영 점수 순'},
+    final_recommendations:[{final_rank:1,name:'<img src=x>',symbol:'SAFE',final_score:15.34,model_probability_pct:12.34,feedback_adjustment_pct_points:3,
+      recommendation_confidence:'보통',selection_summary:'거래대금 증가',feedback_notes:['10건 중 4건 10% 도달']}],
     candidates:[{name:'<img src=x>',symbol:'SAFE',model_probability_pct:12.34,reasons:['거래대금 증가'],volume_ratio_20d:2.1,relative_7d_pct:4.2,development_signal:'커밋 30건',related_events:[],watch_status:'관찰 후보',risks:[]}],limitations:['실험값']}};
   const context=vm.createContext({document,fetch:async url=>({ok,json:async()=>url.includes('latest')?latest:data}),Date,console});
   vm.runInContext(fs.readFileSync('docs/research.js','utf8'),context);
@@ -31,6 +34,9 @@ async function run(ok) {
   assert.equal(elements['#surgeCandidates'].children.length,1);
   assert.equal(elements['#surgeCandidates'].children[0].children[1].textContent,'<img src=x> (SAFE)');
   assert.equal(elements['#surgeAuc'].textContent,'0.612');
+  assert.equal(elements['#finalSurgeLearning'].textContent,'추적학습 반영');
+  assert.equal(elements['#finalSurgeCards'].children[0].children[1].textContent,'<img src=x> (SAFE)');
+  assert.match(elements['#finalSurgeStatus'].textContent,/완료 추적 25건/);
   assert.equal(elements['#trackingRows'].children.length,1);
   assert.equal(elements['#trackingRows'].children[0].children[1].textContent,'<b>코인</b> (SAFE)');
   assert.equal(elements['#trackingHitRate'].textContent,'25.00%');

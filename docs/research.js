@@ -25,6 +25,28 @@ async function loadSurge() {
     document.querySelector("#surgeFeedback").textContent = feedback.completed >= feedback.minimum_for_adjustment
       ? `실제 추적 ${feedback.completed}건 반영 · 10% 도달률 ${percent(feedback.hit_rate_pct)} · 완료 사례의 신호별 성과로 순위를 최대 ±5점 보정합니다.`
       : `실제 추적 ${feedback.completed || 0}건 축적 · ${feedback.minimum_for_adjustment || 20}건부터 완료 사례의 신호별 성과를 다음 후보 순위에 반영합니다.`;
+    const selection = data.final_selection || {};
+    const finalPicks = data.final_recommendations || [];
+    const generated = report.generated_at ? new Date(report.generated_at).toLocaleString("ko-KR",{timeZone:"Asia/Seoul"}) : "시각 확인 불가";
+    document.querySelector("#finalSurgeLearning").textContent = selection.learning_applied ? "추적학습 반영" : "예비 추천";
+    document.querySelector("#finalSurgeStatus").textContent = `${selection.status || "자료 확인 중"} · ${generated} KST 기준 · 완료 추적 ${selection.completed || 0}건`;
+    document.querySelector("#finalSurgeRule").textContent = selection.rule ? `선정 기준: ${selection.rule}` : "학습 자료와 현재 위험을 확인하고 있습니다.";
+    const finalCards = document.querySelector("#finalSurgeCards"); finalCards.replaceChildren();
+    finalPicks.forEach(candidate => {
+      const card = document.createElement("article"); card.className="final-surge-card";
+      const rank = document.createElement("div"); rank.className="final-surge-rank"; rank.textContent=`FINAL ${candidate.final_rank}`;
+      const name = document.createElement("h4"); name.textContent=`${candidate.name} (${candidate.symbol})`;
+      const score = document.createElement("div"); score.className="final-surge-score";
+      const scoreValue = document.createElement("strong"); scoreValue.textContent=Number.isFinite(candidate.final_score)?candidate.final_score.toFixed(1):"—";
+      const scoreLabel = document.createElement("span"); scoreLabel.textContent="최종점수 / 100"; score.append(scoreValue,scoreLabel);
+      const meta = document.createElement("div"); meta.className="final-surge-meta"; meta.textContent=`가격모델 ${percent(candidate.model_probability_pct)} · 추적보정 ${candidate.feedback_adjustment_pct_points >= 0 ? "+" : ""}${Number(candidate.feedback_adjustment_pct_points || 0).toFixed(2)}점 · 신뢰도 ${candidate.recommendation_confidence || "낮음"}`;
+      const reason = document.createElement("div"); reason.className="final-surge-reason"; reason.textContent=`선정 근거: ${candidate.selection_summary || "복합 기술신호"}`;
+      const learning = document.createElement("div"); learning.className="final-surge-learning"; learning.textContent=(candidate.feedback_notes || []).join(" · ") || `추적 ${selection.minimum_for_adjustment || 20}건 완료 후 신호별 성과 보정`;
+      card.append(rank,name,score,meta,reason,learning); finalCards.append(card);
+    });
+    if (!finalPicks.length) {
+      const empty = document.createElement("p"); empty.className="final-surge-learning"; empty.textContent="현재 학습·위험 기준을 통과한 최종 후보가 없습니다."; finalCards.append(empty);
+    }
     const body = document.querySelector("#surgeCandidates"); body.replaceChildren();
     data.candidates.forEach((candidate,index) => {
       const context = [candidate.development_signal, ...(candidate.related_events || []).map(event => `${event.title} [${event.impact?.startsWith("악재") ? "🚨 악재 · " : ""}중요도 ${event.importance}${event.score_penalty ? ` · -${event.score_penalty}점` : ""}]`)].filter(Boolean).join(" · ") || "확인된 보조 신호 없음";

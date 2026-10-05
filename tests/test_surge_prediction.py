@@ -116,6 +116,14 @@ class SurgePredictionTests(unittest.TestCase):
         self.assertEqual(candidate["model_probability_pct"], base_by_market[candidate["market"]]["model_probability_pct"])
         self.assertEqual(candidate["feedback_adjustment_pct_points"], 3.0)
         self.assertAlmostEqual(candidate["feedback_adjusted_score"], candidate["model_probability_pct"] + 3.0, places=1)
+        self.assertEqual(learned["final_selection"]["status"], "최종 추천·추적학습 반영")
+        self.assertTrue(learned["final_selection"]["learning_applied"])
+        self.assertEqual(len(learned["final_recommendations"]), 3)
+        self.assertEqual(learned["final_recommendations"][0]["final_rank"], 1)
+        self.assertEqual(
+            learned["final_recommendations"][0]["final_score"],
+            learned["candidates"][0]["feedback_adjusted_score"],
+        )
 
     def test_current_negative_event_marks_and_reduces_risk_adjusted_score(self):
         baseline = build_surge_research(self.coins, self.bitcoin)
@@ -129,6 +137,16 @@ class SurgePredictionTests(unittest.TestCase):
         self.assertAlmostEqual(after["feedback_adjusted_score"], before["feedback_adjusted_score"] - 8, places=1)
         self.assertEqual(after["watch_status"], "악재 주의")
         self.assertIn("🚨 [악재]", after["risks"][0])
+
+    def test_severe_event_and_extreme_chase_are_excluded_from_final_picks(self):
+        self.coins[1]["rsi"] = 82
+        event = {"id": "c0-critical", "title": "C0 중대 보안 사고", "importance": "매우 높음",
+                 "impact": "악재 가능", "score_penalty": 12, "related_symbols": ["C0"]}
+        result = build_surge_research(self.coins, self.bitcoin, [event])
+        final_symbols = {row["symbol"] for row in result["final_recommendations"]}
+        self.assertNotIn("C0", final_symbols)
+        self.assertNotIn("C1", final_symbols)
+        self.assertIn("중요 악재 12점 이상 제외", result["final_selection"]["rule"])
 
 
 if __name__ == "__main__":
