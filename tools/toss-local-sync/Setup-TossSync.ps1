@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $InstallDir = Join-Path $env:LOCALAPPDATA "CoinRecomand"
@@ -51,6 +51,7 @@ try {
 
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     Copy-Item $SyncSource $SyncTarget -Force
+    Copy-Item (Join-Path $PSScriptRoot "Toss-Auth.ps1") (Join-Path $InstallDir "Toss-Auth.ps1") -Force
     @{
         FunctionUrl = "https://pgtxtnggjqaysjhtdepz.supabase.co/functions/v1/kis-portfolio"
         ClientId = Protect-Text $clientId
@@ -78,6 +79,7 @@ try {
     Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "토스증권 보유종목을 coin-recomand 대시보드에 동기화" -Force | Out-Null
 
     Write-Host ""
+    & (Join-Path $PSScriptRoot "Enable-BrowserSync.ps1")
     Write-Host "첫 동기화를 실행합니다." -ForegroundColor Cyan
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $SyncTarget
     if ($LASTEXITCODE -ne 0) { throw "첫 동기화가 실패했습니다. 위 오류를 확인한 뒤 sync-toss-now.cmd를 다시 실행해 주세요." }

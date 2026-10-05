@@ -3,6 +3,7 @@ const fmt = (value, digits = 1) => value == null ? "미수집" : Number(value).t
 const pct = value => value == null ? "—" : `${value > 0 ? "+" : ""}${fmt(value)}%`;
 let detailCoin = null;
 let detailDays = 30;
+let detailInterval = "1d", detailHistory = [], detailRequest = 0;
 let detailPlot = null;
 let detailFrame = null;
 let detailHoverIndex = null;
@@ -433,9 +434,8 @@ function startLiveMarket(codes) {
 
 function drawDetailedChart(crossIndex = null) {
   if (!detailCoin) return;
-  const all = historyFor(detailCoin);
-  const length = detailDays === "all" ? all.length : Math.min(Number(detailDays), all.length);
-  const start = all.length - length, rows = all.slice(start);
+  const all = detailHistory;
+  const rows = window.ChartData.visible(all, detailDays), start = all.length - rows.length;
   if (!rows.length) return;
   const prices = rows.map(row => Number(row.price));
   const opens = rows.map(row => Number(row.open ?? row.price));
@@ -523,13 +523,15 @@ function drawDetailedChart(crossIndex = null) {
     ctx.fillStyle = value >= 0 ? "rgba(49,216,197,.48)" : "rgba(255,107,120,.45)";
     ctx.fillRect(x(index) - macdBarWidth / 2, Math.min(macdZeroY, valueY), macdBarWidth, Math.max(1, Math.abs(valueY - macdZeroY)));
   });
+  ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillStyle = "#7f93af";
+  [-macdExtent, 0, macdExtent].forEach(value => ctx.fillText(compact(value), pad.left - 8, macdY(value)));
   plot(macdLine, "#4d8dff", 1.55, macdY); plot(macdSignal, "#ffbf47", 1.35, macdY);
   ctx.fillStyle = "#a8b8ce"; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.fillText("MACD(12,26,9)", pad.left + 5, macdTop + 3);
 
   const rsiY = value => rsiTop + (100 - value) / 100 * (rsiBottom - rsiTop);
   ctx.fillStyle = "rgba(255,107,120,.035)"; ctx.fillRect(pad.left, rsiTop, plotWidth, rsiY(70) - rsiTop);
   ctx.fillStyle = "rgba(77,141,255,.035)"; ctx.fillRect(pad.left, rsiY(30), plotWidth, rsiBottom - rsiY(30));
-  [70, 50, 30].forEach(level => {
+  [100, 70, 50, 30, 0].forEach(level => {
     const lineY = rsiY(level); ctx.beginPath(); ctx.moveTo(pad.left, lineY); ctx.lineTo(width - pad.right, lineY);
     ctx.strokeStyle = level === 50 ? "rgba(143,162,189,.12)" : "rgba(212,129,255,.22)"; ctx.lineWidth = 1; ctx.stroke();
     ctx.fillStyle = "#7f93af"; ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(String(level), pad.left - 8, lineY);
@@ -550,7 +552,7 @@ function drawDetailedChart(crossIndex = null) {
   detailPlot = { rows, rsi14, macdLine, macdSignal, macdHistogram, x, pad, width };
   const change = prices[0] ? (prices.at(-1) / prices[0] - 1) * 100 : null;
   const latestRsi = [...rsi14].reverse().find(value => value != null);
-  $("#detailStats").innerHTML = metric("기간 수익률", pct(change)) + metric("기간 최고가", `₩${fmt(Math.max(...highs), 4)}`) + metric("기간 최저가", `₩${fmt(Math.min(...lows), 4)}`) + metric("EMA20", `₩${fmt(detailCoin.ema20, 4)}`) + metric("EMA50", `₩${fmt(detailCoin.ema50, 4)}`) + metric("RSI(14)", fmt(latestRsi, 1)) + metric("MACD", fmt(macdLine.at(-1), 4)) + metric("시그널", fmt(macdSignal.at(-1), 4)) + metric("히스토그램", fmt(macdHistogram.at(-1), 4));
+  $("#detailStats").innerHTML = metric("기간 수익률", pct(change)) + metric("기간 최고가", `₩${fmt(Math.max(...highs), 4)}`) + metric("기간 최저가", `₩${fmt(Math.min(...lows), 4)}`) + metric("EMA20", `₩${fmt(ema20.at(-1), 4)}`) + metric("EMA50", `₩${fmt(ema50.at(-1), 4)}`) + metric("RSI(14)", fmt(latestRsi, 1)) + metric("MACD", fmt(macdLine.at(-1), 4)) + metric("시그널", fmt(macdSignal.at(-1), 4)) + metric("히스토그램", fmt(macdHistogram.at(-1), 4));
 }
 
 function scheduleDetailedChart(crossIndex = null) {
@@ -563,14 +565,35 @@ function scheduleDetailedChart(crossIndex = null) {
 }
 
 function openDetailChart(coin) {
-  detailCoin = coin; detailDays = 30;
+  detailCoin = coin; detailDays = 30; detailHistory = []; detailPlot = null;
   $("#chartSymbol").textContent = `${coin.symbol || "BTC"} / KRW · DAILY`;
   $("#chartTitle").textContent = `${coin.name || "비트코인"} 상세차트`;
   $("#chartPrice").innerHTML = `현재 ₩${fmt(coin.price, 4)} · ${dailyChangeMarkup(coin.return_1d)}`;
   $("#periodTabs").querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.days === "30"));
   const dialog = $("#chartDialog"); dialog.showModal();
-  requestAnimationFrame(() => scheduleDetailedChart());
+  selectCoinInterval("1d");
 }
+
+async function selectCoinInterval(interval) {
+  const request = ++detailRequest, coin = detailCoin; detailInterval = interval; detailHistory = []; detailPlot = null;
+  $("#chartTooltip").hidden = true; $("#detailChart").hidden = true; $("#detailStats").innerHTML = "";
+  $("#chartDataStatus").textContent = `${window.ChartData.labels[interval]} 불러오는 중…`;
+  $("#candleTabs").querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.interval === interval));
+  $("#chartSymbol").textContent = `${coin.symbol || "BTC"} / KRW · ${window.ChartData.labels[interval]}`;
+  try {
+    const data = await window.ChartData.loadCoin(coin, interval); if (request !== detailRequest) return;
+    detailHistory = data.rows; $("#detailChart").hidden = false;
+    $("#chartDataStatus").textContent = `${data.source} · ${data.rows.length}개 ${window.ChartData.labels[interval]} · 진행 중인 봉은 미확정`;
+    scheduleDetailedChart();
+  } catch (error) {
+    if (request !== detailRequest) return;
+    if (interval === "1d" && coin.history?.length) {
+      detailHistory = coin.history.map(row=>({...row,timestamp:Date.parse(row.date)})); $("#detailChart").hidden = false;
+      $("#chartDataStatus").textContent = `저장된 분석 일봉 · 최신 조회 실패: ${error.message}`; scheduleDetailedChart();
+    } else $("#chartDataStatus").textContent = error.message;
+  }
+}
+$("#candleTabs").addEventListener("click", event => { const button = event.target.closest("button"); if (button) selectCoinInterval(button.dataset.interval); });
 
 function metric(label, value) { return `<div><span>${label}</span><strong>${value}</strong></div>`; }
 

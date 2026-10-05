@@ -1,11 +1,12 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const market = document.body.dataset.stockMarket;
 let report = null, detailStock = null, detailDays = 30, detailPlot = null, detailFrame = null;
+let detailHistory = [], detailInterval = "1d", detailRequest = 0, manualRefreshRunning = false;
 const sectorFallback = [{id:"defense",label:"방산"},{id:"semiconductor",label:"반도체"},{id:"energy",label:"에너지"},{id:"ai_platform",label:"AI·플랫폼"},{id:"mobility",label:"자동차·모빌리티"},{id:"bio",label:"바이오·헬스케어"},{id:"finance",label:"금융"},{id:"consumer",label:"소비·유통"},{id:"shipbuilding",label:"조선·기계"}];
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const fmt = (value, digits = 2) => value == null || !Number.isFinite(Number(value)) ? "—" : Intl.NumberFormat("ko-KR", {maximumFractionDigits:digits}).format(Number(value));
 const pct = value => value == null ? "—" : `${Number(value) > 0 ? "+" : ""}${fmt(value, 1)}%`;
-const currency = value => report?.currency === "USD" ? `$${fmt(value, 2)}` : `₩${fmt(value, 0)}`;
+const currency = value => (report?.currency || (market === "us" ? "USD" : "KRW")) === "USD" ? `$${fmt(value, 2)}` : `₩${fmt(value, 0)}`;
 const metric = (label, value) => `<div><span>${label}</span><strong>${value}</strong></div>`;
 
 function drawLine(canvas, values, color = "#31d8c5") {
@@ -52,11 +53,41 @@ function renderPortfolio(data) {
   const comparison=changes.baseline_at?`${escapeHTML(new Date(changes.baseline_at).toLocaleString("ko-KR"))} 대비`:`첫 계좌 기록`;
   const tossConnection=data.connections?.toss||{}, tossReady=Boolean(tossConnection.configured&&tossConnection.ok);
   const tossNote=tossConnection.source==="local_pc"
-    ? `<p class="portfolio-connect-note"><b>토스증권 집 PC 동기화 ${tossReady?"완료":"대기"}</b>${tossConnection.synced_at?` · ${escapeHTML(new Date(tossConnection.synced_at).toLocaleString("ko-KR"))}`:" · PC 동기화 프로그램을 실행해 주세요."} · <a href="downloads/toss-local-sync.zip" download>설치파일 다운로드</a></p>`
+    ? `<p class="portfolio-connect-note"><b>토스증권 집 PC 동기화 ${tossReady?"완료":"대기"}</b>${tossConnection.synced_at?` · ${escapeHTML(new Date(tossConnection.synced_at).toLocaleString("ko-KR"))}`:" · PC 동기화 프로그램을 실행해 주세요."} · 매일 07:10 자동 동기화 · <a href="downloads/toss-browser-sync.zip" download>버튼 연결파일</a></p>`
     : !tossReady?`<p class="portfolio-connect-note"><b>토스증권 연결 대기</b> · <a href="https://corp.tossinvest.com/ko/open-api" target="_blank" rel="noopener">공식 Open API 키 발급</a> 후 저장소 Secret을 등록하면 이 목록에 자동 합산됩니다.</p>`:"";
   panel.hidden=false;
-  panel.innerHTML=`<div class="section-head portfolio-section-head"><div><span class="eyebrow">MY STOCK ACCOUNTS</span><h2>내 ${label}주식 통합 보유현황</h2></div><div class="portfolio-head-actions"><p>${escapeHTML(new Date(data.synced_at).toLocaleString("ko-KR"))} 기준</p><button type="button" class="secondary-button" id="portfolioDownloadExcel">일별 기록 엑셀 다운로드</button></div></div><div class="portfolio-summary">${metric("표시 증권사",`${brokers.length}개`)}${metric("평가금액",portfolioCurrency(evaluation,currencyCode))}${metric("평가손익",`<span class="price-change ${profit>=0?"up":"down"}">${portfolioCurrency(profit,currencyCode)}</span>`)}${metric("수익률",`<span class="price-change ${rate>=0?"up":"down"}">${pct(rate)}</span>`)}</div><div class="portfolio-changes"><b>${comparison}</b>${changeItems.length?changeItems.join(""):`<span class="portfolio-change unchanged">보유수량 변동 없음</span>`}</div>${positions.length?`<div class="portfolio-list">${positions.map(item=>`<div class="portfolio-row"><span><small class="broker-badge ${item.broker==="toss"?"toss":"kis"}">${brokerLabel(item.broker)}</small><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.symbol)} · ${fmt(item.quantity,4)}주</small></span><span><small>현재가</small><strong>${portfolioCurrency(item.current_price,item.currency)}</strong></span><span><small>일간 등락률</small><strong class="price-change ${item.daily_change_rate==null?"":Number(item.daily_change_rate)>=0?"up":"down"}">${pct(item.daily_change_rate)}</strong></span><span><small>평가금액</small><strong>${portfolioCurrency(item.evaluation_amount,item.currency)}</strong></span><span><small>평가손익</small><strong class="price-change ${Number(item.profit_loss)>=0?"up":"down"}">${portfolioCurrency(item.profit_loss,item.currency)} · ${pct(item.profit_rate)}</strong></span></div>`).join("")}</div>`:`<p class="portfolio-empty">조회된 ${label}주식 보유잔고가 없습니다.</p>`}${tossNote}${(data.warnings||[]).length?`<p class="portfolio-warning">계좌 조회 경고: ${escapeHTML(data.warnings.join(" · "))}</p>`:""}<p id="portfolioExportStatus" class="portfolio-export-status" aria-live="polite"></p>`;
+  panel.innerHTML=`<div class="section-head portfolio-section-head"><div><span class="eyebrow">MY STOCK ACCOUNTS</span><h2>내 ${label}주식 통합 보유현황</h2></div><div class="portfolio-head-actions"><p>${escapeHTML(new Date(data.synced_at).toLocaleString("ko-KR"))} 기준</p><button type="button" class="secondary-button" id="portfolioRefresh" ${manualRefreshRunning?"disabled":""}>${manualRefreshRunning?"갱신 중…":"수량·가격 갱신"}</button><button type="button" class="secondary-button" id="portfolioDownloadExcel">일별 기록 엑셀 다운로드</button></div></div><div class="portfolio-summary">${metric("표시 증권사",`${brokers.length}개`)}${metric("평가금액",portfolioCurrency(evaluation,currencyCode))}${metric("평가손익",`<span class="price-change ${profit>=0?"up":"down"}">${portfolioCurrency(profit,currencyCode)}</span>`)}${metric("수익률",`<span class="price-change ${rate>=0?"up":"down"}">${pct(rate)}</span>`)}</div><div class="portfolio-changes"><b>${comparison}</b>${changeItems.length?changeItems.join(""):`<span class="portfolio-change unchanged">보유수량 변동 없음</span>`}</div>${positions.length?`<div class="portfolio-list">${positions.map((item,index)=>`<div class="portfolio-row clickable-portfolio" role="button" tabindex="0" data-position="${index}" aria-label="${escapeHTML(item.name)} 상세차트 열기"><span><small class="broker-badge ${item.broker==="toss"?"toss":"kis"}">${brokerLabel(item.broker)}</small><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.symbol)} · ${fmt(item.quantity,4)}주</small></span><span><small>현재가</small><strong>${portfolioCurrency(item.current_price,item.currency)}</strong></span><span><small>일간 등락률</small><strong class="price-change ${item.daily_change_rate==null?"":Number(item.daily_change_rate)>=0?"up":"down"}">${pct(item.daily_change_rate)}</strong></span><span><small>평가금액</small><strong>${portfolioCurrency(item.evaluation_amount,item.currency)}</strong></span><span><small>평가손익</small><strong class="price-change ${Number(item.profit_loss)>=0?"up":"down"}">${portfolioCurrency(item.profit_loss,item.currency)} · ${pct(item.profit_rate)}</strong></span></div>`).join("")}</div>`:`<p class="portfolio-empty">조회된 ${label}주식 보유잔고가 없습니다.</p>`}${tossNote}${(data.warnings||[]).length?`<p class="portfolio-warning">계좌 조회 경고: ${escapeHTML(data.warnings.join(" · "))}</p>`:""}<p id="portfolioRefreshStatus" class="portfolio-export-status" aria-live="polite"></p><p id="portfolioExportStatus" class="portfolio-export-status" aria-live="polite"></p>`;
+  $("#portfolioRefresh")?.addEventListener("click", () => refreshPortfolio(data));
+  panel.querySelectorAll("[data-position]").forEach(row => {
+    const open = () => { const item = positions[Number(row.dataset.position)]; openChart({ ...(report?.rankings||[]).find(stock=>stock.symbol===item.symbol), ...item, price:item.current_price, return_1d:item.daily_change_rate }); };
+    row.addEventListener("click", open); row.addEventListener("keydown", event => { if(event.key==="Enter"||event.key===" "){event.preventDefault();open();} });
+  });
   $("#portfolioDownloadExcel")?.addEventListener("click",async event=>{const button=event.currentTarget,status=$("#portfolioExportStatus"),original=button.textContent;button.disabled=true;button.textContent="엑셀 생성 중…";status.textContent="";status.classList.remove("error");try{const result=await window.PortfolioExcel.download(data);status.textContent=`최근 ${result.days}일 · ${result.records}개 종목 기록을 다운로드했습니다.${result.truncated?" 오래된 일부 종목 기록은 5,000행 제한으로 제외됐습니다.":""}`;}catch(error){status.textContent=error.message;status.classList.add("error");}finally{button.disabled=false;button.textContent=original;}});
+}
+
+async function refreshPortfolio(previous) {
+  if (manualRefreshRunning) return; manualRefreshRunning = true;
+  const local = previous.connections?.toss?.source === "local_pc";
+  const before = previous.connections?.toss?.synced_at;
+  const status = message => { const element = $("#portfolioRefreshStatus"); if(element)element.textContent = message; };
+  $("#portfolioRefresh").disabled = true; $("#portfolioRefresh").textContent = "갱신 중…";
+  try {
+    if (local) window.location.href = "coin-toss-sync://run";
+    if (local) {
+      status("집 PC 동기화 프로그램의 실행을 허용해 주세요. 완료된 수량·가격을 기다리고 있습니다.");
+      const until = Date.now() + 90000; let complete = false;
+      while (Date.now() < until) {
+        await new Promise(resolve=>setTimeout(resolve,3000));
+        if (!window.CoinAuth?.user) throw new Error("로그인이 필요합니다.");
+        const result = await window.CoinAuth.tossSyncStatus();
+        if (result.synced_at && (!before || Date.parse(result.synced_at) > Date.parse(before))) { complete = true; break; }
+      }
+      if (!complete) throw new Error("PC 동기화 완료를 확인하지 못했습니다. 집 PC에서 아래 ‘버튼 연결파일’을 한 번 실행하고 다시 눌러 주세요. 기존 자료는 유지됩니다.");
+    }
+    await window.CoinAuth.syncBrokerageHoldings({force:true});
+    status("보유수량·가격 갱신 완료");
+  } catch (error) { status(error.message); }
+  finally { manualRefreshRunning = false; const button=$("#portfolioRefresh");if(button){button.disabled=false;button.textContent="수량·가격 갱신";} }
 }
 
 function parseManualHoldings(value) {
@@ -73,7 +104,11 @@ function renderManualHoldings(profile, signedIn = Boolean(window.CoinAuth?.user)
   const items = parseManualHoldings(profile?.[key]);
   const label = market === "us" ? "미국" : "국내";
   panel.hidden = false;
-  panel.innerHTML = `<div class="section-head"><div><span class="eyebrow">MANUAL HOLDINGS</span><h2>내 ${label}주식 수동 등록</h2></div><button type="button" class="secondary-button" id="manualHoldingsEdit">${items.length ? "수정" : "종목 등록"}</button></div>${items.length ? `<div class="manual-holdings-list">${items.map(item => `<span><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.symbol)}</small></span>`).join("")}</div>` : `<p class="portfolio-empty">직접 등록한 종목이 없습니다. 종목 등록을 눌러 ${label} 보유주식을 추가할 수 있습니다.</p>`}`;
+  panel.innerHTML = `<div class="section-head"><div><span class="eyebrow">MANUAL HOLDINGS</span><h2>내 ${label}주식 수동 등록</h2></div><button type="button" class="secondary-button" id="manualHoldingsEdit">${items.length ? "수정" : "종목 등록"}</button></div>${items.length ? `<div class="manual-holdings-list">${items.map((item,index) => `<span class="clickable-portfolio" role="button" tabindex="0" data-manual-position="${index}"><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.symbol)} · 상세차트 ↗</small></span>`).join("")}</div>` : `<p class="portfolio-empty">직접 등록한 종목이 없습니다. 종목 등록을 눌러 ${label} 보유주식을 추가할 수 있습니다.</p>`}`;
+  panel.querySelectorAll("[data-manual-position]").forEach(row=>{
+    const open=()=>{const item=items[Number(row.dataset.manualPosition)];openChart({...item,...(report?.rankings||[]).find(stock=>stock.symbol===item.symbol)});};
+    row.addEventListener("click",open);row.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();open();}});
+  });
   $("#manualHoldingsEdit")?.addEventListener("click", () => { renderStockSettings(); settingsDialog.showModal(); });
 }
 
@@ -96,18 +131,44 @@ function render(data){
   $("#warnings").innerHTML=data.warnings.length?data.warnings.map(x=>`<p>• ${escapeHTML(x)}</p>`).join(""):'<p class="ok">모든 대상 종목의 핵심 데이터가 정상 수집됐습니다.</p>'; $("#sources").innerHTML=(data.sources||[]).map(x=>`<a href="${x.url}" target="_blank" rel="noopener">${escapeHTML(x.name)}</a>`).join(""); $("#disclaimer").textContent=data.disclaimer;
 }
 
-function openChart(stock){detailStock=stock;detailDays=30;$("#chartSymbol").textContent=`${stock.symbol} · DAILY`;$("#chartTitle").textContent=`${stock.name} 상세차트`;$("#chartPrice").innerHTML=`현재 ${currency(stock.price)} · <span class="price-change ${stock.return_1d==null?"":Number(stock.return_1d)>=0?"up":"down"}">일간 ${pct(stock.return_1d)}</span>`;$("#periodTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x.dataset.days==="30"));$("#stockChartDialog").showModal();requestAnimationFrame(()=>scheduleChart())}
+function openChart(stock) {
+  detailStock=stock;detailDays=30;detailHistory=[];detailPlot=null;
+  $("#chartTitle").textContent=`${stock.name || stock.symbol} 상세차트`;
+  $("#chartPrice").innerHTML=`조회가 ${currency(stock.price)} · <span class="price-change ${stock.return_1d==null?"":Number(stock.return_1d)>=0?"up":"down"}">일간 ${pct(stock.return_1d)}</span>`;
+  $("#periodTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x.dataset.days==="30"));
+  if(!$("#stockChartDialog").open)$("#stockChartDialog").showModal(); selectStockInterval("1d");
+}
+async function selectStockInterval(interval) {
+  const request=++detailRequest, stock=detailStock;detailInterval=interval;detailHistory=[];detailPlot=null;
+  $("#chartTooltip").hidden=true;$("#detailChart").hidden=true;$("#detailStats").innerHTML="";
+  $("#candleTabs").querySelectorAll("button").forEach(button=>button.classList.toggle("active",button.dataset.interval===interval));
+  $("#chartSymbol").textContent=`${stock.symbol} · ${window.ChartData.labels[interval]}`;
+  $("#chartDataStatus").textContent=`${window.ChartData.labels[interval]} 불러오는 중…`;
+  try {
+    const data=await window.ChartData.loadStock(stock,market,interval);if(request!==detailRequest)return;
+    detailHistory=data.rows;$("#detailChart").hidden=false;
+    $("#chartDataStatus").textContent=`${data.source} · ${data.rows.length}개 ${window.ChartData.labels[interval]} · 시세 지연 가능 · 진행 중인 봉은 미확정`;
+    scheduleChart();
+  } catch(error) {
+    if(request!==detailRequest)return;
+    if((interval==="1d"||interval==="1w")&&stock.history?.length){detailHistory=window.ChartData.aggregate(stock.history.map(row=>({...row,timestamp:Date.parse(row.date),session:row.date})),interval);$("#detailChart").hidden=false;$("#chartDataStatus").textContent=`저장된 분석 시세 · ${window.ChartData.labels[interval]} · 최신 조회 실패: ${error.message}`;scheduleChart();}
+    else $("#chartDataStatus").textContent=error.message;
+  }
+}
+$("#candleTabs").addEventListener("click",event=>{const button=event.target.closest("button");if(button)selectStockInterval(button.dataset.interval)});
 function scheduleChart(hover=null){if(detailFrame!=null)return;detailFrame=requestAnimationFrame(()=>{detailFrame=null;drawChart(hover)})}
 function drawChart(hover=null){
-  if(!detailStock?.history?.length)return; const all=detailStock.history,length=detailDays==="all"?all.length:Math.min(detailDays,all.length),start=all.length-length,rows=all.slice(start),prices=rows.map(x=>+x.price),opens=rows.map(x=>+x.open||+x.price),highs=rows.map(x=>+x.high||+x.price),lows=rows.map(x=>+x.low||+x.price),volumes=rows.map(x=>+x.volume||0),full=all.map(x=>+x.price),e20=ema(full,20).slice(start),e50=ema(full,50).slice(start),bb=bands(full),upper=bb.upper.slice(start),lower=bb.lower.slice(start),middle=bb.middle.slice(start),rs=rsi(full).slice(start),mc=macd(full),ml=mc.line.slice(start),ms=mc.signal.slice(start),mh=mc.hist.slice(start);
+  if(!detailHistory.length)return; const all=detailHistory,rows=window.ChartData.visible(all,detailDays),start=all.length-rows.length,prices=rows.map(x=>+x.price),opens=rows.map(x=>+x.open||+x.price),highs=rows.map(x=>+x.high||+x.price),lows=rows.map(x=>+x.low||+x.price),volumes=rows.map(x=>+x.volume||0),full=all.map(x=>+x.price),e20=ema(full,20).slice(start),e50=ema(full,50).slice(start),bb=bands(full),upper=bb.upper.slice(start),lower=bb.lower.slice(start),middle=bb.middle.slice(start),rs=rsi(full).slice(start),mc=macd(full),ml=mc.line.slice(start),ms=mc.signal.slice(start),mh=mc.hist.slice(start);
   const canvas=$("#detailChart"),ratio=devicePixelRatio||1,rect=canvas.getBoundingClientRect(),width=Math.max(280,rect.width),height=Math.max(520,rect.height);canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);const ctx=canvas.getContext("2d");ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,width,height);const pad={left:64,right:18,top:20,bottom:22},priceBottom=height*.47,volTop=priceBottom+8,volBottom=height*.57,macdTop=height*.64,macdBottom=height*.77,rsiTop=height*.82,rsiBottom=height-pad.bottom,plotWidth=width-pad.left-pad.right,rangeValues=[...highs,...lows,...upper.filter(Boolean),...lower.filter(Boolean)],lo=Math.min(...rangeValues),hi=Math.max(...rangeValues),margin=(hi-lo||1)*.08,min=lo-margin,max=hi+margin,spread=max-min||1,space=plotWidth/rows.length,x=i=>pad.left+(i+.5)*space,y=v=>pad.top+(max-v)/spread*(priceBottom-pad.top);
   ctx.font="10px system-ui";ctx.textAlign="right";ctx.textBaseline="middle";for(let i=0;i<=4;i++){const gy=pad.top+i*(priceBottom-pad.top)/4;ctx.beginPath();ctx.moveTo(pad.left,gy);ctx.lineTo(width-pad.right,gy);ctx.strokeStyle="rgba(143,162,189,.13)";ctx.stroke();ctx.fillStyle="#7f93af";ctx.fillText(fmt(max-i*spread/4,2),pad.left-7,gy)}
   const plot=(values,color,map=y)=>{ctx.beginPath();let begun=false;values.forEach((v,i)=>{if(v==null)return;if(begun)ctx.lineTo(x(i),map(v));else{ctx.moveTo(x(i),map(v));begun=true}});ctx.strokeStyle=color;ctx.lineWidth=1.2;ctx.stroke()};plot(upper,"#a98bff");plot(lower,"#a98bff");plot(middle,"rgba(169,139,255,.45)");plot(e20,"#31d8c5");plot(e50,"#ffbf47");
   rows.forEach((_,i)=>{const up=prices[i]>=opens[i],color=up?"#ff6b78":"#4d8dff",cx=x(i),oy=y(opens[i]),cy=y(prices[i]);ctx.beginPath();ctx.moveTo(cx,y(highs[i]));ctx.lineTo(cx,y(lows[i]));ctx.strokeStyle=color;ctx.stroke();ctx.fillStyle=color;ctx.fillRect(cx-Math.max(1,space*.28),Math.min(oy,cy),Math.max(2,space*.56),Math.max(1.5,Math.abs(cy-oy)))});
   const vmax=Math.max(...volumes,1);rows.forEach((_,i)=>{ctx.fillStyle=prices[i]>=opens[i]?"rgba(255,107,120,.35)":"rgba(77,141,255,.35)";const h=volumes[i]/vmax*(volBottom-volTop);ctx.fillRect(x(i)-Math.max(1,space*.28),volBottom-h,Math.max(2,space*.56),h)});
-  const macdRange=Math.max(...ml.map(Math.abs),...ms.map(Math.abs),...mh.map(Math.abs),1e-8),ym=v=>(macdTop+macdBottom)/2-v/macdRange*(macdBottom-macdTop)/2;ctx.beginPath();ctx.moveTo(pad.left,ym(0));ctx.lineTo(width-pad.right,ym(0));ctx.strokeStyle="rgba(143,162,189,.2)";ctx.stroke();mh.forEach((v,i)=>{ctx.fillStyle=v>=0?"rgba(49,216,197,.55)":"rgba(255,107,120,.55)";ctx.fillRect(x(i)-Math.max(1,space*.25),Math.min(ym(v),ym(0)),Math.max(2,space*.5),Math.max(1,Math.abs(ym(v)-ym(0))))});plot(ml,"#4d8dff",ym);plot(ms,"#ffbf47",ym);
-  const yr=v=>rsiTop+(100-v)/100*(rsiBottom-rsiTop);[30,50,70].forEach(v=>{ctx.beginPath();ctx.moveTo(pad.left,yr(v));ctx.lineTo(width-pad.right,yr(v));ctx.strokeStyle="rgba(143,162,189,.15)";ctx.stroke()});plot(rs,"#d481ff",yr);
-  detailPlot={rows,pad,width,rsi:rs,macd:ml,signal:ms,hist:mh};$("#detailStats").innerHTML=metric("EMA20",currency(detailStock.ema20))+metric("EMA50",currency(detailStock.ema50))+metric("RSI",fmt(detailStock.rsi,1))+metric("MACD",fmt(detailStock.macd,4))+metric("Signal",fmt(detailStock.macd_signal,4))+metric("Histogram",fmt(detailStock.macd_histogram,4));
+  const macdRange=Math.max(...ml.map(Math.abs),...ms.map(Math.abs),...mh.map(Math.abs),1e-8),ym=v=>(macdTop+macdBottom)/2-v/macdRange*(macdBottom-macdTop)/2;ctx.beginPath();ctx.moveTo(pad.left,ym(0));ctx.lineTo(width-pad.right,ym(0));ctx.strokeStyle="rgba(143,162,189,.2)";ctx.stroke();mh.forEach((v,i)=>{ctx.fillStyle=v>=0?"rgba(49,216,197,.55)":"rgba(255,107,120,.55)";ctx.fillRect(x(i)-Math.max(1,space*.25),Math.min(ym(v),ym(0)),Math.max(2,space*.5),Math.max(1,Math.abs(ym(v)-ym(0))))});ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillStyle="#7f93af";[-macdRange,0,macdRange].forEach(value=>ctx.fillText(fmt(value,4),pad.left-7,ym(value)));plot(ml,"#4d8dff",ym);plot(ms,"#ffbf47",ym);
+  const yr=v=>rsiTop+(100-v)/100*(rsiBottom-rsiTop);[0,30,50,70,100].forEach(v=>{ctx.beginPath();ctx.moveTo(pad.left,yr(v));ctx.lineTo(width-pad.right,yr(v));ctx.strokeStyle="rgba(143,162,189,.15)";ctx.stroke();ctx.fillStyle="#7f93af";ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText(String(v),pad.left-7,yr(v))});plot(rs,"#d481ff",yr);
+  ctx.textAlign="left";ctx.textBaseline="top";ctx.fillStyle="#a8b8ce";ctx.fillText("MACD(12,26,9)",pad.left+5,macdTop+3);ctx.fillText("RSI(14)",pad.left+5,rsiTop+3);
+  [0,Math.floor((rows.length-1)/2),rows.length-1].forEach((index,i)=>{ctx.textAlign=i===0?"left":i===2?"right":"center";ctx.fillText(rows[index].date,x(index),volBottom+5)});
+  detailPlot={rows,pad,width,rsi:rs,macd:ml,signal:ms,hist:mh};$("#detailStats").innerHTML=metric("EMA20",currency(e20.at(-1)))+metric("EMA50",currency(e50.at(-1)))+metric("RSI",fmt(rs.at(-1),1))+metric("MACD",fmt(ml.at(-1),4))+metric("Signal",fmt(ms.at(-1),4))+metric("Histogram",fmt(mh.at(-1),4));
   if(hover!=null&&rows[hover]){const cx=x(hover);ctx.beginPath();ctx.moveTo(cx,pad.top);ctx.lineTo(cx,rsiBottom);ctx.strokeStyle="rgba(237,244,255,.3)";ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([])}
 }
 
