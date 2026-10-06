@@ -17,7 +17,7 @@ const {window}=parseHTML('<html><body></body></html>');
 window.JSZip=JSZip;
 class TestDOMParser { parseFromString(text,type){const d=new DOMParser().parseFromString(text,type);for(const el of [d,...d.querySelectorAll('*')])el.getElementsByTagNameNS=function(ns,name){return [...this.querySelectorAll('*')].filter(e=>e.tagName===name||e.tagName.endsWith(':'+name))};return d;} }
 const context=vm.createContext({window,document:window.document,DOMParser:TestDOMParser,XMLSerializer:class{serializeToString(d){return d.toString()}},URL,setTimeout,Blob,console,fetch:async()=>({ok:true,arrayBuffer:async()=>fs.readFileSync('docs/assets/stock-portfolio-history-template.xlsx')})});
-const exporter=fs.readFileSync('docs/portfolio-export.js','utf8').replace('await import("./portfolio-report.js?v=20261006-2")','({createReport:globalThis.createReport})');
+const exporter=fs.readFileSync('docs/portfolio-export.js','utf8').replace(/await import\("\.\/portfolio-report\.js\?v=[^"]+"\)/,'({createReport:globalThis.createReport})');
 context.createReport=ctx.createReport;vm.runInContext(exporter,context);
 (async()=>{
  const result=await window.PortfolioExcel.createBlob(data),bytes=Buffer.from(await result.blob.arrayBuffer());

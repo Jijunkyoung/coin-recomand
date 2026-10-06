@@ -12,14 +12,14 @@ export function createReport(portfolio) {
   if (!history.length) throw new Error("다운로드할 일별 자산 기록이 아직 없습니다.");
   const amounts = s => Object.fromEntries(["kr","us","coin"].map(id=>[id,(s.positions||[]).filter(p=>p.market===id).reduce((a,p)=>a+(numeric(p.evaluation_amount)||0),0)]));
   const daily = history.map((s,i)=>{
-    const r=i+2,a=amounts(s),fx=numeric(s.fx_rate),status=s.complete===false?"자료누락":s.warnings?.length?"안내 확인":"정상";
+    const r=i+2,a=amounts(s),fx=numeric(s.fx_rate),status=s.complete===false?"자료누락":s.warnings?.some(w=>w.includes("누락일 수동복원"))?"수동복원":s.warnings?.length?"안내 확인":"정상";
     const total=s.complete===false || a.us!==0&&!(fx>0) ? null : a.kr+a.coin+a.us*(fx||0);
     return [serial(s.snapshot_date),a.kr,a.us,a.coin,fx,formula(`IF(H${r}="자료누락","n.a.",IF(C${r}=0,SUM(B${r},D${r}),IF(ISNUMBER(E${r}),SUM(B${r},D${r},C${r}*E${r}),"n.a.")))`,total),(s.positions||[]).length,status,serial(s.fx_date),(s.warnings||[]).join(" / ")+(s.fx_source?` / 환율: ${s.fx_source}`:""),s.snapshot_date];
   });
   function details(s,positions,start) {
     return positions.map((p,i)=>{
       const r=start+i,fx=numeric(s.fx_rate),amount=numeric(p.evaluation_amount),converted=p.currency==="KRW"?amount:fx>0&&amount!=null?amount*fx:null;
-      return [serial(s.snapshot_date),broker(p.broker),market(p.market),String(p.symbol||""),String(p.name||p.symbol||""),numeric(p.quantity),numeric(p.average_price),numeric(p.current_price),amount,numeric(p.profit_loss),numeric(p.profit_rate)==null?null:Number(p.profit_rate)/100,numeric(p.daily_change_rate)==null?null:Number(p.daily_change_rate)/100,p.currency,fx,formula(`IF(M${r}="KRW",I${r},IF(ISNUMBER(N${r}),I${r}*N${r},"n.a."))`,converted),p.source_captured_at||s.captured_at||""];
+      return [serial(s.snapshot_date),broker(p.broker),market(p.market),String(p.symbol||""),String(p.name||p.symbol||""),numeric(p.quantity),numeric(p.average_price),numeric(p.current_price),amount,numeric(p.profit_loss),numeric(p.profit_rate)==null?null:Number(p.profit_rate)/100,numeric(p.daily_change_rate)==null?null:Number(p.daily_change_rate)/100,p.currency,fx,formula(`IF(M${r}="KRW",I${r},IF(ISNUMBER(N${r}),I${r}*N${r},"n.a."))`,converted),p.record_source==="manual_restore"?`수동복원 · ${s.captured_at||""}`:p.source_captured_at||s.captured_at||""];
     });
   }
   const rows=[];for(const s of history)rows.push(...details(s,s.positions||[],rows.length+2));

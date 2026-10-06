@@ -207,6 +207,12 @@
     if (error) throw new Error(await functionErrorMessage(error));
     if (data?.error) throw new Error(data.error); return data;
   }
+  async function restoreAssets(body, save = false) {
+    if (!client || !user) throw new Error("로그인이 필요합니다.");
+    const { data, error } = await client.functions.invoke("kis-portfolio", { body: { ...body, action: save ? "asset_restore_save" : "asset_restore_prepare" } });
+    if (error) throw new Error(await functionErrorMessage(error));
+    if (data?.error) throw new Error(data.error); return data;
+  }
   async function assetExport() {
     if (!client || !user) throw new Error("로그인이 필요합니다.");
     const { data, error } = await client.functions.invoke("kis-portfolio", { body: { action: "asset_export" } });
@@ -214,7 +220,7 @@
     if (data?.error) throw new Error(data.error);
     return data;
   }
-  window.CoinAuth = { assetExport, stockChart, coinChart: body => stockChart(body, "coin_chart"), tossSyncStatus, configured, get user() { return user; }, get profile() { return profile; }, get portfolio() { return portfolio; }, get upbitPortfolio() { return upbitPortfolio; }, savePreferences, syncBrokerageHoldings, syncCryptoHoldings, open: openDialog };
+  window.CoinAuth = { restoreAssets, assetExport, stockChart, coinChart: body => stockChart(body, "coin_chart"), tossSyncStatus, configured, get user() { return user; }, get profile() { return profile; }, get portfolio() { return portfolio; }, get upbitPortfolio() { return upbitPortfolio; }, savePreferences, syncBrokerageHoldings, syncCryptoHoldings, open: openDialog };
   renderActions();
   $("#authClose").addEventListener("click", () => dialog.close()); dialog.addEventListener("click", e => { if (e.target === dialog) dialog.close(); });
   document.querySelectorAll("[data-auth-mode]").forEach(b => b.addEventListener("click", () => showMode(b.dataset.authMode)));
