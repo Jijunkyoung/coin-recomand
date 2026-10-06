@@ -85,9 +85,10 @@ export function restoredSnapshot(userId: string, body: Record<string, any>) {
     keys.add(key);
     const quantity = finite(item.quantity)!;
     if (quantity === 0) return [];
-    const price = market === "coin" && symbol === "KRW" ? 1 : finite(item.current_price)!;
+    const cash = market === "coin" && symbol === "KRW", price = finite(item.current_price)!;
+    if (cash && price !== 1) throw new Error("원화 잔액의 가격은 1원으로 입력하고 수량에 잔액을 입력해 주세요.");
     if (!(price > 0)) throw new Error("보유종목 가격은 0보다 커야 합니다.");
-    const average = finite(item.average_price, true), amount = quantity * price;
+    const average = cash ? 1 : finite(item.average_price, true), amount = quantity * price;
     if (!Number.isFinite(amount) || amount > 1e18) throw new Error("평가금액이 입력 범위를 초과했습니다.");
     return [{ broker, market, symbol, name: String(item.name || symbol).slice(0, 100), quantity, average_price: average, current_price: price, evaluation_amount: amount,
       profit_loss: average == null ? null : amount - quantity * average, profit_rate: average && average > 0 ? (price / average - 1) * 100 : null,

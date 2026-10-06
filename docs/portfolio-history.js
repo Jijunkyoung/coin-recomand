@@ -25,8 +25,14 @@
   function positions() { return [...find("#restoreRows").children].map(element=>Object.fromEntries([...element.querySelectorAll("[data-field]")].map(input=>[input.dataset.field,input.value]))); }
   function changed() {
     find("#restoreConfirmed").checked=false; find("#restoreSave").disabled=true;
+    [...find("#restoreRows").children].forEach(element=>{
+      const cash=element.querySelector('[data-field="market"]').value==="coin" && element.querySelector('[data-field="symbol"]').value.trim().toUpperCase()==="KRW";
+      const price=element.querySelector('[data-field="current_price"]'), average=element.querySelector('[data-field="average_price"]');
+      price.readOnly=cash;average.readOnly=cash;
+      if(cash){price.value="1";average.value="1";element.querySelector(".restore-price-note").textContent="원화 잔액은 종목코드 KRW · 단가 1원입니다. 당시 수량에 원화 잔액을 입력해 주세요.";}
+      price.required=Number(element.querySelector('[data-field="quantity"]').value)>0;
+    });
     const fx=Number(find("#restoreFx").value), items=positions();
-    [...find("#restoreRows").children].forEach(element=>{element.querySelector('[data-field="current_price"]').required=Number(element.querySelector('[data-field="quantity"]').value)>0;});
     const invalid = items.some(item=>Number(item.quantity)>0 && !(Number(item.current_price)>0));
     const needsFx = items.some(item=>item.market==="us" && Number(item.quantity)>0);
     const total = items.reduce((sum,item)=>sum+Number(item.quantity)*Number(item.current_price)*(item.market==="us"?fx:1),0);
