@@ -47,6 +47,10 @@
     const wb=parse(await zip.file("xl/workbook.xml").async("string"));let calc=wb.getElementsByTagNameNS(NS,"calcPr")[0];if(!calc){calc=wb.createElementNS(NS,"x:calcPr");wb.documentElement.appendChild(calc);}calc.setAttribute("calcMode","auto");calc.setAttribute("fullCalcOnLoad","1");calc.setAttribute("forceFullCalc","1");zip.file("xl/workbook.xml",xml(wb));
     return {blob:await zip.generateAsync({type:"blob",mimeType:MIME,compression:"DEFLATE"}),report};
   }
-  async function download(portfolio){const {blob,report}=await createBlob(portfolio),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`portfolio-history-${report.date}.xlsx`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);return {days:report.days,records:report.records};}
+  async function download(portfolio){
+    // Download always reads the complete owner history, including after a page reload.
+    if(window.CoinAuth?.user&&window.CoinAuth.assetExport)portfolio=await window.CoinAuth.assetExport();
+    const {blob,report}=await createBlob(portfolio),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`portfolio-history-${report.date}.xlsx`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);return {days:report.days,records:report.records};
+  }
   window.PortfolioExcel={download,createBlob};
 })();

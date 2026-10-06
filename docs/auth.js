@@ -129,7 +129,11 @@
       if (error) throw new Error(await functionErrorMessage(error));
       if (data?.error) throw new Error(data.error);
       portfolio = data;
-      sessionStorage.setItem(portfolioCacheKey(), JSON.stringify(data));
+      // A year's combined stock/coin history can exceed browser storage limits.
+      // Keep the full response in memory; use only recent records for the UI cache.
+      const cache = { ...data, history: (data.history || []).slice(-30), asset_history: (data.asset_history || []).slice(-30) };
+      try { sessionStorage.setItem(portfolioCacheKey(), JSON.stringify(cache)); }
+      catch { try { sessionStorage.removeItem(portfolioCacheKey()); } catch { /* caching is optional */ } }
       dispatchPortfolio();
       const summary = brokerSyncSummary(data); setBrokerStatus(summary.message, summary.error);
       return data;
@@ -203,7 +207,14 @@
     if (error) throw new Error(await functionErrorMessage(error));
     if (data?.error) throw new Error(data.error); return data;
   }
-  window.CoinAuth = { stockChart, coinChart: body => stockChart(body, "coin_chart"), tossSyncStatus, configured, get user() { return user; }, get profile() { return profile; }, get portfolio() { return portfolio; }, get upbitPortfolio() { return upbitPortfolio; }, savePreferences, syncBrokerageHoldings, syncCryptoHoldings, open: openDialog };
+  async function assetExport() {
+    if (!client || !user) throw new Error("로그인이 필요합니다.");
+    const { data, error } = await client.functions.invoke("kis-portfolio", { body: { action: "asset_export" } });
+    if (error) throw new Error(await functionErrorMessage(error));
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+  window.CoinAuth = { assetExport, stockChart, coinChart: body => stockChart(body, "coin_chart"), tossSyncStatus, configured, get user() { return user; }, get profile() { return profile; }, get portfolio() { return portfolio; }, get upbitPortfolio() { return upbitPortfolio; }, savePreferences, syncBrokerageHoldings, syncCryptoHoldings, open: openDialog };
   renderActions();
   $("#authClose").addEventListener("click", () => dialog.close()); dialog.addEventListener("click", e => { if (e.target === dialog) dialog.close(); });
   document.querySelectorAll("[data-auth-mode]").forEach(b => b.addEventListener("click", () => showMode(b.dataset.authMode)));
