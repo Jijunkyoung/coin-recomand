@@ -15,7 +15,8 @@ function database({assets=[],stocks=[],error=null}={}){let writes=[];return {wri
  for(const bad of [null,true,{},-1,Infinity,'NaN'])assert.throws(()=>restoredSnapshot('owner',{...body,positions:[{...usd,quantity:bad}]}));
  assert.throws(()=>restoredSnapshot('owner',{...body,positions:[usd,usd]}));assert.throws(()=>restoredSnapshot('owner',{...body,positions:[{...usd,current_price:0}]}));assert.throws(()=>restoredSnapshot('owner',{...body,positions:[{...usd,broker:'upbit'}]}));
  const zero=restoredSnapshot('owner',{...body,positions:[{...usd,quantity:0,current_price:null}],fx_rate:null});assert.equal(zero.positions.length,0);
- const cash=restoredSnapshot('owner',{...body,positions:[{broker:'upbit',market:'coin',symbol:'KRW',quantity:1000,current_price:700}],fx_rate:null});assert.equal(cash.totals.coin,1000);
+ const cash=restoredSnapshot('owner',{...body,positions:[{broker:'upbit',market:'coin',symbol:'KRW',quantity:1000,current_price:1}],fx_rate:null});assert.equal(cash.totals.coin,1000);assert.equal(cash.positions[0].profit_loss,0);
+ assert.throws(()=>restoredSnapshot('owner',{...body,positions:[{broker:'upbit',market:'coin',symbol:'KRW',quantity:1000,current_price:2}],fx_rate:null}),/가격은 1원/);
  quotes=[{timestamp:Date.parse('2026-10-02T13:30:00Z'),price:90,session:'2026-10-02'},{timestamp:Date.parse('2026-10-05T13:30:00Z'),price:100,session:'2026-10-05'}];
  assert.equal((await historicalPrice(usd,'2026-10-05')).current_price,90,'US close after KST midnight must not leak future price');
  quotes=[{timestamp:Date.parse('2026-10-05T00:00:00Z'),price:70000,session:'2026-10-05'}];assert.equal((await historicalPrice({market:'kr',symbol:'005930'},'2026-10-05')).current_price,70000);
