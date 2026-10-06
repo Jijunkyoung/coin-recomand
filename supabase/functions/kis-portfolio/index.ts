@@ -1,4 +1,6 @@
 import { stockChart, coinChart } from "./stock-chart.ts";
+import { captureAssetHistory } from "../_shared/asset-history.ts";
+import { createReport } from "../_shared/portfolio-report.js";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -265,7 +267,25 @@ Deno.serve(async (request) => {
         user_id: ownerId, broker: "toss", positions: uploaded, source: "local_pc", synced_at: syncedAt,
       }, { onConflict: "user_id,broker" });
       if (uploadError) throw new Error(`토스증권 로컬 자료 저장 실패: ${uploadError.message}`);
-      return new Response(JSON.stringify({ ok: true, broker: "toss", positions_count: uploaded.length, synced_at: syncedAt }), {
+      let excelPortfolio = null, exportWarning = null;
+      try {
+        const warnings: string[] = [], connections: Record<string, Connection> = { toss: { configured: true, ok: true, source: "local_pc", synced_at: syncedAt }, kis: { configured: false, ok: false } };
+        let stocks = [...uploaded];
+        try { const kis = await loadKisPositions(); connections.kis = { configured: kis.configured, ok: kis.configured }; stocks.push(...kis.positions); warnings.push(...kis.warnings); }
+        catch (error) { connections.kis = { configured: true, ok: false }; warnings.push(`한국투자증권: ${error instanceof Error ? error.message : "조회 실패"}`); }
+        const assetHistory = await captureAssetHistory(supabase, ownerId, stocks, connections, warnings);
+        // Preserve the existing stock history as well, using the merged/fallback broker positions.
+        const daily = assetHistory[assetHistory.length - 1];
+        const stockPositions = daily.positions.filter((item: Record<string, any>) => item.market !== "coin");
+        const { error: dailyError } = await supabase.from("stock_portfolio_daily_snapshots").upsert({ user_id: ownerId, snapshot_date: daily.snapshot_date, positions: stockPositions, totals: marketTotals(stockPositions), captured_at: syncedAt }, { onConflict: "user_id,snapshot_date" });
+        if (dailyError) throw new Error(`주식 일별기록 저장 실패: ${dailyError.message}`);
+        if (body.export_history === true) {
+          const { data: legacy, error: legacyError } = await supabase.from("stock_portfolio_daily_snapshots").select("snapshot_date,positions,totals,captured_at").eq("user_id", ownerId).order("snapshot_date", { ascending: false }).limit(366);
+          if (legacyError) throw new Error("기존 일별기록 조회 실패");
+          excelPortfolio = createReport({ asset_history: assetHistory, history: (legacy || []).reverse() });
+        }
+      } catch (error) { exportWarning = error instanceof Error ? error.message : "자산기록 저장 실패"; }
+      return new Response(JSON.stringify({ ok: true, broker: "toss", positions_count: uploaded.length, synced_at: syncedAt, excel_portfolio: excelPortfolio, export_warning: exportWarning }), {
         headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "no-store" },
       });
     }
@@ -348,6 +368,9 @@ Deno.serve(async (request) => {
     const { data: history, error: historyError } = await supabase.from("stock_portfolio_daily_snapshots")
       .select("snapshot_date,positions,totals,captured_at").eq("user_id", userId).order("snapshot_date", { ascending: false }).limit(366);
     if (historyError) throw new Error(`일별 계좌기록 조회 실패: ${historyError.message}`);
+    let assetHistory: Record<string, any>[] = [];
+    try { assetHistory = await captureAssetHistory(supabase, userId, unique, connections, warnings); }
+    catch (error) { warnings.push(`자산기록: ${error instanceof Error ? error.message : "저장 실패"}`); }
 
     const holdingsKr = unique.filter((item) => item.market === "kr").map((item) => `${item.symbol}|${item.name}`).join("\n");
     const holdingsUs = unique.filter((item) => item.market === "us").map((item) => `${item.symbol}|${item.name}`).join("\n");
@@ -360,7 +383,7 @@ Deno.serve(async (request) => {
       mailProfile = { holdings_us: [holdingsUs, preferences?.holdings_us || ""].filter(Boolean).join("\n"), holdings_kr: [holdingsKr, preferences?.holdings_kr || ""].filter(Boolean).join("\n"), sector_ids: preferences?.sector_ids || [], stock_email: preferences?.stock_email || authData.user?.email || null };
     }
 
-    return new Response(JSON.stringify({ positions: unique, totals, synced_at: capturedAt, snapshot_date: today, warnings, changes, history: (history || []).reverse(), connections, mail_profile: mailProfile }), {
+    return new Response(JSON.stringify({ positions: unique, totals, synced_at: capturedAt, snapshot_date: today, warnings, changes, history: (history || []).reverse(), asset_history: assetHistory, connections, mail_profile: mailProfile }), {
       headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "no-store" },
     });
   } catch (error) {

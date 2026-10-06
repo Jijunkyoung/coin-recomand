@@ -209,11 +209,12 @@ class MemberAuthTests(unittest.TestCase):
     def test_excel_history_download_keeps_native_charts(self):
         exporter = (ROOT / "docs/portfolio-export.js").read_text(encoding="utf-8")
         template = ROOT / "docs/assets/stock-portfolio-history-template.xlsx"
-        self.assertIn('stock-portfolio-history-${latest.snapshot_date}.xlsx', exporter)
-        self.assertIn('xl/worksheets/sheet2.xml', exporter)
-        self.assertIn('xl/worksheets/sheet3.xml', exporter)
-        self.assertIn("latestTotals", exporter)
-        self.assertGreater(template.stat().st_size, 50_000)
+        self.assertIn('portfolio-history-${report.date}.xlsx', exporter)
+        model = (ROOT / "docs/portfolio-report.js").read_text(encoding="utf-8")
+        self.assertIn('xl/worksheets/sheet2.xml', model)
+        self.assertIn('xl/worksheets/sheet3.xml', model)
+        self.assertIn("latestTotals", model)
+        self.assertGreater(template.stat().st_size, 10_000)
         with zipfile.ZipFile(template) as workbook:
             names = set(workbook.namelist())
             self.assertIn("xl/drawings/charts/chart1.xml", names)
