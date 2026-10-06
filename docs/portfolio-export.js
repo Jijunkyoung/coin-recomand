@@ -35,7 +35,7 @@
   }
   async function createBlob(portfolio){
     if(!window.JSZip)throw new Error("엑셀 생성 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.");
-    const {createReport}=await import("./portfolio-report.js?v=20261006-2"),report=createReport(portfolio);
+    const {createReport}=await import("./portfolio-report.js?v=20261006-4"),report=createReport(portfolio);
     const response=await fetch("assets/stock-portfolio-history-template.xlsx?v=20261006-2",{cache:"no-store"});if(!response.ok)throw new Error("엑셀 양식을 불러오지 못했습니다.");
     const zip=await window.JSZip.loadAsync(await response.arrayBuffer());
     const summary=parse(await zip.file("xl/worksheets/sheet1.xml").async("string"));

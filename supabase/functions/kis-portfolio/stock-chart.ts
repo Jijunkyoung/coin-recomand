@@ -1,6 +1,6 @@
 type ChartRow = { timestamp: number; date: string; session: string; open: number; high: number; low: number; price: number; volume: number };
 const chartCache = new Map<string, { at: number; data: unknown }>();
-export async function stockChart(body: Record<string, unknown>) {
+export async function stockChart(body: Record<string, unknown>, signal?: AbortSignal) {
   const symbol = String(body.symbol || "").trim().toUpperCase(), market = String(body.market || "");
   const interval = String(body.interval || "1d");
   if (!["us", "kr"].includes(market) || !/^[A-Z0-9][A-Z0-9.\-]{0,15}$/.test(symbol) || (market === "kr" && !/^[A-Z0-9]{6}$/.test(symbol)) || !["1d", "1w", "1h", "4h"].includes(interval)) throw new Error("종목 또는 봉 선택값이 올바르지 않습니다.");
@@ -10,9 +10,10 @@ export async function stockChart(body: Record<string, unknown>) {
   const symbols = market === "kr" ? [`${symbol}.KS`, `${symbol}.KQ`] : [symbol.replace(".", "-")];
   for (const ticker of symbols) {
     for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
+      if (signal?.aborted) throw new Error("과거 시세 조회 시간 초과: 직접 입력해 주세요.");
       try {
         const query = new URLSearchParams({ interval: hourly ? "60m" : "1d", range: hourly ? "3mo" : "5y", includePrePost: "false" });
-        const response = await fetch(`https://${host}/v8/finance/chart/${encodeURIComponent(ticker)}?${query}`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" }, signal: AbortSignal.timeout(8000) });
+        const response = await fetch(`https://${host}/v8/finance/chart/${encodeURIComponent(ticker)}?${query}`, { headers: { "user-agent": "Mozilla/5.0", accept: "application/json" }, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000) });
         if (!response.ok) continue;
         const result = (await response.json()).chart?.result?.[0], quote = result?.indicators?.quote?.[0];
         if (!quote || !Array.isArray(result.timestamp)) continue;

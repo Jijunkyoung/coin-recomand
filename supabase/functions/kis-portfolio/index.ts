@@ -1,4 +1,5 @@
 import { stockChart, coinChart } from "./stock-chart.ts";
+import { prepareRestore, saveRestore } from "./asset-restore.ts";
 import { captureAssetHistory } from "../_shared/asset-history.ts";
 import { createReport } from "../_shared/portfolio-report.js";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -303,6 +304,11 @@ Deno.serve(async (request) => {
     }
     if (!userId) return new Response(JSON.stringify({ error: "증권계좌 소유자 설정이 완료되지 않았습니다." }), { status: 403, headers: { ...corsHeaders, "content-type": "application/json" } });
 
+    if (body.action === "asset_restore_prepare" || body.action === "asset_restore_save") {
+      if (schedulerMode) throw new Error("누락일 복원은 계좌 소유자로 로그인한 브라우저에서 실행해 주세요.");
+      const data = body.action === "asset_restore_prepare" ? await prepareRestore(supabase, userId, body.snapshot_date) : await saveRestore(supabase, userId, body);
+      return new Response(JSON.stringify(data), { headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "no-store" } });
+    }
     if (body.action === "toss_sync_status") {
       const { data, error } = await supabase.from("stock_broker_sync_state").select("synced_at").eq("user_id", userId).eq("broker", "toss").maybeSingle();
       if (error) throw new Error("토스 동기화 상태를 확인하지 못했습니다.");
