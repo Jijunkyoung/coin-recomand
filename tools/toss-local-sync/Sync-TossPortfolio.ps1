@@ -100,10 +100,17 @@ try {
     Write-SyncLog "3단계 성공: $($positions.Count)개 종목 확인"
     $stage = "4단계: 대시보드 서버 업로드"
     Write-SyncLog "$stage 시작"
-    $payload = @{ action = "upload_toss_positions"; positions = @($positions) } | ConvertTo-Json -Depth 8 -Compress
-    $uploadResponse = Invoke-RestMethod -Method Post -Uri $config.FunctionUrl -Headers @{ "x-toss-local-sync-key" = $syncKey } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($payload)) -TimeoutSec 60
+    $payload = @{ action = "upload_toss_positions"; positions = @($positions); export_history = $true } | ConvertTo-Json -Depth 8 -Compress
+    $uploadResponse = Invoke-RestMethod -Method Post -Uri $config.FunctionUrl -Headers @{ "x-toss-local-sync-key" = $syncKey } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($payload)) -TimeoutSec 180
     if (-not $uploadResponse.ok) { throw "Supabase 업로드가 완료되지 않았습니다." }
     Write-SyncLog "성공: 토스증권 $($uploadResponse.positions_count)개 종목을 대시보드에 동기화했습니다."
+    $stage = "5단계: 일별 자산 엑셀 저장"
+    Write-SyncLog "$stage 시작"
+    if ($uploadResponse.export_warning) { throw "동기화는 성공했지만 자산기록 실패: $($uploadResponse.export_warning)" }
+    . (Join-Path $PSScriptRoot "Save-PortfolioExcel.ps1")
+    $excelDir = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "CoinRecomand\portfolio-excel"
+    $excelPath = Save-PortfolioExcel $uploadResponse.excel_portfolio (Join-Path $PSScriptRoot "stock-portfolio-history-template.xlsx") $excelDir
+    Write-SyncLog "5단계 성공: 엑셀 저장 완료 / $excelPath"
     exit 0
 } catch {
     $failure = $_

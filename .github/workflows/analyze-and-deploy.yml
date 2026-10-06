@@ -69,6 +69,7 @@ jobs:
           node --check docs/research.js
           node --check docs/auth.js
           node --check docs/portfolio-export.js
+          node --check docs/portfolio-report.js
           node --check docs/stock.js
           node tests/research_ui.cjs
       - name: Load browser-saved member settings

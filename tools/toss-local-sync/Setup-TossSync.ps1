@@ -52,6 +52,8 @@ try {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     Copy-Item $SyncSource $SyncTarget -Force
     Copy-Item (Join-Path $PSScriptRoot "Toss-Auth.ps1") (Join-Path $InstallDir "Toss-Auth.ps1") -Force
+    Copy-Item (Join-Path $PSScriptRoot "Save-PortfolioExcel.ps1") (Join-Path $InstallDir "Save-PortfolioExcel.ps1") -Force
+    Copy-Item (Join-Path $PSScriptRoot "stock-portfolio-history-template.xlsx") (Join-Path $InstallDir "stock-portfolio-history-template.xlsx") -Force
     @{
         FunctionUrl = "https://pgtxtnggjqaysjhtdepz.supabase.co/functions/v1/kis-portfolio"
         ClientId = Protect-Text $clientId

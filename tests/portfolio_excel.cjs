@@ -1,0 +1,30 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const {parseHTML,DOMParser}=require('linkedom');
+const JSZip=require('../docs/vendor/jszip.min.js');
+const {stripTypeScriptTypes}=require('node:module');
+const code=fs.readFileSync('docs/portfolio-report.js','utf8');
+assert.equal(code,fs.readFileSync('supabase/functions/_shared/portfolio-report.js','utf8'));
+const ctx=vm.createContext({console,Map,Date});vm.runInContext(code.replace('export function','function')+';globalThis.createReport=createReport;',ctx);
+const assets=[{broker:'kis',market:'kr',symbol:'005930',name:'삼성전자',quantity:10,current_price:70000,evaluation_amount:700000,currency:'KRW'},{broker:'toss',market:'us',symbol:'AAPL',name:'Apple',quantity:2,current_price:250,evaluation_amount:500,currency:'USD'},{broker:'upbit',market:'coin',symbol:'BTC',name:'BTC',quantity:.01,current_price:140000000,evaluation_amount:1400000,currency:'KRW'}];
+const data={asset_history:Array.from({length:366},(_,i)=>({snapshot_date:new Date(Date.UTC(2025,9,6+i)).toISOString().slice(0,10),positions:Array.from({length:10},(_,j)=>assets.map(p=>({...p,symbol:p.symbol+j}))).flat(),fx_rate:1400,fx_date:'2026-10-05',complete:true,warnings:[],captured_at:'2026-10-06T00:10:00Z'}))};
+const report=ctx.createReport(data);assert.equal(report.records,10980);assert.equal(report.sheets[0].rows[0][5].value,28000000);assert.equal(report.summary[1].value,28000000);assert.equal(report.charts[0].points.length,366);assert.equal(report.charts[1].points.length,10);
+const missing=ctx.createReport({asset_history:[{...data.asset_history[0],fx_rate:null}]});assert.equal(missing.summary[1].value,'n.a.');assert.equal(missing.charts[0].points[0],null);
+const incomplete=ctx.createReport({asset_history:[{...data.asset_history[0],complete:false}]});assert.equal(incomplete.summary[1].value,'n.a.');
+const empty=ctx.createReport({asset_history:[{snapshot_date:'2026-10-06',positions:[],fx_rate:null}]});assert.equal(empty.summary[1].value,0);assert.equal(empty.records,0);
+const overlap=ctx.createReport({history:[{snapshot_date:'2026-10-06',positions:[]}],asset_history:[{snapshot_date:'2026-10-06',positions:assets,fx_rate:1400}]});assert.equal(overlap.days,1);assert.equal(overlap.records,3);
+assert.throws(()=>ctx.createReport({history:[]}),/기록/);
+const {window}=parseHTML('<html><body></body></html>');
+window.JSZip=JSZip;
+class TestDOMParser { parseFromString(text,type){const d=new DOMParser().parseFromString(text,type);for(const el of [d,...d.querySelectorAll('*')])el.getElementsByTagNameNS=function(ns,name){return [...this.querySelectorAll('*')].filter(e=>e.tagName===name||e.tagName.endsWith(':'+name))};return d;} }
+const context=vm.createContext({window,document:window.document,DOMParser:TestDOMParser,XMLSerializer:class{serializeToString(d){return d.toString()}},URL,setTimeout,Blob,console,fetch:async()=>({ok:true,arrayBuffer:async()=>fs.readFileSync('docs/assets/stock-portfolio-history-template.xlsx')})});
+const exporter=fs.readFileSync('docs/portfolio-export.js','utf8').replace('await import("./portfolio-report.js?v=20261006-2")','({createReport:globalThis.createReport})');
+context.createReport=ctx.createReport;vm.runInContext(exporter,context);
+(async()=>{
+ const result=await window.PortfolioExcel.createBlob(data),bytes=Buffer.from(await result.blob.arrayBuffer());
+ fs.mkdirSync('/tmp/daily-asset-excel-20261006/test',{recursive:true});fs.writeFileSync('/tmp/daily-asset-excel-20261006/test/report.json',JSON.stringify(report));fs.writeFileSync('/tmp/daily-asset-excel-20261006/test/browser.xlsx',bytes);
+ const zip=await JSZip.loadAsync(bytes),sheet=await zip.file('xl/worksheets/sheet3.xml').async('string');assert.equal((sheet.match(/<x:row /g)||[]).length,10981);assert.match(sheet,/r="O10981"/);assert.match(sheet,/0059300/);
+ const chart=await zip.file('xl/drawings/charts/chart1.xml').async('string');assert.match(chart,/\$F\$367/);assert.match(chart,/ptCount val="366"/);assert.match(chart,/28000000/);
+ const tableFiles=Object.keys(zip.files).filter(p=>p.startsWith('xl/tables/')&&p.endsWith('.xml'));let recordTable='';for(const f of tableFiles){const text=await zip.file(f).async('string');if(text.includes('name="AssetRecords"'))recordTable=text;}assert.match(recordTable,/ref="A1:P10981"/);
+ const small=await window.PortfolioExcel.createBlob({asset_history:[{snapshot_date:'2026-10-06',positions:assets,fx_rate:1400,fx_date:'2026-10-05',complete:true,warnings:[]}]});fs.writeFileSync('/tmp/daily-asset-excel-20261006/test/report-small.json',JSON.stringify(small.report));fs.writeFileSync('/tmp/daily-asset-excel-20261006/test/browser-small.xlsx',Buffer.from(await small.blob.arrayBuffer()));
+ console.log('Excel: 10,980 records retained; currency totals, missing/zero values, date merge, native chart caches and table resizing passed.');
+})().catch(e=>{console.error(e);process.exitCode=1});

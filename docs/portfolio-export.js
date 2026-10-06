@@ -1,119 +1,52 @@
 (function () {
   "use strict";
-
-  const NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
-  const MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-  const brokerName = value => value === "toss" ? "Toss Securities" : "KIS";
-  const marketName = value => value === "us" ? "US" : "KR";
-  const numeric = value => Number.isFinite(Number(value)) ? Number(value) : null;
-  const excelSerial = iso => {
-    const time = Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`);
-    return Number.isFinite(time) ? time / 86400000 + 25569 : null;
-  };
-
-  function cells(document) {
-    return new Map([...document.getElementsByTagNameNS(NS, "c")].map(cell => [cell.getAttribute("r"), cell]));
+  const NS="http://schemas.openxmlformats.org/spreadsheetml/2006/main",CNS="http://schemas.openxmlformats.org/drawingml/2006/chart";
+  const MIME="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  const parse=text=>{const d=new DOMParser().parseFromString(text,"application/xml");if(d.querySelector("parsererror"))throw new Error("엑셀 양식을 읽지 못했습니다.");return d;};
+  const xml=d=>new XMLSerializer().serializeToString(d);
+  function writeCell(d,c,value){
+    while(c.firstChild)c.removeChild(c.firstChild);c.removeAttribute("t");
+    if(value&&typeof value==="object"){const f=d.createElementNS(NS,"x:f");f.textContent=value.formula;c.appendChild(f);value=value.value;}
+    if(value==null||value==="")return;
+    const v=d.createElementNS(NS,"x:v");v.textContent=String(value);c.setAttribute("t",typeof value==="number"?"n":"str");c.appendChild(v);
   }
-
-  function clearCell(cell) {
-    while (cell.firstChild) cell.removeChild(cell.firstChild);
-    cell.removeAttribute("t");
+  function fillRows(d,rows,columns){
+    const body=d.getElementsByTagNameNS(NS,"sheetData")[0],old=[...body.getElementsByTagNameNS(NS,"row")],sample=old.find(r=>r.getAttribute("r")==="2");
+    const styles=new Map([...sample.children].map(c=>[c.getAttribute("r").replace(/\d+$/,""),c.getAttribute("s")]));
+    for(const r of old)if(Number(r.getAttribute("r"))>=2)r.remove();
+    rows.forEach((values,i)=>{const r=d.createElementNS(NS,"x:row");r.setAttribute("r",i+2);if(sample.hasAttribute("ht")){r.setAttribute("ht",sample.getAttribute("ht"));r.setAttribute("customHeight","1");}values.forEach((v,j)=>{const col=String.fromCharCode(65+j),c=d.createElementNS(NS,"x:c");c.setAttribute("r",`${col}${i+2}`);if(styles.get(col)!=null)c.setAttribute("s",styles.get(col));writeCell(d,c,v);r.appendChild(c);});body.appendChild(r);});
+    const dimension=d.getElementsByTagNameNS(NS,"dimension")[0];if(dimension)dimension.setAttribute("ref",`A1:${String.fromCharCode(64+columns)}${Math.max(2,rows.length+1)}`);
   }
-
-  function setCell(document, map, ref, value, type = "number") {
-    const cell = map.get(ref);
-    if (!cell) throw new Error(`엑셀 양식의 ${ref} 셀을 찾지 못했습니다.`);
-    clearCell(cell);
-    if (value == null || value === "") return;
-    const node = document.createElementNS(NS, "x:v");
-    node.textContent = String(value);
-    cell.setAttribute("t", type === "string" ? "str" : "n");
-    cell.appendChild(node);
-  }
-
-  function clearBody(map, maxRow, columns) {
-    const allowed = new Set(columns);
-    for (const [ref, cell] of map) {
-      const match = /^([A-Z]+)(\d+)$/.exec(ref);
-      if (match && allowed.has(match[1]) && Number(match[2]) >= 2 && Number(match[2]) <= maxRow) clearCell(cell);
+  function chartCache(d,report){
+    for(const [role,ref,data,kind] of [["cat",report.category,report.labels,"str"],["val",report.values,report.points,"num"]]){
+      const parent=d.getElementsByTagNameNS(CNS,role)[0];while(parent.firstChild)parent.removeChild(parent.firstChild);
+      const r=d.createElementNS(CNS,`c:${kind}Ref`),f=d.createElementNS(CNS,"c:f"),cache=d.createElementNS(CNS,`c:${kind}Cache`),count=d.createElementNS(CNS,"c:ptCount");f.textContent=ref;count.setAttribute("val",data.length);cache.appendChild(count);
+      data.forEach((value,i)=>{if(value==null)return;const pt=d.createElementNS(CNS,"c:pt"),v=d.createElementNS(CNS,"c:v");pt.setAttribute("idx",i);v.textContent=String(value);pt.appendChild(v);cache.appendChild(pt);});r.appendChild(f);r.appendChild(cache);parent.appendChild(r);
+    }
+    if(d.getElementsByTagNameNS(CNS,"lineChart").length){
+      const series=d.getElementsByTagNameNS(CNS,"ser")[0];let marker=series.getElementsByTagNameNS(CNS,"marker")[0];
+      if(!marker){marker=d.createElementNS(CNS,"c:marker");series.insertBefore(marker,series.getElementsByTagNameNS(CNS,"cat")[0]);}
+      while(marker.firstChild)marker.removeChild(marker.firstChild);
+      const symbol=d.createElementNS(CNS,"c:symbol");symbol.setAttribute("val","circle");marker.appendChild(symbol);
+      const size=d.createElementNS(CNS,"c:size");size.setAttribute("val","4");marker.appendChild(size);
+      const axis=d.getElementsByTagNameNS(CNS,"catAx")[0];let skip=axis.getElementsByTagNameNS(CNS,"tickLblSkip")[0];
+      if(!skip){skip=d.createElementNS(CNS,"c:tickLblSkip");axis.appendChild(skip);}skip.setAttribute("val",Math.max(1,Math.ceil(report.labels.length/8)));
     }
   }
-
-  function parseXml(text) {
-    const document = new DOMParser().parseFromString(text, "application/xml");
-    if (document.querySelector("parsererror")) throw new Error("엑셀 양식을 읽지 못했습니다.");
-    return document;
+  async function createBlob(portfolio){
+    if(!window.JSZip)throw new Error("엑셀 생성 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.");
+    const {createReport}=await import("./portfolio-report.js?v=20261006-2"),report=createReport(portfolio);
+    const response=await fetch("assets/stock-portfolio-history-template.xlsx?v=20261006-2",{cache:"no-store"});if(!response.ok)throw new Error("엑셀 양식을 불러오지 못했습니다.");
+    const zip=await window.JSZip.loadAsync(await response.arrayBuffer());
+    const summary=parse(await zip.file("xl/worksheets/sheet1.xml").async("string"));
+    for(const item of report.summary){const cell=[...summary.getElementsByTagNameNS(NS,"c")].find(c=>c.getAttribute("r")===item.ref);if(!cell)throw new Error("엑셀 요약 양식이 올바르지 않습니다.");writeCell(summary,cell,item);}
+    zip.file("xl/worksheets/sheet1.xml",xml(summary));
+    for(const sheet of report.sheets){const d=parse(await zip.file(sheet.path).async("string"));fillRows(d,sheet.rows,sheet.columns);zip.file(sheet.path,xml(d));}
+    for(const path of Object.keys(zip.files).filter(p=>/^xl\/tables\/.*\.xml$/.test(p))){const d=parse(await zip.file(path).async("string")),table=d.documentElement,sheet=report.sheets.find(s=>s.table===table.getAttribute("name"));if(!sheet)continue;const ref=`A1:${String.fromCharCode(64+sheet.columns)}${Math.max(2,sheet.rows.length+1)}`;table.setAttribute("ref",ref);for(const f of d.getElementsByTagNameNS(NS,"autoFilter"))f.setAttribute("ref",ref);zip.file(path,xml(d));}
+    for(const chart of report.charts){const d=parse(await zip.file(chart.path).async("string"));chartCache(d,chart);zip.file(chart.path,xml(d));}
+    const wb=parse(await zip.file("xl/workbook.xml").async("string"));let calc=wb.getElementsByTagNameNS(NS,"calcPr")[0];if(!calc){calc=wb.createElementNS(NS,"x:calcPr");wb.documentElement.appendChild(calc);}calc.setAttribute("calcMode","auto");calc.setAttribute("fullCalcOnLoad","1");calc.setAttribute("forceFullCalc","1");zip.file("xl/workbook.xml",xml(wb));
+    return {blob:await zip.generateAsync({type:"blob",mimeType:MIME,compression:"DEFLATE"}),report};
   }
-
-  function serialize(document) {
-    return new XMLSerializer().serializeToString(document);
-  }
-
-  function snapshotTotals(snapshot) {
-    if (snapshot?.totals?.kr && snapshot?.totals?.us) return snapshot.totals;
-    const totals = { kr: { evaluation_amount: 0 }, us: { evaluation_amount: 0 } };
-    for (const item of snapshot?.positions || []) totals[item.market === "us" ? "us" : "kr"].evaluation_amount += numeric(item.evaluation_amount) || 0;
-    return totals;
-  }
-
-  function downloadBlob(blob, fileName) {
-    const url = URL.createObjectURL(blob), link = document.createElement("a");
-    link.href = url; link.download = fileName; document.body.appendChild(link); link.click(); link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-
-  async function download(portfolio) {
-    if (!window.JSZip) throw new Error("엑셀 생성 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.");
-    const history = [...(portfolio?.history || [])].sort((a, b) => String(a.snapshot_date).localeCompare(String(b.snapshot_date))).slice(-366);
-    if (!history.length) throw new Error("다운로드할 일별 계좌 기록이 아직 없습니다.");
-    const response = await fetch("assets/stock-portfolio-history-template.xlsx", { cache: "no-store" });
-    if (!response.ok) throw new Error("엑셀 양식을 불러오지 못했습니다.");
-    const zip = await window.JSZip.loadAsync(await response.arrayBuffer());
-
-    const summaryDoc = parseXml(await zip.file("xl/worksheets/sheet1.xml").async("string"));
-    const totalsDoc = parseXml(await zip.file("xl/worksheets/sheet2.xml").async("string"));
-    const recordsDoc = parseXml(await zip.file("xl/worksheets/sheet3.xml").async("string"));
-    const summaryCells = cells(summaryDoc), totalCells = cells(totalsDoc), recordCells = cells(recordsDoc);
-    clearBody(totalCells, 367, ["A", "B", "C", "D"]);
-    clearBody(recordCells, 5001, ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M"]);
-
-    const totalRows = history.map(snapshot => {
-      const totals = snapshotTotals(snapshot);
-      return [snapshot.snapshot_date, numeric(totals.kr?.evaluation_amount) || 0, numeric(totals.us?.evaluation_amount) || 0, (snapshot.positions || []).length];
-    });
-    totalRows.forEach((row, index) => {
-      const excelRow = index + 2;
-      setCell(totalsDoc, totalCells, `A${excelRow}`, row[0], "string");
-      setCell(totalsDoc, totalCells, `B${excelRow}`, row[1]);
-      setCell(totalsDoc, totalCells, `C${excelRow}`, row[2]);
-      setCell(totalsDoc, totalCells, `D${excelRow}`, row[3]);
-    });
-
-    const detailRows = history.flatMap(snapshot => (snapshot.positions || []).map(item => [
-      excelSerial(snapshot.snapshot_date), brokerName(item.broker), marketName(item.market), item.symbol, item.name,
-      numeric(item.quantity), numeric(item.average_price), numeric(item.current_price), numeric(item.evaluation_amount),
-      numeric(item.profit_loss), numeric(item.profit_rate) == null ? null : numeric(item.profit_rate) / 100,
-      numeric(item.daily_change_rate) == null ? null : numeric(item.daily_change_rate) / 100, item.currency,
-    ])).slice(-5000);
-    const letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M"];
-    const stringColumns = new Set([1, 2, 3, 4, 12]);
-    detailRows.forEach((row, index) => row.forEach((value, column) => setCell(recordsDoc, recordCells, `${letters[column]}${index + 2}`, value, stringColumns.has(column) ? "string" : "number")));
-
-    const latest = history[history.length - 1], latestTotals = snapshotTotals(latest);
-    setCell(summaryDoc, summaryCells, "B5", latest.snapshot_date, "string");
-    setCell(summaryDoc, summaryCells, "B7", numeric(latestTotals.kr?.evaluation_amount) || 0);
-    setCell(summaryDoc, summaryCells, "E7", numeric(latestTotals.us?.evaluation_amount) || 0);
-    setCell(summaryDoc, summaryCells, "H7", (latest.positions || []).length);
-
-    zip.file("xl/worksheets/sheet1.xml", serialize(summaryDoc));
-    zip.file("xl/worksheets/sheet2.xml", serialize(totalsDoc));
-    zip.file("xl/worksheets/sheet3.xml", serialize(recordsDoc));
-    const workbookXml = await zip.file("xl/workbook.xml").async("string");
-    zip.file("xl/workbook.xml", workbookXml.includes("<x:calcPr") ? workbookXml : workbookXml.replace("</x:workbook>", '<x:calcPr calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1" /></x:workbook>'));
-    const blob = await zip.generateAsync({ type: "blob", mimeType: MIME, compression: "DEFLATE" });
-    downloadBlob(blob, `stock-portfolio-history-${latest.snapshot_date}.xlsx`);
-    return { days: history.length, records: detailRows.length, truncated: detailRows.length === 5000 };
-  }
-
-  window.PortfolioExcel = { download };
+  async function download(portfolio){const {blob,report}=await createBlob(portfolio),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`portfolio-history-${report.date}.xlsx`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);return {days:report.days,records:report.records};}
+  window.PortfolioExcel={download,createBlob};
 })();
