@@ -308,6 +308,15 @@ Deno.serve(async (request) => {
       if (error) throw new Error("토스 동기화 상태를 확인하지 못했습니다.");
       return new Response(JSON.stringify({ synced_at: data?.synced_at || null }), { headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "no-store" } });
     }
+    if (body.action === "asset_export") {
+      // Read saved owner records; downloading does not reauthenticate with broker APIs.
+      const { data: assets, error: assetError } = await supabase.from("asset_portfolio_daily_snapshots")
+        .select("snapshot_date,captured_at,positions,totals,fx_rate,fx_date,fx_source,complete,warnings").eq("user_id", userId).order("snapshot_date", { ascending: false }).limit(366);
+      const { data: stocks, error: stockError } = await supabase.from("stock_portfolio_daily_snapshots")
+        .select("snapshot_date,captured_at,positions,totals").eq("user_id", userId).order("snapshot_date", { ascending: false }).limit(366);
+      if (assetError || stockError) throw new Error("일별 자산 기록을 읽지 못했습니다.");
+      return new Response(JSON.stringify({ asset_history: (assets || []).reverse(), history: (stocks || []).reverse() }), { headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "no-store" } });
+    }
     const warnings: string[] = [], connections: Record<Broker, Connection> = {
       kis: { configured: false, ok: false, source: "direct" },
       toss: { configured: false, ok: false, source: env("TOSS_SYNC_MODE") === "local" ? "local_pc" : "direct", synced_at: null },
