@@ -231,3 +231,25 @@ coin recomand-01
 가격은 한국시간 날짜 종료까지 완료된 주식 일봉 종가와 코인 1시간봉 종가를 사용합니다. 미국주식은 그날 한국시간 자정 이후 마감되는 일봉을 사용하지 않습니다. 휴장일에는 이전 거래일 종가를 사용하며 7일보다 오래된 시세 또는 조회 실패 종목은 가격을 직접 입력해야 합니다. 미국주식 환산에는 해당 날짜 또는 이전 7일 이내 환율을 확인해야 합니다. 총액은 연결된 주식 보유종목·업비트 코인과 원화 잔액을 대상으로 하며 주식 계좌 예수금은 제외합니다.
 
 빈 날짜는 새로 저장하고, 자료누락·이전 자료 경고가 있는 날짜만 확인 후 교체할 수 있습니다. 정상 자동 기록은 덮어쓰지 않으며 교체는 기존 저장시각까지 일치해야 합니다. 엑셀의 일별총액에 **수동복원**을 표시하고 종목별 기록에도 복원 출처를 남기며 총액 그래프에 반영합니다. 브라우저 **복원 기록 포함 엑셀 다운로드**로 최신 전체 기록을 받습니다. Windows의 다음 성공 동기화에서도 복원된 날짜를 포함한 누적 엑셀이 생성됩니다. 매일 07:10 일정·암호화된 키는 그대로 유지되며 Windows 업데이트 파일을 다시 실행할 필요가 없습니다.
+
+
+### Cloudflare Pages에 대시보드 자동 동기화
+
+Cloudflare에 별도 정적 사이트를 만들고, 기존 GitHub Pages와 같은 실행에서 생성된 분석자료·회원 로그인 설정을 함께 배포합니다. 저장소의 `docs` 원본만 Git 연동으로 게시하면 자동 생성되는 `supabase-runtime-config.js`와 최신 분석자료가 빠질 수 있어 GitHub Actions의 `github-pages` 결과물을 재사용합니다.
+
+1. Cloudflare에서 이메일 확인을 완료합니다. 도메인 구입이나 수동 파일 업로드는 필요하지 않습니다.
+2. Cloudflare 메인 검색(`Ctrl+K`)에서 **Copy account ID**를 검색해 Account ID를 복사합니다. Workers & Pages의 Account Details에서도 확인할 수 있습니다.
+3. Cloudflare **Manage Account → Account API Tokens → Create Token → Custom Token**에서 토큰을 만듭니다. 권한은 **Account / Cloudflare Pages / Edit**, 계정 범위는 본인 계정으로 지정합니다. API 토큰은 채팅에 보내지 않고 아래 GitHub Secrets에 직접 등록합니다.
+4. `Jijunkyoung/coin-recomand` 저장소의 **Settings → Secrets and variables → Actions → New repository secret**에서 다음 두 값을 등록합니다.
+
+| Name | Secret 값 |
+| --- | --- |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID |
+| `CLOUDFLARE_API_TOKEN` | 방금 만든 Cloudflare Pages 편집 토큰 |
+
+5. 저장소 **Actions → Analyze, email and deploy → Run workflow**에서 `main`을 선택하고 실행합니다. 테스트 메일 발송이나 연구 이력 초기화 옵션은 선택하지 않습니다.
+6. 분석이 끝난 후 **Deploy dashboard to Cloudflare** 작업이 프로젝트를 만들고, 기존 로그인 복귀 주소를 보존하면서 새 운영 주소를 추가한 뒤 게시합니다. 게시된 분석자료와 공개 로그인 설정 파일을 이번 실행의 결과물과 비교한 뒤 작업 Summary에 대시보드 링크를 표시합니다.
+
+기본 프로젝트명은 `coin-recomand-jijunkyoung`입니다. 해당 이름이 이미 사용 중이거나 다른 기존 프로젝트를 사용할 때는 저장소 **Settings → Secrets and variables → Actions → Variables**에 `CLOUDFLARE_PAGES_PROJECT`를 원하는 소문자 프로젝트명으로 등록합니다. 다른 프로젝트를 사용한다면 production branch는 `main`으로 지정하고, 저장소 원본을 중복 게시하는 Cloudflare Git 자동 운영 배포는 꺼야 합니다.
+
+인증값을 아직 등록하지 않은 동안에는 Cloudflare 작업이 설정 대기로 끝나고 기존 GitHub 배포는 계속됩니다. Cloudflare가 실패해도 기존 GitHub Pages 배포 작업은 독립적으로 실행됩니다. 등록 후에는 기존 예약 분석과 코드 배포가 성공할 때 Cloudflare에도 자동 반영되므로 매번 업로드할 필요가 없습니다. 계좌 조회는 계속 기존 Supabase 소유자 인증을 사용하며, API 비밀키와 SMTP 인증값을 정적 사이트에 올리지 않습니다. 새 주소에서 기존 계정으로 로그인하면 됩니다.

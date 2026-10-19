@@ -182,3 +182,51 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+
+  deploy_cloudflare:
+    if: github.ref == 'refs/heads/main'
+    name: Deploy dashboard to Cloudflare
+    runs-on: ubuntu-latest
+    needs: analyze
+    permissions:
+      contents: read
+      actions: read
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT || 'coin-recomand-jijunkyoung' }}
+    steps:
+      - name: Checkout deployment helper
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Check Cloudflare settings
+        id: cloudflare
+        run: python -m scripts.cloudflare_pages check
+      - name: Download this run's published dashboard
+        if: steps.cloudflare.outputs.enabled == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: cloudflare-artifact
+      - name: Validate latest analysis and public login configuration
+        if: steps.cloudflare.outputs.enabled == 'true'
+        run: python -m scripts.cloudflare_pages unpack
+      - name: Prepare Pages project and login redirects
+        if: steps.cloudflare.outputs.enabled == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: python -m scripts.cloudflare_pages prepare
+      - name: Publish dashboard to Cloudflare
+        if: steps.cloudflare.outputs.enabled == 'true'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy cloudflare-site --project-name=${{ steps.cloudflare.outputs.project }} --branch=main
+      - name: Verify the new dashboard and show its address
+        if: steps.cloudflare.outputs.enabled == 'true'
+        run: python -m scripts.cloudflare_pages verify
