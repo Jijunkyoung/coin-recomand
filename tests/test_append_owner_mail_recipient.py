@@ -41,7 +41,7 @@ class AppendOwnerMailRecipientTests(unittest.TestCase):
         self.assertEqual(payload, expected)
         self.assertEqual(filters["user_id"], ["eq.sole-owner-id"])
         self.assertEqual(filters["stock_email"], ["is.null"])
-        self.assertEqual(filters["coin_email"], ['eq."personal@example.com, prior@example.com"'])
+        self.assertEqual(filters["coin_email"], ['in.("personal@example.com, prior@example.com")'])
         self.assertNotIn("coworker@example.com", str(payload))
 
     @patch("scripts.append_owner_mail_recipient.resolve_owner_id", return_value="sole-owner-id")
