@@ -1,0 +1,41 @@
+name: Append existing owner mail recipient
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/append-owner-mail-recipient.yml"
+  workflow_dispatch:
+    inputs:
+      recipient_sha256:
+        description: "SHA-256 of the confirmed lowercase address already in mail secrets"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: owner-mail-preferences
+  cancel-in-progress: false
+
+jobs:
+  append:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[append-owner-mail-recipient]'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Test recipient maintenance
+        run: python -m unittest discover -s tests -p 'test_append_owner_mail_recipient.py' -v
+      - name: Append and verify the confirmed recipient in both saved lists
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          KIS_SCHEDULER_KEY: ${{ secrets.KIS_SCHEDULER_KEY }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          STOCK_EMAIL_TO: ${{ secrets.STOCK_EMAIL_TO }}
+          RECIPIENT_SHA256: ${{ inputs.recipient_sha256 || 'fa43f7bc8f54d6172189c07696092ee3096e05a535fe08b42a7dfa31a0564703' }}
+        run: python -m scripts.append_owner_mail_recipient
