@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/append-owner-mail-recipient.yml"
+      - "scripts/append_owner_mail_recipient.py"
   workflow_dispatch:
     inputs:
       recipient_sha256:

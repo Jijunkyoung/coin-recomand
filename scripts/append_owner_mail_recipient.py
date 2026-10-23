@@ -79,11 +79,13 @@ def run(env: dict[str, str]) -> bool:
     if changed:
         filters = {"user_id": f"eq.{owner_id}", "select": "coin_email,stock_email"}
         for name in updated:
-            # Quoted PostgREST strings preserve commas and other filter syntax.
-            filters[name] = "is.null" if current.get(name) is None else "eq." + json.dumps(current[name])
+            # A one-item IN list explicitly supports quoted text (including
+            # commas). EQ treats quotes as part of the scalar on some servers.
+            filters[name] = "is.null" if current.get(name) is None else "in.(" + json.dumps(current[name]) + ")"
         saved = request_json(env, "/rest/v1/user_preferences?" + urlencode(filters), "PATCH", updated)
         if saved != [updated]:
-            raise RuntimeError("Preference settings changed concurrently; reload before retrying")
+            count = len(saved) if isinstance(saved, list) else "unexpected response"
+            raise RuntimeError(f"Preference settings changed concurrently; reload before retrying (matched rows: {count})")
     verified = request_json(env, "/functions/v1/owner-settings", "POST", {}).get("profile") or {}
     if any(recipient not in {value.lower() for value in addresses(str(verified.get(name) or ""))}
            for name in updated):
