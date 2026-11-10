@@ -72,6 +72,13 @@ jobs:
           node --check docs/portfolio-report.js
           node --check docs/stock.js
           node tests/research_ui.cjs
+      - name: Configure member authentication
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: pgtxtnggjqaysjhtdepz
+        run: python scripts/write_supabase_config.py
       - name: Load browser-saved member settings
         continue-on-error: true
         env:
@@ -156,13 +163,6 @@ jobs:
           path: research-state/state.json
           retention-days: 90
           if-no-files-found: error
-      - name: Configure member authentication
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: pgtxtnggjqaysjhtdepz
-        run: python scripts/write_supabase_config.py
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
         with:
