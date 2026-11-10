@@ -5,6 +5,8 @@ import base64
 import json
 import os
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 
@@ -53,17 +55,30 @@ def main() -> None:
     url = os.getenv("SUPABASE_URL", "").strip() or f"https://{project_ref}.supabase.co"
     key = os.getenv("SUPABASE_ANON_KEY", "").strip()
     access_token = os.getenv("SUPABASE_ACCESS_TOKEN", "").strip()
-    if access_token:
-        key = _fetch_public_key(project_ref, access_token)
-    elif not key:
-        raise RuntimeError("SUPABASE_ACCESS_TOKEN is required when SUPABASE_ANON_KEY is empty")
     expected_host = f"{project_ref}.supabase.co"
-    if expected_host not in url:
+    parsed_url = urlsplit(url)
+    if (parsed_url.scheme != "https" or parsed_url.netloc != expected_host
+            or parsed_url.path not in {"", "/"} or parsed_url.query or parsed_url.fragment):
         raise RuntimeError(f"SUPABASE_URL must target {expected_host}")
+    # The public browser key is sufficient for a static deployment. Do not let
+    # an unrelated expired management token override an explicitly configured key.
+    if not key:
+        if not access_token:
+            raise RuntimeError("SUPABASE_ANON_KEY or SUPABASE_ACCESS_TOKEN is required")
+        try:
+            key = _fetch_public_key(project_ref, access_token)
+        except HTTPError as error:
+            raise RuntimeError(
+                f"Public login key lookup failed (HTTP {error.code}). "
+                "Set SUPABASE_ANON_KEY to the project's publishable/anon key, "
+                "or renew SUPABASE_ACCESS_TOKEN."
+            ) from None
+        except (URLError, TimeoutError) as error:
+            raise RuntimeError("Public login key lookup is unavailable; configure SUPABASE_ANON_KEY directly.") from None
     if not _is_public_key(key):
         raise RuntimeError("SUPABASE_ANON_KEY must be a publishable key or legacy anon JWT")
     config = {
-        "url": url,
+        "url": url.rstrip("/"),
         "anonKey": key,
     }
     target = Path("docs/supabase-runtime-config.js")
