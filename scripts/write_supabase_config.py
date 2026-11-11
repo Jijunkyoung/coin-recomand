@@ -50,6 +50,27 @@ def _fetch_public_key(project_ref: str, access_token: str) -> str:
     return candidates[0]
 
 
+def _validate_public_key(url: str, key: str) -> None:
+    request = Request(
+        f"{url.rstrip('/')}/auth/v1/settings",
+        headers={"apikey": key, "Accept": "application/json"},
+    )
+    try:
+        with urlopen(request, timeout=30) as response:
+            settings = json.load(response)
+    except HTTPError as error:
+        if error.code in {401, 403}:
+            raise RuntimeError(
+                f"Supabase rejected the configured public login key (HTTP {error.code}). "
+                "Replace SUPABASE_ANON_KEY with this project's current publishable/anon key."
+            ) from None
+        raise RuntimeError(f"Supabase public login key verification failed (HTTP {error.code}).") from None
+    except (URLError, TimeoutError, ValueError):
+        raise RuntimeError("Supabase public login key verification is unavailable; no login configuration was written.") from None
+    if not isinstance(settings, dict):
+        raise RuntimeError("Supabase returned an invalid Auth settings response; no login configuration was written.")
+
+
 def main() -> None:
     project_ref = os.getenv("SUPABASE_PROJECT_REF", PROJECT_REF).strip()
     url = os.getenv("SUPABASE_URL", "").strip() or f"https://{project_ref}.supabase.co"
@@ -77,6 +98,7 @@ def main() -> None:
             raise RuntimeError("Public login key lookup is unavailable; configure SUPABASE_ANON_KEY directly.") from None
     if not _is_public_key(key):
         raise RuntimeError("SUPABASE_ANON_KEY must be a publishable key or legacy anon JWT")
+    _validate_public_key(url, key)
     config = {
         "url": url.rstrip("/"),
         "anonKey": key,
