@@ -4,6 +4,8 @@ import subprocess
 import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
+from scripts import write_supabase_config
 
 
 ROOT = Path(__file__).parents[1]
@@ -62,12 +64,12 @@ class MemberAuthTests(unittest.TestCase):
                 SUPABASE_URL="https://pgtxtnggjqaysjhtdepz.supabase.co",
                 SUPABASE_ANON_KEY="sb_publishable_public-key",
             )
-            subprocess.run(
-                ["python", str(ROOT / "scripts/write_supabase_config.py")],
-                cwd=directory,
-                env=env,
-                check=True,
-            )
+            with patch.dict(os.environ, env, clear=True), \
+                    patch.object(write_supabase_config, "_validate_public_key") as validate, \
+                    patch.object(write_supabase_config, "Path") as target:
+                target.return_value = docs / "supabase-runtime-config.js"
+                write_supabase_config.main()
+                validate.assert_called_once_with(env["SUPABASE_URL"], env["SUPABASE_ANON_KEY"])
             output = (docs / "supabase-runtime-config.js").read_text(encoding="utf-8")
             self.assertIn("https://pgtxtnggjqaysjhtdepz.supabase.co", output)
             self.assertIn("sb_publishable_public-key", output)

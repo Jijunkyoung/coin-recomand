@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+from unittest.mock import MagicMock
 from urllib.error import HTTPError
 
 from scripts import write_supabase_config as writer
@@ -14,11 +15,45 @@ from scripts import write_supabase_config as writer
 class WriteSupabaseConfigTests(unittest.TestCase):
     def write(self, env, fetch):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, env, clear=True), \
-                patch.object(writer, "_fetch_public_key", fetch), patch.object(writer, "Path") as path:
+                patch.object(writer, "_fetch_public_key", fetch), patch.object(writer, "Path") as path, \
+                patch.object(writer, "_validate_public_key") as validate:
             target = Path(tmp) / "config.js"
             path.return_value = target
             writer.main()
+            validate.assert_called_once()
             return target.read_text()
+
+    @patch.object(writer, "urlopen")
+    def test_live_key_validation_rejects_401_without_writing_a_config(self, open_url):
+        open_url.side_effect = HTTPError("https://example.invalid", 401, "Unauthorized", {}, io.BytesIO(b"private body"))
+        with self.assertRaisesRegex(RuntimeError, "HTTP 401.*Replace SUPABASE_ANON_KEY") as caught:
+            writer._validate_public_key(f"https://{writer.PROJECT_REF}.supabase.co", "sb_publishable_rejected")
+        self.assertNotIn("sb_publishable_rejected", str(caught.exception))
+        self.assertNotIn("private body", str(caught.exception))
+
+    @patch.object(writer, "urlopen")
+    def test_live_key_validation_checks_auth_settings_with_only_public_key(self, open_url):
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.read.return_value = b'{"disable_signup":false}'
+        open_url.return_value = response
+        writer._validate_public_key(f"https://{writer.PROJECT_REF}.supabase.co", "sb_publishable_valid")
+        request = open_url.call_args.args[0]
+        self.assertTrue(request.full_url.endswith("/auth/v1/settings"))
+        self.assertEqual(request.get_header("Apikey"), "sb_publishable_valid")
+        self.assertIsNone(request.get_header("Authorization"))
+
+    def test_failed_validation_preserves_the_existing_published_config(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                patch.dict(os.environ, {"SUPABASE_ANON_KEY": "sb_publishable_rejected"}, clear=True), \
+                patch.object(writer, "_validate_public_key", side_effect=RuntimeError("rejected")), \
+                patch.object(writer, "Path") as path:
+            target = Path(tmp) / "config.js"
+            target.write_text("existing verified login configuration")
+            path.return_value = target
+            with self.assertRaisesRegex(RuntimeError, "rejected"):
+                writer.main()
+            self.assertEqual(target.read_text(), "existing verified login configuration")
 
     def test_expired_management_token_cannot_block_configured_publishable_key(self):
         with patch.object(writer, "_fetch_public_key", side_effect=AssertionError("must not call management")) as fetch:
