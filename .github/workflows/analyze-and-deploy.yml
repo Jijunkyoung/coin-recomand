@@ -75,8 +75,7 @@ jobs:
       - name: Configure member authentication
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PUBLIC_KEY_FILE: config/supabase-publishable-key.txt
           SUPABASE_PROJECT_REF: pgtxtnggjqaysjhtdepz
         run: python scripts/write_supabase_config.py
       - name: Load browser-saved member settings

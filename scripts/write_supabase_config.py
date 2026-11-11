@@ -62,7 +62,7 @@ def _validate_public_key(url: str, key: str) -> None:
         if error.code in {401, 403}:
             raise RuntimeError(
                 f"Supabase rejected the configured public login key (HTTP {error.code}). "
-                "Replace SUPABASE_ANON_KEY with this project's current publishable/anon key."
+                "Replace SUPABASE_ANON_KEY or the configured public key file with this project's current publishable/anon key."
             ) from None
         raise RuntimeError(f"Supabase public login key verification failed (HTTP {error.code}).") from None
     except (URLError, TimeoutError, ValueError):
@@ -74,7 +74,13 @@ def _validate_public_key(url: str, key: str) -> None:
 def main() -> None:
     project_ref = os.getenv("SUPABASE_PROJECT_REF", PROJECT_REF).strip()
     url = os.getenv("SUPABASE_URL", "").strip() or f"https://{project_ref}.supabase.co"
-    key = os.getenv("SUPABASE_ANON_KEY", "").strip()
+    key_file = os.getenv("SUPABASE_PUBLIC_KEY_FILE", "").strip()
+    if key_file:
+        key = Path(key_file).read_text(encoding="utf-8").strip()
+        if not key:
+            raise RuntimeError("The configured public key file is empty")
+    else:
+        key = os.getenv("SUPABASE_ANON_KEY", "").strip()
     access_token = os.getenv("SUPABASE_ACCESS_TOKEN", "").strip()
     expected_host = f"{project_ref}.supabase.co"
     parsed_url = urlsplit(url)

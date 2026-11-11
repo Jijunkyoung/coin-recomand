@@ -26,7 +26,9 @@ class WorkflowScheduleTests(unittest.TestCase):
         self.assertIn("STOCK_HOLDINGS_KR: ${{ secrets.STOCK_HOLDINGS_KR }}", workflow)
         self.assertIn("STOCK_SECTORS: ${{ secrets.STOCK_SECTORS }}", workflow)
         self.assertIn("SUPABASE_URL: ${{ secrets.SUPABASE_URL }}", workflow)
-        self.assertIn("SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}", workflow)
+        auth_config = workflow.split("name: Configure member authentication", 1)[1].split("\n      - name:", 1)[0]
+        self.assertIn("SUPABASE_PUBLIC_KEY_FILE: config/supabase-publishable-key.txt", auth_config)
+        self.assertNotIn("SUPABASE_ACCESS_TOKEN:", auth_config)
         self.assertIn("SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}", workflow)
         self.assertIn("SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}", workflow)
         self.assertIn("KIS_SCHEDULER_KEY: ${{ secrets.KIS_SCHEDULER_KEY }}", workflow)
