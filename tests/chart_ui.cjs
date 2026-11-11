@@ -25,12 +25,45 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,15));
    document.querySelector(`[data-interval="${interval}"]`).click();await tick();assert.match(document.querySelector('#chartDataStatus').textContent,name==='index.html'?/업비트/:/fixture/);assert.match(document.querySelector('#detailStats').textContent,/MACD/);
   }
   for(const value of ['0','30','50','70','100'])assert.ok(labels.includes(value),name+' RSI scale '+value);assert.ok(labels.includes('MACD(12,26,9)'));
+  const canvas=document.querySelector('#detailChart'),tabs=document.querySelector('#periodTabs');
+  const timestamps=()=>vm.runInContext('detailPlot.rows.map(row=>row.timestamp)',context);
+  const wheel=(deltaY, clientX, extra={})=>{
+   const event=new window.Event('wheel',{bubbles:true,cancelable:true});
+   Object.assign(event,{deltaY,deltaX:0,deltaMode:0,clientX,...extra});
+   canvas.dispatchEvent(event);
+   return event.defaultPrevented;
+  };
+  tabs.querySelector('[data-days="all"]').click();await tick();
+  const full=timestamps(),anchor=.25;
+  const cursor=vm.runInContext('detailPlot.pad.left+(detailPlot.width-detailPlot.pad.left-detailPlot.pad.right)*.25',context);
+  assert.equal(full.length,200);
+  assert.equal(wheel(-120,5),false,'axis margin should still scroll normally');
+  assert.equal(wheel(-120,cursor,{ctrlKey:true}),false,'browser zoom remains available');
+  assert.equal(wheel(-120,cursor),true);await tick();
+  const zoomed=timestamps();
+  assert.ok(zoomed.length<full.length);
+  assert.ok(zoomed.at(-1)<full.at(-1),'zoomed range may end before the latest candle');
+  assert.equal(vm.runInContext('(detailPlot.macdLine ?? detailPlot.macd).length',context),zoomed.length,'indicators end at the zoomed candle');
+  const anchored=full.indexOf(zoomed[Math.floor(zoomed.length*anchor)]);
+  assert.ok(Math.abs(anchored-Math.floor(full.length*anchor))<=1,'wheel zoom follows the pointer');
+  assert.equal(tabs.querySelector('.active'),null,'custom range deselects the preset');
+  assert.equal(wheel(120,cursor),true);await tick();
+  assert.ok(timestamps().length>zoomed.length);
+  for(let i=0;i<18;i++)wheel(-120,cursor);
+  await tick();assert.equal(timestamps().length,3,'fast wheel input is bounded');
+  tabs.querySelector('[data-days="30"]').click();await tick();
+  assert.equal(timestamps().length,31);
+  assert.equal(timestamps().at(-1),full.at(-1));
+  wheel(-120,cursor);await tick();
+  document.querySelector('[data-interval="1w"]').click();await tick();
+  assert.equal(vm.runInContext('detailZoom',context),null,'switching the interval clears the zoom');
+  assert.equal(tabs.querySelector('.active').dataset.days,'30');
   if(name!=='index.html'){
    vm.runInContext("sample.connections.toss={source:'local_pc',configured:true,ok:true,synced_at:'2026-10-06T00:00:00Z'};renderPortfolio(sample)",context);document.querySelector('#portfolioRefresh').click();await new Promise(resolve=>setTimeout(resolve,80));assert.equal(window.location.href,'coin-toss-sync://run');assert.equal(checks,1);assert.equal(refreshes,2);assert.match(document.querySelector('#portfolioRefreshStatus').textContent,/갱신 완료/);
    // A newer selected timeframe must win when earlier responses arrive late.
    let resolveOld;window.CoinAuth.stockChart=body=>body.interval==='1h'?new Promise(resolve=>resolveOld=resolve):Promise.resolve({rows:makeRows(body.interval),source:'new-selection'});
    vm.runInContext("detailStock={...detailStock,symbol:'NEW'};selectStockInterval('1h');selectStockInterval('4h')",context);await tick();resolveOld({rows:makeRows('1h'),source:'stale-response'});await tick();assert.match(document.querySelector('#chartDataStatus').textContent,/new-selection/);
   }
-  console.log(name+': holding click, manual refresh, interval changes, left indicator scales and stale response protection passed');
+  console.log(name+': chart intervals, indicator scales, pointer-centered wheel zoom and range reset passed');
  }
 })().catch(error=>{console.error(error);process.exitCode=1});
