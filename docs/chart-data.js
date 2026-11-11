@@ -40,11 +40,36 @@
     const cutoff = last - Number(days) * 86400000;
     return rows.filter(row => (row.timestamp || Date.parse(row.date)) >= cutoff);
   }
+  function visibleRange(rows, days) {
+    const end = rows.length;
+    return { start: end - visible(rows, days).length, end };
+  }
+  function bindWheelZoom(canvas, getView, onZoom) {
+    canvas.addEventListener("wheel", event => {
+      if (event.ctrlKey || event.metaKey || !event.deltaY || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      const { plot, range, total } = getView();
+      if (canvas.hidden || !plot || total <= 1) return;
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width) return;
+      const localX = (event.clientX - rect.left) * plot.width / rect.width;
+      const anchor = (localX - plot.pad.left) / (plot.width - plot.pad.left - plot.pad.right);
+      if (anchor < 0 || anchor > 1) return;
+      event.preventDefault();
+      const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? rect.height : 1);
+      const count = range.end - range.start, factor = Math.exp(Math.max(-1, Math.min(1, pixels / 420)));
+      const scaled = pixels < 0 ? Math.floor(count * factor) : Math.ceil(count * factor);
+      const nextCount = Math.max(Math.min(3, count), Math.min(total, scaled));
+      if (nextCount === count) return;
+      // Keep the same part of the timeline under the pointer, up to the loaded edges.
+      const start = Math.max(0, Math.min(total - nextCount, Math.round(range.start + anchor * (count - nextCount))));
+      onZoom({ start, end: start + nextCount });
+    }, { passive: false });
+  }
   function axisNumber(value) {
     if (!Number.isFinite(value)) return "—";
     const magnitude = Math.abs(value); if (magnitude === 0) return "0";
     if (magnitude < .01) return value.toExponential(1);
     return Intl.NumberFormat("ko-KR", { notation: magnitude >= 1000 ? "compact" : "standard", maximumFractionDigits: magnitude < 1 ? 4 : magnitude >= 1000 ? 1 : 2 }).format(value);
   }
-  window.ChartData = { axisNumber, labels, aggregate, loadCoin, loadStock, visible };
+  window.ChartData = { axisNumber, labels, aggregate, loadCoin, loadStock, visible, visibleRange, bindWheelZoom };
 })();

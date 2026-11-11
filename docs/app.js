@@ -2,7 +2,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const fmt = (value, digits = 1) => value == null ? "미수집" : Number(value).toLocaleString("ko-KR", { maximumFractionDigits: digits });
 const pct = value => value == null ? "—" : `${value > 0 ? "+" : ""}${fmt(value)}%`;
 let detailCoin = null;
-let detailDays = 30;
+let detailDays = 30, detailZoom = null;
 let detailInterval = "1d", detailHistory = [], detailRequest = 0;
 let detailPlot = null;
 let detailFrame = null;
@@ -437,7 +437,8 @@ function startLiveMarket(codes) {
 function drawDetailedChart(crossIndex = null) {
   if (!detailCoin) return;
   const all = detailHistory;
-  const rows = window.ChartData.visible(all, detailDays), start = all.length - rows.length;
+  const { start, end } = detailZoom ?? window.ChartData.visibleRange(all, detailDays);
+  const rows = all.slice(start, end);
   if (!rows.length) return;
   const prices = rows.map(row => Number(row.price));
   const opens = rows.map(row => Number(row.open ?? row.price));
@@ -445,13 +446,13 @@ function drawDetailedChart(crossIndex = null) {
   const lows = rows.map(row => Number(row.low ?? row.price));
   const volumes = rows.map(row => Number(row.volume) || 0);
   const allPrices = all.map(row => Number(row.price));
-  const ema20 = emaValues(allPrices, 20).slice(start);
-  const ema50 = emaValues(allPrices, 50).slice(start);
+  const ema20 = emaValues(allPrices, 20).slice(start, end);
+  const ema50 = emaValues(allPrices, 50).slice(start, end);
   const bands = bollingerValues(allPrices);
-  const bandUpper = bands.upper.slice(start), bandMiddle = bands.middle.slice(start), bandLower = bands.lower.slice(start);
-  const rsi14 = rsiValues(allPrices).slice(start);
+  const bandUpper = bands.upper.slice(start, end), bandMiddle = bands.middle.slice(start, end), bandLower = bands.lower.slice(start, end);
+  const rsi14 = rsiValues(allPrices).slice(start, end);
   const macd = macdValues(allPrices);
-  const macdLine = macd.line.slice(start), macdSignal = macd.signal.slice(start), macdHistogram = macd.histogram.slice(start);
+  const macdLine = macd.line.slice(start, end), macdSignal = macd.signal.slice(start, end), macdHistogram = macd.histogram.slice(start, end);
   const canvas = $("#detailChart"), ratio = window.devicePixelRatio || 1;
   const bounds = canvas.getBoundingClientRect();
   const width = Math.max(280, Math.floor(bounds.width)), height = Math.max(280, Math.floor(bounds.height));
@@ -466,7 +467,7 @@ function drawDetailedChart(crossIndex = null) {
   const bandRange = [...bandUpper, ...bandLower].filter(value => value != null && Number.isFinite(value));
   const low = Math.min(...lows, ...bandRange), high = Math.max(...highs, ...bandRange), margin = (high - low || high * .02 || 1) * .09;
   const min = low - margin, max = high + margin, spread = max - min || 1;
-  const candleSpace = plotWidth / Math.max(1, rows.length), candleWidth = Math.max(1.5, Math.min(10, candleSpace * .62));
+  const candleSpace = plotWidth / Math.max(1, rows.length), candleWidth = Math.max(1.5, Math.min(26, candleSpace * .62));
   const x = index => pad.left + (index + .5) * candleSpace;
   const y = value => pad.top + (max - value) / spread * (priceBottom - pad.top);
 
@@ -567,17 +568,17 @@ function scheduleDetailedChart(crossIndex = null) {
 }
 
 function openDetailChart(coin) {
-  detailCoin = coin; detailDays = 30; detailHistory = []; detailPlot = null;
+  detailCoin = coin; detailDays = 30;
   $("#chartSymbol").textContent = `${coin.symbol || "BTC"} / KRW · DAILY`;
   $("#chartTitle").textContent = `${coin.name || "비트코인"} 상세차트`;
   $("#chartPrice").innerHTML = `현재 ₩${fmt(coin.price, 4)} · ${dailyChangeMarkup(coin.return_1d)}`;
-  $("#periodTabs").querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.days === "30"));
   const dialog = $("#chartDialog"); dialog.showModal();
   selectCoinInterval("1d");
 }
 
 async function selectCoinInterval(interval) {
-  const request = ++detailRequest, coin = detailCoin; detailInterval = interval; detailHistory = []; detailPlot = null;
+  const request = ++detailRequest, coin = detailCoin; detailInterval = interval; detailHistory = []; detailPlot = null; detailZoom = null;
+  $("#periodTabs").querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.days === String(detailDays)));
   $("#chartTooltip").hidden = true; $("#detailChart").hidden = true; $("#detailStats").innerHTML = "";
   $("#chartDataStatus").textContent = `${window.ChartData.labels[interval]} 불러오는 중…`;
   $("#candleTabs").querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.interval === interval));
@@ -758,8 +759,17 @@ $("#chartClose").addEventListener("click", () => $("#chartDialog").close());
 $("#chartDialog").addEventListener("click", event => { if (event.target === event.currentTarget) event.currentTarget.close(); });
 $("#periodTabs").addEventListener("click", event => {
   const button = event.target.closest("button"); if (!button) return;
-  detailDays = button.dataset.days === "all" ? "all" : Number(button.dataset.days);
+  detailDays = button.dataset.days === "all" ? "all" : Number(button.dataset.days); detailZoom = null;
+  $("#chartTooltip").hidden = true;
   $("#periodTabs").querySelectorAll("button").forEach(item => item.classList.toggle("active", item === button)); scheduleDetailedChart();
+});
+window.ChartData.bindWheelZoom($("#detailChart"), () => ({
+  plot: detailPlot, range: detailZoom ?? window.ChartData.visibleRange(detailHistory, detailDays), total: detailHistory.length,
+}), range => {
+  detailZoom = range;
+  $("#periodTabs").querySelectorAll("button").forEach(button => button.classList.remove("active"));
+  $("#chartTooltip").hidden = true;
+  scheduleDetailedChart();
 });
 $("#detailChart").addEventListener("pointermove", event => {
   if (!detailPlot) return;
