@@ -45,8 +45,8 @@ python -m http.server 8000 --directory docs
 2. [`supabase/migrations/20260915_user_preferences.sql`](supabase/migrations/20260915_user_preferences.sql)의 전체 내용을 붙여넣어 **Run** 합니다.
 3. **Authentication → Providers → Email**에서 Email 로그인을 켜고 **Confirm email**을 켭니다.
 4. **Authentication → URL Configuration**에서 Site URL을 `https://jijunkyoung.github.io/coin-recomand/`로 지정하고 같은 주소와 `https://jijunkyoung.github.io/coin-recomand/**`를 Redirect URLs에 추가합니다.
-5. 관리 프로젝트는 `SUPABASE_ACCESS_TOKEN`으로 Project URL과 publishable key(구 프로젝트는 anon key)를 배포할 때 자동 조회합니다.
-6. `SUPABASE_URL`, `SUPABASE_ANON_KEY`를 직접 등록해도 되지만, 값이 비어 있으면 관리 프로젝트에서 자동으로 가져옵니다. service_role/secret key는 브라우저용 Secret에 넣지 않습니다.
+5. 배포는 `SUPABASE_URL`과 [브라우저용 공개 키 설정](config/supabase-publishable-key.txt)을 사용합니다. 키를 교체할 때는 같은 프로젝트의 Publishable key로 이 파일을 업데이트하세요.
+6. 배포 전에 Supabase Auth가 공개 키를 받아들이는지 확인합니다. 키 파일을 지정하지 않는 별도 실행에서는 `SUPABASE_ANON_KEY`를 사용할 수 있습니다.
 7. Actions에서 워크플로를 한 번 실행하거나 변경사항 배포가 끝나면 우측 상단의 `회원가입`으로 확인합니다.
 
 `SUPABASE_ANON_KEY`는 GitHub Pages 브라우저에 전달되는 공개용 키입니다. 배포는 publishable/anon 키인지 검증하고 잘못된 키면 중단합니다. 테이블 보호는 키 은닉이 아니라 위 SQL의 RLS 정책이 담당합니다. `service_role` 키는 RLS를 우회하므로 정적 페이지나 저장소 파일에 절대 넣지 않습니다.
@@ -78,7 +78,7 @@ python -m http.server 8000 --directory docs
 | `STOCK_HOLDINGS_KR` | 국내 보유종목 뉴스 대상 | `005930\|삼성전자,000660\|SK하이닉스` |
 | `STOCK_SECTORS` | 분석·뉴스를 수집할 섹터 ID | `defense,semiconductor,energy` |
 | `SUPABASE_URL` | Supabase Project URL | `https://...supabase.co` |
-| `SUPABASE_ANON_KEY` | 브라우저용 publishable/anon key | `sb_publishable_...` 또는 기존 JWT anon key |
+| `SUPABASE_ANON_KEY` | 공개 키 파일을 지정하지 않는 실행의 브라우저용 키 | `sb_publishable_...` 또는 기존 JWT anon key |
 | `KIS_OWNER_EMAIL` | KIS 계좌 조회를 허용할 단일 회원 이메일(미설정 시 단일 `STOCK_EMAIL_TO`) | `owner@example.com` |
 
 ### 미국·국내주식 최초 설정
