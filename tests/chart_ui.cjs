@@ -27,6 +27,16 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,15));
   for(const value of ['0','30','50','70','100'])assert.ok(labels.includes(value),name+' RSI scale '+value);assert.ok(labels.includes('MACD(12,26,9)'));
   const canvas=document.querySelector('#detailChart'),tabs=document.querySelector('#periodTabs');
   const timestamps=()=>vm.runInContext('detailPlot.rows.map(row=>row.timestamp)',context);
+  let captured=null;
+  canvas.setPointerCapture=id=>{captured=id;};
+  canvas.hasPointerCapture=id=>captured===id;
+  canvas.releasePointerCapture=()=>{captured=null;};
+  const pointer=(type,clientX,extra={})=>{
+   const event=new window.Event(type,{bubbles:true,cancelable:true});
+   Object.assign(event,{clientX,pointerId:1,pointerType:'mouse',button:0,buttons:1,...extra});
+   canvas.dispatchEvent(event);
+   return event.defaultPrevented;
+  };
   const wheel=(deltaY, clientX, extra={})=>{
    const event=new window.Event('wheel',{bubbles:true,cancelable:true});
    Object.assign(event,{deltaY,deltaX:0,deltaMode:0,clientX,...extra});
@@ -54,6 +64,23 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,15));
   tabs.querySelector('[data-days="30"]').click();await tick();
   assert.equal(timestamps().length,31);
   assert.equal(timestamps().at(-1),full.at(-1));
+  const original=timestamps();
+  assert.equal(pointer('pointerdown',cursor,{button:2}),false);
+  assert.equal(pointer('pointerdown',cursor),true);
+  assert.equal(captured,1);
+  pointer('pointermove',cursor+160);await tick();
+  assert.equal(timestamps().length,original.length);
+  assert.ok(timestamps()[0]<original[0],'dragging right reveals earlier candles');
+  assert.equal(document.querySelector('#chartTooltip').hidden,true);
+  pointer('pointermove',cursor+10000);await tick();
+  assert.equal(timestamps()[0],full[0],'drag bounds stop at the earliest candle');
+  pointer('pointermove',cursor-160);await tick();
+  assert.equal(timestamps().at(-1),full.at(-1),'dragging left returns to the newest candles');
+  pointer('pointerup',cursor,{buttons:0});assert.equal(captured,null);
+  pointer('pointermove',cursor+200,{buttons:0});await tick();
+  assert.equal(timestamps()[0],original[0],'hover after release does not pan');
+  pointer('pointerdown',cursor);
+  pointer('pointercancel',cursor,{buttons:0});assert.equal(captured,null);
   wheel(-120,cursor);await tick();
   document.querySelector('[data-interval="1w"]').click();await tick();
   assert.equal(vm.runInContext('detailZoom',context),null,'switching the interval clears the zoom');
@@ -64,6 +91,6 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,15));
    let resolveOld;window.CoinAuth.stockChart=body=>body.interval==='1h'?new Promise(resolve=>resolveOld=resolve):Promise.resolve({rows:makeRows(body.interval),source:'new-selection'});
    vm.runInContext("detailStock={...detailStock,symbol:'NEW'};selectStockInterval('1h');selectStockInterval('4h')",context);await tick();resolveOld({rows:makeRows('1h'),source:'stale-response'});await tick();assert.match(document.querySelector('#chartDataStatus').textContent,/new-selection/);
   }
-  console.log(name+': chart intervals, indicator scales, pointer-centered wheel zoom and range reset passed');
+  console.log(name+': chart intervals, wheel zoom, horizontal drag and range reset passed');
  }
 })().catch(error=>{console.error(error);process.exitCode=1});

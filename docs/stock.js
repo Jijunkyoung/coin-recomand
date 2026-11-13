@@ -139,6 +139,7 @@ function openChart(stock) {
   if(!$("#stockChartDialog").open)$("#stockChartDialog").showModal(); selectStockInterval("1d");
 }
 async function selectStockInterval(interval) {
+  detailNavigation.cancelDrag();
   const request=++detailRequest, stock=detailStock;detailInterval=interval;detailHistory=[];detailPlot=null;detailZoom=null;
   $("#periodTabs").querySelectorAll("button").forEach(button=>button.classList.toggle("active",button.dataset.days===String(detailDays)));
   $("#chartTooltip").hidden=true;$("#detailChart").hidden=true;$("#detailStats").innerHTML="";
@@ -177,16 +178,20 @@ function drawChart(hover=null){
 }
 
 $("#stockSearchForm").addEventListener("submit",event=>{event.preventDefault();const raw=$("#stockSearchInput").value.trim(),normalize=value=>String(value||"").toLowerCase().replace(/\s+/g,"");const query=normalize(raw);if(!query)return;if(!report?.rankings?.length){$("#stockSearchResult").innerHTML='<p class="search-empty">검색 데이터를 준비하지 못했습니다. 잠시 후 새로고침해 주세요.</p>';return}const stock=report.rankings.find(x=>normalize(x.symbol)===query||normalize(x.name)===query)||report.rankings.find(x=>normalize(x.symbol).includes(query)||normalize(x.name).includes(query));if(stock)renderSearch(stock);else $("#stockSearchResult").innerHTML=`<p class="search-empty"><strong>${escapeHTML(raw)}</strong>을 분석 대상에서 찾지 못했습니다.</p>`});
-$("#chartClose").addEventListener("click",()=>$("#stockChartDialog").close());$("#stockChartDialog").addEventListener("click",e=>{if(e.target===e.currentTarget)e.currentTarget.close()});$("#periodTabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;detailDays=b.dataset.days==="all"?"all":+b.dataset.days;detailZoom=null;$("#chartTooltip").hidden=true;$("#periodTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));scheduleChart()});
-window.ChartData.bindWheelZoom($("#detailChart"), () => ({
+$("#chartClose").addEventListener("click",()=>$("#stockChartDialog").close());$("#stockChartDialog").addEventListener("click",e=>{if(e.target===e.currentTarget)e.currentTarget.close()});$("#periodTabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;detailDays=b.dataset.days==="all"?"all":+b.dataset.days;detailZoom=null;detailNavigation.cancelDrag();$("#chartTooltip").hidden=true;$("#periodTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));scheduleChart()});
+const detailNavigation = window.ChartData.bindChartNavigation($("#detailChart"), () => ({
   plot: detailPlot, range: detailZoom ?? window.ChartData.visibleRange(detailHistory, detailDays), total: detailHistory.length,
 }), range => {
   detailZoom = range;
   $("#periodTabs").querySelectorAll("button").forEach(button => button.classList.remove("active"));
   $("#chartTooltip").hidden = true;
   scheduleChart();
+}, () => {
+  $("#chartTooltip").hidden = true;
+  scheduleChart();
 });
-$("#detailChart").addEventListener("pointermove",event=>{if(!detailPlot)return;const rect=event.currentTarget.getBoundingClientRect(),local=event.clientX-rect.left,index=Math.max(0,Math.min(detailPlot.rows.length-1,Math.round((local-detailPlot.pad.left)/(detailPlot.width-detailPlot.pad.left-detailPlot.pad.right)*(detailPlot.rows.length-1)))),row=detailPlot.rows[index],tip=$("#chartTooltip");scheduleChart(index);tip.innerHTML=`<strong>${row.date}</strong><span>시가 ${currency(+row.open)} · 고가 ${currency(+row.high)}</span><span>저가 ${currency(+row.low)} · 종가 ${currency(+row.price)}</span><span>거래량 ${fmt(+row.volume,0)} · RSI ${fmt(detailPlot.rsi[index],1)}</span><span>MACD ${fmt(detailPlot.macd[index],4)} · Signal ${fmt(detailPlot.signal[index],4)}</span>`;tip.hidden=false;tip.style.left=`${Math.max(8,Math.min(rect.width-234,local+13))}px`;tip.style.top="18px"});$("#detailChart").addEventListener("pointerleave",()=>{$("#chartTooltip").hidden=true;scheduleChart()});window.addEventListener("resize",()=>{if($("#stockChartDialog").open)scheduleChart()});
+$("#stockChartDialog").addEventListener("close", detailNavigation.cancelDrag);
+$("#detailChart").addEventListener("pointermove",event=>{if(!detailPlot||detailNavigation.isDragging())return;const rect=event.currentTarget.getBoundingClientRect(),local=event.clientX-rect.left,index=Math.max(0,Math.min(detailPlot.rows.length-1,Math.round((local-detailPlot.pad.left)/(detailPlot.width-detailPlot.pad.left-detailPlot.pad.right)*(detailPlot.rows.length-1)))),row=detailPlot.rows[index],tip=$("#chartTooltip");scheduleChart(index);tip.innerHTML=`<strong>${row.date}</strong><span>시가 ${currency(+row.open)} · 고가 ${currency(+row.high)}</span><span>저가 ${currency(+row.low)} · 종가 ${currency(+row.price)}</span><span>거래량 ${fmt(+row.volume,0)} · RSI ${fmt(detailPlot.rsi[index],1)}</span><span>MACD ${fmt(detailPlot.macd[index],4)} · Signal ${fmt(detailPlot.signal[index],4)}</span>`;tip.hidden=false;tip.style.left=`${Math.max(8,Math.min(rect.width-234,local+13))}px`;tip.style.top="18px"});$("#detailChart").addEventListener("pointerleave",()=>{$("#chartTooltip").hidden=true;scheduleChart()});window.addEventListener("resize",()=>{if($("#stockChartDialog").open)scheduleChart()});
 
 const settingsDialog=$("#stockSettingsDialog"), holdingsKey=`stock-holdings-${market}-v1`, sectorsKey="stock-sectors-v1", emailKey="stock-email-recipients-v1";
 function selectedSectorIds(){return [...$("#stockSectorOptions").querySelectorAll("input:checked")].map(input=>input.value)}
