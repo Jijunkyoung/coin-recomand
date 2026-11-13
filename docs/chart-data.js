@@ -44,8 +44,46 @@
     const end = rows.length;
     return { start: end - visible(rows, days).length, end };
   }
-  function bindWheelZoom(canvas, getView, onZoom) {
+  function bindChartNavigation(canvas, getView, onRange, onDragStart) {
+    let drag = null;
+    function cancelDrag() {
+      if (!drag) return;
+      const { pointerId } = drag;
+      drag = null;
+      canvas.style.cursor = "";
+      if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+    }
+    canvas.addEventListener("pointerdown", event => {
+      if (drag || event.button !== 0 || event.pointerType === "touch") return;
+      const { plot, range, total } = getView();
+      const count = range.end - range.start;
+      if (canvas.hidden || !plot || !count || count >= total) return;
+      const rect = canvas.getBoundingClientRect();
+      const scale = rect.width / plot.width;
+      const plotWidth = (plot.width - plot.pad.left - plot.pad.right) * scale;
+      const x = event.clientX - rect.left - plot.pad.left * scale;
+      if (plotWidth <= 0 || x < 0 || x > plotWidth) return;
+      canvas.setPointerCapture(event.pointerId);
+      drag = { pointerId: event.pointerId, x: event.clientX, start: range.start, count, total, plotWidth };
+      canvas.style.cursor = "grabbing";
+      event.preventDefault();
+      onDragStart();
+    });
+    canvas.addEventListener("pointermove", event => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      if (!(event.buttons & 1)) { cancelDrag(); return; }
+      const { x, start, count, total, plotWidth } = drag;
+      const shift = Math.round((x - event.clientX) * count / plotWidth);
+      const next = Math.max(0, Math.min(total - count, start + shift));
+      if (next !== getView().range.start) onRange({ start: next, end: next + count });
+    });
+    for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) {
+      canvas.addEventListener(name, event => {
+        if (event.pointerId === drag?.pointerId) cancelDrag();
+      });
+    }
     canvas.addEventListener("wheel", event => {
+      if (drag) return;
       if (event.ctrlKey || event.metaKey || !event.deltaY || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
       const { plot, range, total } = getView();
       if (canvas.hidden || !plot || total <= 1) return;
@@ -62,8 +100,9 @@
       if (nextCount === count) return;
       // Keep the same part of the timeline under the pointer, up to the loaded edges.
       const start = Math.max(0, Math.min(total - nextCount, Math.round(range.start + anchor * (count - nextCount))));
-      onZoom({ start, end: start + nextCount });
+      onRange({ start, end: start + nextCount });
     }, { passive: false });
+    return { cancelDrag, isDragging: () => drag !== null };
   }
   function axisNumber(value) {
     if (!Number.isFinite(value)) return "—";
@@ -71,5 +110,5 @@
     if (magnitude < .01) return value.toExponential(1);
     return Intl.NumberFormat("ko-KR", { notation: magnitude >= 1000 ? "compact" : "standard", maximumFractionDigits: magnitude < 1 ? 4 : magnitude >= 1000 ? 1 : 2 }).format(value);
   }
-  window.ChartData = { axisNumber, labels, aggregate, loadCoin, loadStock, visible, visibleRange, bindWheelZoom };
+  window.ChartData = { axisNumber, labels, aggregate, loadCoin, loadStock, visible, visibleRange, bindChartNavigation };
 })();

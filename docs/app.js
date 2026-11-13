@@ -577,6 +577,7 @@ function openDetailChart(coin) {
 }
 
 async function selectCoinInterval(interval) {
+  detailNavigation.cancelDrag();
   const request = ++detailRequest, coin = detailCoin; detailInterval = interval; detailHistory = []; detailPlot = null; detailZoom = null;
   $("#periodTabs").querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.days === String(detailDays)));
   $("#chartTooltip").hidden = true; $("#detailChart").hidden = true; $("#detailStats").innerHTML = "";
@@ -760,19 +761,24 @@ $("#chartDialog").addEventListener("click", event => { if (event.target === even
 $("#periodTabs").addEventListener("click", event => {
   const button = event.target.closest("button"); if (!button) return;
   detailDays = button.dataset.days === "all" ? "all" : Number(button.dataset.days); detailZoom = null;
+  detailNavigation.cancelDrag();
   $("#chartTooltip").hidden = true;
   $("#periodTabs").querySelectorAll("button").forEach(item => item.classList.toggle("active", item === button)); scheduleDetailedChart();
 });
-window.ChartData.bindWheelZoom($("#detailChart"), () => ({
+const detailNavigation = window.ChartData.bindChartNavigation($("#detailChart"), () => ({
   plot: detailPlot, range: detailZoom ?? window.ChartData.visibleRange(detailHistory, detailDays), total: detailHistory.length,
 }), range => {
   detailZoom = range;
   $("#periodTabs").querySelectorAll("button").forEach(button => button.classList.remove("active"));
   $("#chartTooltip").hidden = true;
   scheduleDetailedChart();
+}, () => {
+  $("#chartTooltip").hidden = true;
+  scheduleDetailedChart();
 });
+$("#chartDialog").addEventListener("close", detailNavigation.cancelDrag);
 $("#detailChart").addEventListener("pointermove", event => {
-  if (!detailPlot) return;
+  if (!detailPlot || detailNavigation.isDragging()) return;
   const rect = event.currentTarget.getBoundingClientRect(), localX = event.clientX - rect.left;
   const ratioX = (localX - detailPlot.pad.left) / Math.max(1, detailPlot.width - detailPlot.pad.left - detailPlot.pad.right);
   const index = Math.max(0, Math.min(detailPlot.rows.length - 1, Math.round(ratioX * (detailPlot.rows.length - 1))));
