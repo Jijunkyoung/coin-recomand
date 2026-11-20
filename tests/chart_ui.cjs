@@ -14,6 +14,18 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,15));
   window.CoinAuth={user:{id:'owner'},stockChart:async body=>({rows:makeRows(body.interval),source:'fixture'}),coinChart:async body=>({rows:makeRows(body.interval),source:'fixture'}),syncBrokerageHoldings:async()=>{refreshes++;return{}},tossSyncStatus:async()=>{checks++;return{synced_at:'2026-10-06T00:00:05Z'}}};
   const context=vm.createContext({window,document,CustomEvent:window.CustomEvent,Date,Intl,Map,console,devicePixelRatio:1,requestAnimationFrame:fn=>setTimeout(fn,0),setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms,20)),clearTimeout,setInterval:()=>0,fetch:()=>new Promise(()=>{}),localStorage:{getItem:()=>null,setItem:()=>{}},location:window.location});
   vm.runInContext(fs.readFileSync('docs/chart-data.js','utf8'),context);vm.runInContext(fs.readFileSync('docs/'+(name==='index.html'?'app.js':'stock.js'),'utf8'),context);
+  if(name!=='index.html'){
+   context.contextFixture={market_context:{sentiment:{kind:'proxy',label:'국내 공포·탐욕 · 자체 산출',score:0,rating:'극도의 공포',date:'2026-11-19',source:'Test source',source_url:'https://example.invalid',notice:'CNN 공표값 미수집',stale:true,history:[{date:'2026-11-18',value:10},{date:'2026-11-19',value:0}],components:[]},indicators:[{id:'vix',label:'VIX',value:null,unit:'pt',source:'<img src=x>',source_url:'javascript:alert(1)',note:'자료 없음'}]}};
+   vm.runInContext('renderMarketContext(contextFixture)',context);await tick();
+   const panel=document.querySelector('#stockMarketContext');
+   assert.equal(panel.querySelector('[role="meter"]').getAttribute('aria-valuenow'),'0','genuine zero is a valid index value');
+   assert.match(panel.textContent,/자체 산출/);assert.match(panel.textContent,/CNN 공표값 미수집/);assert.match(panel.textContent,/오래된 관측/);
+   assert.match(panel.querySelector('.context-value').textContent,/미수집/);
+   assert.equal(panel.querySelector('img'),null);assert.equal(panel.querySelector('a[href^="javascript:"]'),null);
+   vm.runInContext('contextFixture.market_context.sentiment.score=null;renderMarketContext(contextFixture)',context);
+   assert.equal(panel.querySelector('[role="meter"]'),null,'missing sentiment is not zero or neutral');
+   assert.match(panel.querySelector('.stock-sentiment-score').textContent,/미수집/);
+  }
   if(name==='index.html')vm.runInContext("openDetailChart({symbol:'BTC',market:'KRW-BTC',name:'BTC',price:100})",context);
   else{
    const market=name.startsWith('kr')?'kr':'us';context.sample={positions:[{broker:'toss',market,symbol:market==='kr'?'005930':'AAPL',name:'테스트종목',quantity:3,current_price:100,evaluation_amount:300,profit_loss:5,currency:market==='kr'?'KRW':'USD'}],synced_at:'2026-10-06T00:00:00Z',connections:{toss:{source:'direct',configured:true,ok:true}}};
