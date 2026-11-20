@@ -119,7 +119,34 @@ function showSetup(){
   else if(report?.configured){panel.innerHTML=`<h2>맞춤 수집 범위를 선택해 주세요</h2><p>한국투자증권 API는 연결됐습니다. 위의 <b>맞춤 수집 설정</b>에서 섹터를 선택하고 <code>STOCK_SECTORS</code> Secret에 저장하면 해당 그룹만 분석합니다. 보유종목은 추천 순위가 아니라 맞춤 뉴스 수집에만 사용합니다.</p>`;}
 }
 
+function renderMarketContext(data) {
+  const panel = $("#stockMarketContext"); if (!panel) return;
+  const context = data.market_context;
+  if (!context) { panel.innerHTML = '<p class="context-note">시장심리 자료를 아직 수집하지 못했습니다.</p>'; return; }
+  const sentiment = context.sentiment || {}, raw = sentiment.score;
+  const score = raw == null ? null : Number(raw), available = score != null && Number.isFinite(score) && score >= 0 && score <= 100;
+  const mood = !available ? "missing" : score < 25 ? "extreme-fear" : score < 45 ? "fear" : score < 55 ? "neutral" : score < 75 ? "greed" : "extreme-greed";
+  const sourceLink = (label, url) => /^https:\/\//.test(String(url || "")) ? `<a href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(label)} ↗</a>` : escapeHTML(label);
+  const delta = (value, unit) => value == null || !Number.isFinite(Number(value)) ? "" : `${Number(value) > 0 ? "+" : ""}${fmt(value, 2)}${escapeHTML(unit)}`;
+  const history = (sentiment.history || []).filter(row => Number.isFinite(Number(row.value)));
+  panel.innerHTML = `<div class="section-head"><div><span class="eyebrow">MARKET SENTIMENT & CONTEXT</span><h2>공포·탐욕과 시장 참고지표</h2></div><p>공표값·자체 산출 구분 · 일별 관측</p></div>
+    <div class="stock-context-grid"><article class="stock-sentiment ${mood}">
+      <div class="context-card-heading"><h3>${escapeHTML(sentiment.label || "공포·탐욕")}</h3><span class="context-badge">${sentiment.kind === "published" ? "공표 지수" : "자체 산출"}</span></div>
+      <div class="stock-sentiment-score"><strong>${available ? fmt(score, 1) : "—"}</strong><span>/ 100</span><b>${available ? escapeHTML(sentiment.rating) : "미수집"}</b></div>
+      <div class="sentiment-scale" ${available ? `role="meter" aria-label="공포·탐욕 점수" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${score}"` : ""}>${available ? `<i style="left:${score}%"></i>` : ""}</div><div class="sentiment-scale-labels"><span>극도의 공포 0</span><span>중립 50</span><span>100 극도의 탐욕</span></div>
+      <p class="context-observation">관측 ${escapeHTML(sentiment.date || "확인 불가")}${sentiment.stale ? ' <b class="context-stale">오래된 관측</b>' : ""}${sentiment.change != null ? ` · 이전 관측 대비 ${delta(sentiment.change, "pt")}` : ""}</p>
+      <p class="context-source">${sourceLink(sentiment.source || "출처 미확인", sentiment.source_url)}${sentiment.benchmark ? ` · ${escapeHTML(sentiment.benchmark)}` : ""}</p>
+      ${history.length > 1 ? '<canvas id="stockSentimentHistory" height="72" aria-label="공포·탐욕지수의 관측 추이"></canvas><p class="context-history-range">'+escapeHTML(history[0].date)+' → '+escapeHTML(history.at(-1).date)+'</p>' : ""}
+      <p class="context-note">${escapeHTML(sentiment.note || "")}</p>${sentiment.notice ? `<p class="context-warning">${escapeHTML(sentiment.notice)} ${sourceLink("CNN 원문", sentiment.published_source_url)}</p>` : ""}${sentiment.reason ? `<p class="context-warning">${escapeHTML(sentiment.reason)}</p>` : ""}
+      <details class="context-method"><summary>산출 방식과 구성지표</summary><p>${escapeHTML(sentiment.methodology || "출처에서 산출 방식을 확인하세요.")}</p>${(sentiment.components || []).length ? `<ul>${sentiment.components.map(item => `<li>${escapeHTML(item.label)} ${fmt(item.value, 2)}${escapeHTML(item.unit)} → ${fmt(item.score, 1)}점</li>`).join("")}</ul>` : ""}<p>점수가 낮다고 매수, 높다고 매도 신호가 되는 것은 아닙니다.</p></details>
+    </article><div class="stock-context-indicators">${(context.indicators || []).map(item => `<article class="context-indicator"><h3>${escapeHTML(item.label)}</h3><p class="context-value">${item.value == null ? '<strong>미수집</strong>' : `<strong>${fmt(item.value, 2)}</strong><span>${escapeHTML(item.unit)}</span>`}</p><p class="context-observation">${item.date ? `관측 ${escapeHTML(item.date)}` : "관측 자료 없음"}${item.stale ? ' <b class="context-stale">오래된 관측</b>' : ""}</p>${item.change == null ? "" : `<p class="context-change">이전 관측 대비 ${delta(item.change, item.change_unit)}</p>`}<p class="context-note">${escapeHTML(item.note)}</p><p class="context-source">${sourceLink(item.source, item.source_url)}</p></article>`).join("")}</div></div><p class="context-note context-footnote">${escapeHTML(context.note || "")}</p>`;
+  if (history.length > 1) requestAnimationFrame(() => {
+    const canvas = $("#stockSentimentHistory"); if (canvas) drawLine(canvas, history.map(row => Number(row.value)), mood.includes("fear") ? "#ff8e9b" : "#31d8c5");
+  });
+}
+
 function render(data){
+  renderMarketContext(data);
   report=data; $("#generatedAt").textContent=data.generated_at_kst||"—"; $("#stockStatus").textContent=data.status==="정상"?"데이터 정상":data.status; $("#stockStatus").className=`stock-status ${data.status==="정상"?"ok":"error"}`;
   if(!data.configured||!data.rankings?.length){showSetup(); const selected=Boolean(data.selected_sectors?.length); $("#marketTitle").textContent=!data.configured?`${data.market_name} API 설정 필요`:selected?`${data.market_name} 데이터 수집 실패`:`${data.market_name} 수집범위 선택 필요`; $("#marketSummary").textContent=(data.warnings||[])[0]||"주식 데이터를 아직 수집하지 못했습니다."; $("#recommendations").innerHTML=`<div class="error-card">${!data.configured?"API 설정 후 자동으로 추천 순위가 표시됩니다.":selected?"선택 종목의 수집 오류를 데이터 상태에서 확인해 주세요.":"맞춤 수집 설정 후 선택한 섹터의 추천 순위가 표시됩니다."}</div>`; $("#rankingList").innerHTML='<p class="search-empty">수집된 순위가 없습니다.</p>'; $("#warnings").innerHTML=(data.warnings||[]).map(x=>`<p>• ${escapeHTML(x)}</p>`).join(""); return;}
   const benchmark=data.benchmark; $("#marketTitle").textContent=`${data.regime} 국면`; $("#marketSummary").textContent=data.regime==="상승"?"대표지수 추세가 우호적입니다. 종목별 과열 여부를 함께 확인하세요.":data.regime==="하락"?"대표지수가 약세입니다. 신규 매수보다 위험 관리를 우선합니다.":"대표지수 방향이 혼조입니다. 강한 종목만 선별적으로 관찰합니다.";

@@ -253,3 +253,15 @@ Cloudflare에 별도 정적 사이트를 만들고, 기존 GitHub Pages와 같�
 기본 프로젝트명은 `coin-recomand-jijunkyoung`입니다. 해당 이름이 이미 사용 중이거나 다른 기존 프로젝트를 사용할 때는 저장소 **Settings → Secrets and variables → Actions → Variables**에 `CLOUDFLARE_PAGES_PROJECT`를 원하는 소문자 프로젝트명으로 등록합니다. 다른 프로젝트를 사용한다면 production branch는 `main`으로 지정하고, 저장소 원본을 중복 게시하는 Cloudflare Git 자동 운영 배포는 꺼야 합니다.
 
 인증값을 아직 등록하지 않은 동안에는 Cloudflare 작업이 설정 대기로 끝나고 기존 GitHub 배포는 계속됩니다. Cloudflare가 실패해도 기존 GitHub Pages 배포 작업은 독립적으로 실행됩니다. 등록 후에는 기존 예약 분석과 코드 배포가 성공할 때 Cloudflare에도 자동 반영되므로 매번 업로드할 필요가 없습니다. 계좌 조회는 계속 기존 Supabase 소유자 인증을 사용하며, API 비밀키와 SMTP 인증값을 정적 사이트에 올리지 않습니다. 새 주소에서 기존 계정으로 로그인하면 됩니다.
+
+### 주식 공포·탐욕과 시장 참고지표
+
+국내·미국 주식 탭은 시장심리 점수, 관측 추이, 관측일, 출처를 표시합니다. 미국은 CNN 공표값을 먼저 수집하며 수집 실패 시 대표 ETF 기반 자체 지수로 명시하여 대체합니다. 국내는 KODEX 200 기반 자체 산출 지수입니다. 자체 지수는 CNN이나 한국거래소의 공표 지수가 아닙니다.
+
+자체 지수는 RSI14, 50거래일 이동평균 이격률, 20거래일 수익률, 20일 실현변동성의 역방향 백분위를 0~100으로 환산해 같은 가중치로 합산합니다. 산출 방식과 구성점수는 화면에서 펼쳐 확인합니다. 과거 점수는 해당 시점까지의 시세로 계산하며 기존 종목 추천점수에 합산하지 않습니다.
+
+- 미국: Cboe VIX 일별 종가, 연준/FRED 미국 10년 국채 금리, 대표 ETF 추세·고점 대비 하락률, 분석종목의 50일선 상회 비율.
+- 국내: 연준/FRED 원·달러 고시환율, 대표 ETF 추세·고점 대비 하락률·20일 실현변동성, 분석종목의 50일선 상회 비율. 환율은 뉴욕 정오 관측값이며 주간 발표 시차가 있습니다.
+- 실현변동성은 로그수익률의 표본표준편차를 연간 252거래일 기준으로 환산하며, 옵션의 예상변동성인 VIX·VKOSPI와 구분합니다. 분석종목 비율은 설정된 분석대상 범위의 통계입니다.
+
+수집은 기존 예약 분석에서 수행하며 별도 유료 API 키가 필요하지 않습니다. 각 외부 수집에 제한시간을 적용하고 실패한 값을 0이나 중립으로 바꾸지 않습니다. 휴장일·발표 시차는 관측일로 구분하고 오래된 관측을 표시합니다. CNN 출처: https://www.cnn.com/markets/fear-and-greed · VIX 출처: https://www.cboe.com/tradable_products/vix/vix_historical_data/ · FRED: https://fred.stlouisfed.org/series/DGS10 및 https://fred.stlouisfed.org/series/DEXKOUS

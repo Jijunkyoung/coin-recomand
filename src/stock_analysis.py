@@ -410,6 +410,8 @@ def generate_stock_reports(settings_path: str | Path = "config/stocks.json", out
         market: build_stock_report(market, settings, client, list(settings[market].get("universe", [])), sector_ids)
         for market in ("us", "kr")
     }
+    from .stock_sentiment import add_market_context
+    add_market_context(reports)
     try:
         news_issues = collect_stock_news(holdings, sector_ids, settings)
     except Exception as exc:
