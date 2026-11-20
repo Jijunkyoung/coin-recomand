@@ -265,3 +265,5 @@ Cloudflare에 별도 정적 사이트를 만들고, 기존 GitHub Pages와 같�
 - 실현변동성은 로그수익률의 표본표준편차를 연간 252거래일 기준으로 환산하며, 옵션의 예상변동성인 VIX·VKOSPI와 구분합니다. 분석종목 비율은 설정된 분석대상 범위의 통계입니다.
 
 수집은 기존 예약 분석에서 수행하며 별도 유료 API 키가 필요하지 않습니다. 각 외부 수집에 제한시간을 적용하고 실패한 값을 0이나 중립으로 바꾸지 않습니다. 휴장일·발표 시차는 관측일로 구분하고 오래된 관측을 표시합니다. CNN 출처: https://www.cnn.com/markets/fear-and-greed · VIX 출처: https://www.cboe.com/tradable_products/vix/vix_historical_data/ · FRED: https://fred.stlouisfed.org/series/DGS10 및 https://fred.stlouisfed.org/series/DEXKOUS
+
+FRED CSV 다운로드가 실패하면 같은 시계열의 공식 페이지, 이어서 연준 원본 H.15(명목 10년 국채 금리)·H.10(한국 원화 환율) 발표를 순서대로 확인합니다. 대체 경로에서도 발표일 대신 실제 관측일을 사용합니다.
