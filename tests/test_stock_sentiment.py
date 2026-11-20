@@ -2,9 +2,10 @@ import copy
 from datetime import datetime, timedelta, timezone
 import math
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+import requests
 
-from src.stock_sentiment import add_market_context, benchmark_indicators, parse_cnn, parse_csv, proxy_sentiment
+from src.stock_sentiment import add_market_context, benchmark_indicators, parse_cnn, parse_csv, parse_fred_page, parse_fed_release, proxy_sentiment, _download
 
 NOW = datetime(2026, 11, 20, 10, tzinfo=timezone.utc)
 
@@ -76,6 +77,50 @@ class StockSentimentTests(unittest.TestCase):
         card = next(item for item in benchmark_indicators(report, NOW) if item["id"] == "breadth")
         self.assertEqual(card["value"], 50)
         self.assertIn("2개 중 1개", card["note"])
+
+    def test_fred_page_uses_observation_date_instead_of_publication_date(self):
+        text = '<span class="updated-date">2026-11-20</span><span class="series-meta-value">2026-11-13:</span><span class="series-meta-observation-value">1,336.58</span>'
+        self.assertEqual(parse_fred_page(text, NOW), [{"date": "2026-11-13", "value": 1336.58}])
+        with self.assertRaises(ValueError):
+            parse_fred_page('<html>No observations</html>', NOW)
+
+    @patch("src.stock_sentiment.requests.get")
+    def test_fred_csv_failure_falls_back_to_the_same_official_series(self, get):
+        csv_response, page_response = MagicMock(), MagicMock()
+        csv_response.raise_for_status.side_effect = requests.HTTPError("CSV unavailable")
+        page_response.text = '<span class="series-meta-value">2026-11-18:</span><span class="series-meta-observation-value">5.07</span>'
+        get.side_effect = [csv_response, page_response]
+        self.assertEqual(_download("yield", NOW), [{"date": "2026-11-18", "value": 5.07}])
+        self.assertEqual(get.call_args.args[0], "https://fred.stlouisfed.org/series/DGS10")
+
+    def test_fed_yield_selects_nominal_ten_year_not_real_yield(self):
+        html = '''<table><tr><th id="c1">2026<br>Nov<br>17</th><th id="c2">2026<br>Nov<br>18</th></tr>
+        <tr><th id="nom">Nominal <a>9</a></th></tr>
+        <tr><th id="ten" headers="nom">10-year</th><td headers="nom ten c1">5.10</td><td headers="nom ten c2">5.07</td></tr>
+        <tr><th id="real">Real</th></tr>
+        <tr><th id="tips" headers="real">10-year</th><td headers="real tips c2">2.00</td></tr></table>'''
+        self.assertEqual(parse_fed_release(html, "DGS10", NOW), [
+            {"date": "2026-11-17", "value": 5.10}, {"date": "2026-11-18", "value": 5.07}])
+
+    def test_fed_fx_dates_use_release_year_and_skip_holidays(self):
+        html = '''Release Date: January 4, 2027
+        <table><tr><th id="c1">Dec. 30</th><th id="c2">Jan. 1</th></tr>
+        <tr><th id="kr">SOUTH KOREA</th><td headers="kr c1">1,336.58</td><td headers="kr c2">ND</td></tr>
+        <tr><th id="other">SOUTH AFRICA</th><td headers="other c1">18.0</td></tr></table>'''
+        now = datetime(2027, 1, 4, tzinfo=timezone.utc)
+        self.assertEqual(parse_fed_release(html, "DEXKOUS", now), [{"date": "2026-12-30", "value": 1336.58}])
+        with self.assertRaises(ValueError):
+            parse_fed_release(html.replace("Release Date: January 4, 2027", ""), "DEXKOUS", now)
+
+    @patch("src.stock_sentiment.requests.get")
+    def test_both_fred_routes_unavailable_use_original_fed_release(self, get):
+        response = MagicMock()
+        response.text = '''Release Date: November 16, 2026
+        <table><tr><th id="c">Nov. 13</th></tr>
+        <tr><th id="kr">SOUTH KOREA</th><td headers="kr c">1336.58</td></tr></table>'''
+        get.side_effect = [requests.Timeout(), requests.ConnectionError(), response]
+        self.assertEqual(_download("fx", NOW), [{"date": "2026-11-13", "value": 1336.58}])
+        self.assertEqual(get.call_args.args[0], "https://www.federalreserve.gov/releases/h10/current/")
 
     @patch("src.stock_sentiment._download", side_effect=RuntimeError("offline"))
     def test_source_outage_falls_back_to_labeled_proxy_without_changing_stock_scores(self, download):

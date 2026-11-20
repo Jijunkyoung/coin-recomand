@@ -4,7 +4,10 @@ from __future__ import annotations
 import csv
 import io
 import math
+import re
 import statistics
+from html import unescape
+from html.parser import HTMLParser
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -136,6 +139,73 @@ def parse_csv(text: str, column: str, now: datetime, vix: bool = False) -> list[
     return dated(rows, now)
 
 
+def parse_fred_page(text: str, now: datetime) -> list[dict]:
+    # FRED's series page publishes the latest observation even when its CSV
+    # download endpoint is unavailable. Do not substitute its "Updated" date.
+    match = re.search(
+        r'class=["\'][^"\']*\bseries-meta-value\b[^"\']*["\'][^>]*>\s*'
+        r'(\d{4}-\d{2}-\d{2})\s*:\s*</span>\s*<span[^>]*'
+        r'class=["\'][^"\']*\bseries-meta-observation-value\b[^"\']*["\'][^>]*>\s*([\d,.-]+)\s*</span>',
+        text,
+    )
+    rows = dated([{"date": match[1], "value": match[2].replace(",", "")}], now) if match else []
+    if not rows:
+        raise ValueError("No valid FRED observation on the series page")
+    return rows
+
+
+class ReleaseTable(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows, self.row, self.cell, self.text = [], [], None, []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "tr": self.row = []
+        if tag in {"th", "td"}: self.cell, self.text = dict(attrs), []
+        if tag == "br" and self.cell is not None: self.text.append(" ")
+
+    def handle_data(self, text):
+        if self.cell is not None: self.text.append(text)
+
+    def handle_endtag(self, tag):
+        if tag in {"th", "td"} and self.cell is not None:
+            self.row.append({**self.cell, "text": " ".join("".join(self.text).split())})
+            self.cell = None
+        if tag == "tr" and self.row: self.rows.append(self.row)
+
+
+def parse_fed_release(text: str, series: str, now: datetime) -> list[dict]:
+    table = ReleaseTable(); table.feed(text)
+    plain = " ".join(unescape(re.sub(r"<[^>]+>", " ", text)).split())
+    release = re.search(r"Release Date:\s*([A-Za-z]+ \d{1,2}, \d{4})", plain)
+    release_date = datetime.strptime(release[1], "%B %d, %Y").date() if release else None
+    dates, nominal_ids = {}, set()
+    for row in table.rows:
+        for cell in row:
+            value = cell["text"].replace(".", "")
+            if value.startswith("Nominal") and cell.get("id"): nominal_ids.add(cell["id"])
+            parsed = None
+            try:
+                if series == "DGS10": parsed = datetime.strptime(value, "%Y %b %d").date()
+                elif release_date:
+                    parsed = datetime.strptime(f"{value} {release_date.year}", "%b %d %Y").date()
+                    if parsed > release_date: parsed = parsed.replace(year=parsed.year - 1)
+            except ValueError: pass
+            if parsed and cell.get("id"): dates[cell["id"]] = parsed.isoformat()
+    rows = []
+    for row in table.rows:
+        labels = [cell for cell in row if cell.get("id")]
+        selected = (any(cell["text"] == "SOUTH KOREA" for cell in labels) if series == "DEXKOUS" else
+                    any(cell["text"] == "10-year" and nominal_ids.intersection(cell.get("headers", "").split()) for cell in labels))
+        if not selected: continue
+        for cell in row:
+            for header in cell.get("headers", "").split():
+                if header in dates: rows.append({"date": dates[header], "value": cell["text"].replace(",", "")})
+    result = dated(rows, now)
+    if not result: raise ValueError("No dated observation in Federal Reserve release")
+    return result
+
+
 def indicator(id: str, label: str, rows: list[dict], unit: str, source: str, url: str, note: str,
               now: datetime, change_unit: str | None = None, change_scale: float = 1, max_age: int = 5) -> dict:
     latest = rows[-1] if rows else {}
@@ -178,9 +248,26 @@ def _download(name: str, now: datetime):
     series = {"yield": "DGS10", "fx": "DEXKOUS"}
     url = CNN_URL if name == "cnn" else VIX_URL if name == "vix" else (
         f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series[name]}&cosd={(now - timedelta(days=90)):%Y-%m-%d}")
-    response = requests.get(url, headers={"User-Agent": "coin-recomand/1.0", "Accept": "application/json,text/csv"}, timeout=10)
-    response.raise_for_status()
-    return parse_cnn(response.json(), now) if name == "cnn" else parse_csv(response.text, "CLOSE" if name == "vix" else series[name], now, name == "vix")
+    headers = {"User-Agent": "coin-recomand/1.0", "Accept": "application/json,text/csv,text/html"}
+    try:
+        response = requests.get(url, headers=headers, timeout=12)
+        response.raise_for_status()
+        output = parse_cnn(response.json(), now) if name == "cnn" else parse_csv(response.text, "CLOSE" if name == "vix" else series[name], now, name == "vix")
+        if not output:
+            raise ValueError("No valid observations in public CSV")
+        return output
+    except (requests.RequestException, ValueError):
+        if name not in series:
+            raise
+    try:
+        response = requests.get(f"https://fred.stlouisfed.org/series/{series[name]}", headers=headers, timeout=12)
+        response.raise_for_status()
+        return parse_fred_page(response.text, now)
+    except (requests.RequestException, ValueError):
+        url = "https://www.federalreserve.gov/releases/h15/" if name == "yield" else "https://www.federalreserve.gov/releases/h10/current/"
+        response = requests.get(url, headers=headers, timeout=12)
+        response.raise_for_status()
+        return parse_fed_release(response.text, series[name], now)
 
 
 def add_market_context(reports: dict[str, dict], now: datetime | None = None) -> None:
