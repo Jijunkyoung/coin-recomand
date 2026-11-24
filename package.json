@@ -1,0 +1,10 @@
+{
+  "name": "coin-recomand-dashboard-tests",
+  "private": true,
+  "scripts": {
+    "test:ui": "node tests/chart_ui.cjs && node tests/stock_workbench_ui.cjs"
+  },
+  "devDependencies": {
+    "linkedom": "0.18.12"
+  }
+}
