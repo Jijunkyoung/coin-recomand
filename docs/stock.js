@@ -147,6 +147,7 @@ function renderMarketContext(data) {
 
 function render(data){
   renderMarketContext(data);
+  window.StockWorkbench?.render(data, stock => openChart(stock));
   report=data; $("#generatedAt").textContent=data.generated_at_kst||"—"; $("#stockStatus").textContent=data.status==="정상"?"데이터 정상":data.status; $("#stockStatus").className=`stock-status ${data.status==="정상"?"ok":"error"}`;
   if(!data.configured||!data.rankings?.length){showSetup(); const selected=Boolean(data.selected_sectors?.length); $("#marketTitle").textContent=!data.configured?`${data.market_name} API 설정 필요`:selected?`${data.market_name} 데이터 수집 실패`:`${data.market_name} 수집범위 선택 필요`; $("#marketSummary").textContent=(data.warnings||[])[0]||"주식 데이터를 아직 수집하지 못했습니다."; $("#recommendations").innerHTML=`<div class="error-card">${!data.configured?"API 설정 후 자동으로 추천 순위가 표시됩니다.":selected?"선택 종목의 수집 오류를 데이터 상태에서 확인해 주세요.":"맞춤 수집 설정 후 선택한 섹터의 추천 순위가 표시됩니다."}</div>`; $("#rankingList").innerHTML='<p class="search-empty">수집된 순위가 없습니다.</p>'; $("#warnings").innerHTML=(data.warnings||[]).map(x=>`<p>• ${escapeHTML(x)}</p>`).join(""); return;}
   const benchmark=data.benchmark; $("#marketTitle").textContent=`${data.regime} 국면`; $("#marketSummary").textContent=data.regime==="상승"?"대표지수 추세가 우호적입니다. 종목별 과열 여부를 함께 확인하세요.":data.regime==="하락"?"대표지수가 약세입니다. 신규 매수보다 위험 관리를 우선합니다.":"대표지수 방향이 혼조입니다. 강한 종목만 선별적으로 관찰합니다.";

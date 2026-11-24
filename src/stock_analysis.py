@@ -121,23 +121,34 @@ class KisDataClient:
         return rows[-days:]
 
     def overseas_daily(self, symbol: str, exchange: str, days: int = 120) -> list[dict[str, Any]]:
-        data = self._get(
-            "/uapi/overseas-price/v1/quotations/dailyprice",
-            "HHDFS76240000",
-            {"AUTH": "", "EXCD": exchange, "SYMB": symbol, "GUBN": "0", "BYMD": "", "MODP": "1"},
-        )
-        rows = []
-        for item in reversed(data.get("output2") or []):
+        items, by_date, previous_oldest = [], "", None
+        for _ in range(3):
+            data = self._get(
+                "/uapi/overseas-price/v1/quotations/dailyprice", "HHDFS76240000",
+                {"AUTH": "", "EXCD": exchange, "SYMB": symbol, "GUBN": "0", "BYMD": by_date, "MODP": "1"},
+            )
+            page = data.get("output2") or []
+            items.extend(page)
+            dates = [str(row.get("xymd", "")) for row in page if re.fullmatch(r"\d{8}", str(row.get("xymd", "")))]
+            oldest = min(dates) if dates else None
+            all_dates = {str(row.get("xymd", "")) for row in items if re.fullmatch(r"\d{8}", str(row.get("xymd", "")))}
+            if not oldest or oldest == previous_oldest or len(all_dates) >= days or len(page) < 100:
+                break
+            previous_oldest = oldest
+            by_date = (datetime.strptime(oldest, "%Y%m%d") - timedelta(days=1)).strftime("%Y%m%d")
+            time.sleep(0.15)
+        rows = {}
+        for item in items:
             raw_date = str(item.get("xymd") or "")
             close = self._number(item.get("clos"))
             if len(raw_date) != 8 or close <= 0:
                 continue
-            rows.append({
+            rows[raw_date] = {
                 "date": f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}",
                 "open": self._number(item.get("open")), "high": self._number(item.get("high")),
                 "low": self._number(item.get("low")), "price": close, "volume": self._number(item.get("tvol")),
-            })
-        return rows[-days:]
+            }
+        return [rows[key] for key in sorted(rows)][-days:]
 
     def daily(self, market: str, symbol: str, exchange: str, days: int) -> list[dict[str, Any]]:
         return self.domestic_daily(symbol, days) if market == "kr" else self.overseas_daily(symbol, exchange, days)
@@ -412,6 +423,15 @@ def generate_stock_reports(settings_path: str | Path = "config/stocks.json", out
     }
     from .stock_sentiment import add_market_context
     add_market_context(reports)
+    from .stock_workbench import attach_themes, collect_theme_news
+    public_news, public_news_warnings = collect_theme_news(settings)
+    for report in reports.values():
+        attach_themes(report, settings, public_news)
+        prefix = "미국" if report["market"] == "us" else "국내"
+        report["theme_news_warnings"] = [warning for warning in public_news_warnings if warning.startswith(prefix)]
+    from .stock_public_research import collect_public_research
+    public_research = collect_public_research(reports, settings)
+    (output / "stock-research.json").write_text(json.dumps(public_research, ensure_ascii=False, indent=2), encoding="utf-8")
     try:
         news_issues = collect_stock_news(holdings, sector_ids, settings)
     except Exception as exc:

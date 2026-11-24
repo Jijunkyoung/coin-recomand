@@ -1,5 +1,5 @@
 {
-  "history_days": 120,
+  "history_days": 260,
   "recommendation_count": 5,
   "sectors": {
     "defense": {"label": "방산", "news_terms": ["방산", "방위산업", "국방 수주"], "us": ["PLTR"], "kr": ["012450", "042660"]},
