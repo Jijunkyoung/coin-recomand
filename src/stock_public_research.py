@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import calendar
+import json
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from html import unescape
+from pathlib import Path
 from urllib.parse import quote
 from xml.etree import ElementTree as ET
 from zoneinfo import ZoneInfo
@@ -24,6 +26,8 @@ EARNINGS = "https://www.nasdaq.com/market-activity/earnings"
 IPO = "https://www.nasdaq.com/market-activity/ipos"
 DART = "https://dart.fss.or.kr/api/todayRSS.xml"
 ET_ZONE = ZoneInfo("America/New_York")
+CACHE_HOURS = {"bls": 72, "earnings": 24, "sec": 168, "ipo": 48}
+PUBLIC_SNAPSHOT = "https://jijunkyoung.github.io/coin-recomand/data/stock-research.json"
 
 
 def download(url: str, json: bool = False):
@@ -205,7 +209,9 @@ def collect_earnings(now: datetime) -> tuple[list[dict], list[str]]:
         pending = [(day, pool.submit(fetch, day)) for day in days]
         for day, future in pending:
             try: rows.extend(future.result())
-            except (requests.RequestException, ValueError): errors.append(str(day))
+            except (requests.RequestException, ValueError) as error:
+                code = getattr(getattr(error, "response", None), "status_code", None)
+                errors.append(str(day) + (f" (HTTP {code})" if code else ""))
     return sorted(rows, key=lambda row: (row["date"], -(row["market_cap"] or 0), row["symbol"])), errors
 
 
@@ -306,11 +312,66 @@ def collect_ipos(now: datetime) -> tuple[list[dict], list[str]]:
             if period.get("year") is not None and period.get("month") is not None and (int(period["year"]), int(period["month"])) != (year, month + 1):
                 raise ValueError("IPO response month mismatch")
             for row in parse_ipos(payload): rows[row["id"]] = row
-        except (requests.RequestException, ValueError): errors.append(query)
+        except (requests.RequestException, ValueError) as error:
+            code = getattr(getattr(error, "response", None), "status_code", None)
+            errors.append(query + (f" (HTTP {code})" if code else ""))
     return sorted(rows.values(), key=lambda row: row["date"] or "", reverse=True), errors
 
 
-def collect_public_research(reports: dict, settings: dict, now: datetime | None = None) -> dict:
+def load_public_cache(output_dir: str | Path, seed_path: str | Path = "config/stock-public-last-success.json") -> dict:
+    """Reuse already-public observations, never shift their success timestamp.
+
+    The committed seed is an actual prior successful retrieval, not example
+    data. A newer successful result from our own publication supersedes it.
+    This reads no credentials and does not route requests around provider WAFs.
+    """
+    cache = {}
+    try:
+        cache.update(json.loads(Path(seed_path).read_text(encoding="utf-8")).get("sources", {}))
+    except (OSError, ValueError, TypeError):
+        pass
+    candidates = []
+    try: candidates.append(json.loads((Path(output_dir) / "stock-research.json").read_text(encoding="utf-8")))
+    except (OSError, ValueError): pass
+    try: candidates.append(download(PUBLIC_SNAPSHOT, json=True))
+    except (requests.RequestException, ValueError): pass
+    for previous in candidates:
+        if not isinstance(previous, dict): continue
+        for key in CACHE_HOURS:
+            source = previous.get("sources", {}).get(key, {})
+            stamp = source.get("observed_at")
+            if not stamp or not (source.get("status") == "정상 수집" or source.get("cached")):
+                continue
+            rows = [row for target in ("economic_events", "earnings", "filings", "ipos")
+                    for row in previous.get(target, []) if row.get("_source") == key]
+            if rows and str(stamp) > str(cache.get(key, {}).get("observed_at", "")):
+                cache[key] = {"observed_at": stamp, "rows": rows}
+    return cache
+
+
+def cached_rows(cache: dict, key: str, now: datetime) -> tuple[list[dict], str | None]:
+    previous = cache.get(key) or {}
+    stamp = previous.get("observed_at")
+    try:
+        parsed = datetime.fromisoformat(str(stamp).replace("Z", "+00:00"))
+        if parsed.tzinfo is None or not 0 <= (now - parsed).total_seconds() <= CACHE_HOURS[key] * 3600:
+            return [], None
+    except (ValueError, TypeError, KeyError):
+        return [], None
+    result = []
+    for row in previous.get("rows", []):
+        if not isinstance(row, dict): continue
+        try: day = date.fromisoformat(str(row.get("date")))
+        except ValueError: continue
+        today = now.astimezone(KST if key == "bls" else ET_ZONE).date()
+        if key == "bls" and not today - timedelta(days=7) <= day <= today + timedelta(days=45): continue
+        if key == "earnings" and not today - timedelta(days=1) <= day <= today + timedelta(days=7): continue
+        if key == "sec" and not today - timedelta(days=90) <= day <= today: continue
+        result.append(dict(row))
+    return result, stamp if result else None
+
+
+def collect_public_research(reports: dict, settings: dict, now: datetime | None = None, cache: dict | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     result = {"schema_version": 1, "generated_at": now.isoformat(), "economic_events": [], "macro_indicators": [],
               "earnings": [], "filings": [], "ipos": [], "sources": {},
@@ -329,19 +390,25 @@ def collect_public_research(reports: dict, settings: dict, now: datetime | None 
         pending = [(key, pool.submit(task[3])) for key, task in tasks.items()]
         for key, future in pending:
             label, url, target, _ = tasks[key]
-            status, count = "정상 수집", 0
+            status, count, failed, collected, snapshot_at = "정상 수집", 0, False, [], None
             try:
                 collected = future.result()
                 if isinstance(collected, tuple):
                     collected, errors = collected
-                    if errors: status = f"일부 미수집: {', '.join(errors)}"
-                count = len(collected)
-                result[target].extend(collected)
+                    if errors:
+                        status, failed = f"일부 미수집: {', '.join(errors)}", True
                 if key == "macro" and any(row.get("value") is None for row in collected): status = "일부 지표 미수집"
             except (requests.RequestException, ValueError, KeyError, TypeError, ET.ParseError) as error:
                 code = getattr(getattr(error, "response", None), "status_code", None)
                 status = f"미수집 · HTTP {code}" if code else "미수집 · 자료 형식 또는 연결 확인 필요"
-            result["sources"][key] = {"label": label, "url": url, "status": status, "count": count, "observed_at": now.isoformat()}
+                failed = True
+            if failed and not collected and key in CACHE_HOURS:
+                collected, snapshot_at = cached_rows(cache or {}, key, now)
+            result[target].extend({**row, "_source": key} for row in collected)
+            count = len(collected)
+            result["sources"][key] = {"label": label, "url": url, "status": status, "count": count,
+                                       "attempted_at": now.isoformat(), "observed_at": snapshot_at or (now.isoformat() if not failed or count else None),
+                                       "cached": bool(snapshot_at), "cache_limit_hours": CACHE_HOURS.get(key)}
     result["economic_events"].sort(key=lambda row: row["at"] or row["date"])
     result["filings"].sort(key=lambda row: (row["date"], row["symbol"]), reverse=True)
     return result

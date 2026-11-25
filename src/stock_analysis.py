@@ -429,8 +429,8 @@ def generate_stock_reports(settings_path: str | Path = "config/stocks.json", out
         attach_themes(report, settings, public_news)
         prefix = "미국" if report["market"] == "us" else "국내"
         report["theme_news_warnings"] = [warning for warning in public_news_warnings if warning.startswith(prefix)]
-    from .stock_public_research import collect_public_research
-    public_research = collect_public_research(reports, settings)
+    from .stock_public_research import collect_public_research, load_public_cache
+    public_research = collect_public_research(reports, settings, cache=load_public_cache(output))
     (output / "stock-research.json").write_text(json.dumps(public_research, ensure_ascii=False, indent=2), encoding="utf-8")
     try:
         news_issues = collect_stock_news(holdings, sector_ids, settings)

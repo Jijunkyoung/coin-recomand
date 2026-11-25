@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 from unittest.mock import patch
 import requests
 
-from src.stock_public_research import collect_macro, collect_public_research, parse_dart, parse_earnings, parse_filings, parse_fomc, parse_ics, parse_ipos
+from src.stock_public_research import cached_rows, collect_macro, collect_public_research, parse_dart, parse_earnings, parse_filings, parse_fomc, parse_ics, parse_ipos
 
 NOW = datetime(2026, 11, 25, 2, tzinfo=timezone.utc)
 
@@ -88,6 +88,34 @@ END:VEVENT'''
         self.assertEqual(result["economic_events"], [])
         self.assertIn("미수집", result["sources"]["bls"]["status"])
         self.assertEqual(result["options"]["status"], "보류")
+
+    def test_snapshot_age_is_bounded_and_future_or_naive_timestamps_are_rejected(self):
+        rows = [{"date": "2026-11-25", "symbol": "TEST"}]
+        for stamp in ["2026-11-23T00:00:00+00:00", "2026-11-26T00:00:00+00:00", "2026-11-25T00:00:00"]:
+            self.assertEqual(cached_rows({"earnings": {"observed_at": stamp, "rows": rows}}, "earnings", NOW), ([], None))
+        source = {"observed_at": "2026-11-25T01:00:00+00:00", "rows": rows}
+        self.assertEqual(cached_rows({"earnings": source}, "earnings", NOW), (rows, source["observed_at"]))
+
+    @patch("src.stock_public_research.download", side_effect=requests.ConnectionError())
+    def test_outage_uses_real_previous_records_without_retimestamping_success(self, download):
+        stamp = "2026-11-25T01:00:00+00:00"
+        cache = {"earnings": {"observed_at": stamp, "rows": [{"date": "2026-11-25", "symbol": "TEST", "eps_estimate": 0}]}}
+        result = collect_public_research({}, {"us": {"universe": []}, "kr": {"universe": []}}, NOW, cache=cache)
+        source = result["sources"]["earnings"]
+        self.assertTrue(source["cached"])
+        self.assertEqual(source["observed_at"], stamp)
+        self.assertEqual(source["attempted_at"], NOW.isoformat())
+        self.assertIn("미수집", source["status"])
+        self.assertEqual(result["earnings"][0]["eps_estimate"], 0)
+        self.assertEqual(result["earnings"][0]["_source"], "earnings")
+
+    @patch("src.stock_public_research.download", side_effect=requests.ConnectionError())
+    @patch("src.stock_public_research.collect_earnings", return_value=([], []))
+    def test_successful_empty_calendar_does_not_resurrect_old_records(self, earnings, download):
+        cache = {"earnings": {"observed_at": "2026-11-25T01:00:00+00:00", "rows": [{"date": "2026-11-25", "symbol": "TEST"}]}}
+        result = collect_public_research({}, {"us": {"universe": []}, "kr": {"universe": []}}, NOW, cache=cache)
+        self.assertEqual(result["earnings"], [])
+        self.assertFalse(result["sources"]["earnings"]["cached"])
 
 
 if __name__ == "__main__": unittest.main()
