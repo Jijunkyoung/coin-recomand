@@ -35,6 +35,11 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
   const csv=await exported.text();assert.ok(csv.includes("'=HYPERLINK"),'spreadsheet formula injection is neutralized');assert.ok(csv.includes('관측일'));
   root.querySelector('[data-wb-tab="macro"]').click();assert.match(root.textContent,/공식 일정/);assert.match(root.querySelector('.wb-macro-cards strong').textContent,/—/);
   root.querySelector('[data-wb-tab="companies"]').click();assert.match(root.textContent,/전년 EPS/);assert.match(root.textContent,/実際|실제 당기 EPS/);assert.match(root.textContent,/공모가 확정일/);assert.equal(root.querySelector('img'),null);assert.equal(root.querySelector('a[href^="javascript:"]'),null);
+  publicData.sources.sec={label:'SEC',status:'미수집 · HTTP 403',cached:true,observed_at:'2026-11-25T01:00:00Z',cache_limit_hours:168};
+  root.querySelector('[data-wb-tab="companies"]').click();
+  assert.match(root.querySelector('.wb-source-warning').textContent,/이전 성공 수집본/);
+  assert.match(root.querySelector('.wb-source-warning').textContent,/HTTP 403/);
+  assert.match(root.querySelector('.wb-source-warning').textContent,/예정일 변경·새 공시/);
   console.log(market+': themes, chart links, strict filters, favorites, safe CSV, macro and company panels passed');
  }
 })().catch(error=>{console.error(error);process.exitCode=1});

@@ -280,3 +280,11 @@ FRED CSV 다운로드가 실패하면 같은 시계열의 공식 페이지, 이�
 모든 공개 수집은 제한시간과 동시요청 수를 제한하며 일부 제공처가 실패해도 다른 패널은 유지합니다. `stock-research.json`의 `sources`와 화면의 **수집 상태·출처 확인**에서 실패·부분 누락을 확인합니다. 새 유료 서비스나 API 키는 추가하지 않습니다. 옵션 체결·포지션 분석은 무료 원자료·이용 권한을 확보하지 못해 보류하며 모의 숫자나 대체 주가지표를 옵션 데이터로 표시하지 않습니다.
 
 검증: `python -m unittest discover -s tests`, `npm ci --ignore-scripts`, `npm run test:ui`. 공개 원문: https://www.bls.gov/schedule/ · https://www.bea.gov/news/schedule · https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm · https://www.nasdaq.com/market-activity/earnings · https://www.nasdaq.com/market-activity/ipos · https://www.sec.gov/search-filings · https://dart.fss.or.kr/
+
+#### 자동 조회 제한과 이전 성공 수집본
+
+일부 제공처는 실행 환경에 따라 자동 조회에 HTTP 403을 반환할 수 있습니다. 접근 제한을 우회하거나 가짜 최신값을 만들지 않습니다. 수집 실패 시 이미 정상적으로 취득한 공개 관측값을 제한시간 안에서 재사용하고, 패널 상단에 **이전 성공 수집본·원래 수집시각·자동조회 실패**를 표시합니다. 분석 생성시각과 원자료의 성공 수집시각은 다릅니다.
+
+재사용 한도는 BLS 일정 72시간, 미국 실적일정 24시간, SEC 역사 공시 168시간, 공모정보 48시간입니다. 기한 초과·미래 수집시각·시각 없는 기록은 재사용하지 않습니다. 정상 조회 결과가 빈 목록인 경우 과거 기록으로 채우지 않습니다. 매시간 정상 경로로 재시도하며, 원 제공처의 조회 제한이 해소되었다고 보장하지 않습니다.
+
+초기 `config/stock-public-last-success.json`은 2026-11-25 08:44 KST의 실제 성공 수집본이며 예시 데이터가 아닙니다. 후속 배포에서는 자체 공개 사이트에 남아 있는 더 최근의 성공 수집본도 확인하되 원래의 시각을 유지합니다. 허용된 실행 환경에서 `python scripts/refresh_public_stock_snapshot.py`로 공개 수집본을 갱신한 뒤 해당 JSON을 커밋·배포할 수도 있습니다. 이 명령은 로그인·계좌정보를 읽지 않으며, 실패한 소스의 수집시각을 갱신하지 않습니다. 실적·공시·일정이 최신이라고 단정하려면 각 제공처의 원문을 확인해야 합니다.
