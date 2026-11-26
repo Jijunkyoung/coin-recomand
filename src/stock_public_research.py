@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from html import unescape
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from xml.etree import ElementTree as ET
 from zoneinfo import ZoneInfo
 
@@ -30,8 +30,12 @@ CACHE_HOURS = {"bls": 72, "earnings": 24, "sec": 168, "ipo": 48, "reported": 168
 PUBLIC_SNAPSHOT = "https://jijunkyoung.github.io/coin-recomand/data/stock-research.json"
 
 
+def request_timeout(url: str) -> int:
+    return 25 if urlsplit(url).hostname == "api.nasdaq.com" else 12
+
+
 def download(url: str, json: bool = False):
-    response = requests.get(url, headers=HEADERS, timeout=12)
+    response = requests.get(url, headers=HEADERS, timeout=request_timeout(url))
     response.raise_for_status()
     if not json:
         response.encoding = "utf-8"

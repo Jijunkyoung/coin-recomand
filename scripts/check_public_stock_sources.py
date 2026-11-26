@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from src.stock_public_research import HEADERS, parse_earnings
+from src.stock_public_research import HEADERS, parse_earnings, request_timeout
 
 
 def main():
@@ -22,7 +22,7 @@ def main():
         key, url = item
         result = {"source": key}
         try:
-            response = requests.get(url, headers=HEADERS, timeout=12)
+            response = requests.get(url, headers=HEADERS, timeout=request_timeout(url))
             result["http_status"] = response.status_code
             if response.ok:
                 payload = response.json()

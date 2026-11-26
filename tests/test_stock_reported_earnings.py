@@ -1,10 +1,9 @@
-import copy
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock
 
 from src.stock_reported_earnings import eps_comparison, parse_reported_earnings
-from src.stock_public_research import collect_filings, download
+from src.stock_public_research import collect_filings, download, request_timeout
 
 NOW = datetime(2026, 11, 26, tzinfo=timezone.utc)
 STOCK = {"symbol": "TEST", "name": "Test"}
@@ -92,6 +91,11 @@ class ReportedEarningsTests(unittest.TestCase):
         response=MagicMock();response.json.return_value={"status":{"rCode":"200"},"data":{}}
         get.return_value=response
         self.assertEqual(download("https://example.invalid",json=True)["status"]["rCode"],"200")
+
+    def test_only_nasdaq_has_a_longer_bounded_timeout(self):
+        self.assertEqual(request_timeout("https://api.nasdaq.com/api/calendar/earnings"),25)
+        self.assertEqual(request_timeout("https://data.sec.gov/submissions/file.json"),12)
+        self.assertEqual(request_timeout("https://api.nasdaq.com.example.invalid/"),12)
 
 
 if __name__ == "__main__":unittest.main()

@@ -3,7 +3,7 @@
   "note": "실제 성공 수집본. 수집시각을 변경하지 않으며 자동조회 실패 시 제한시간 내 참고자료로만 재사용합니다.",
   "sources": {
     "bls": {
-      "observed_at": "2026-11-24T23:44:24.702356+00:00",
+      "observed_at": "2026-11-26T01:23:19.675885+00:00",
       "source_url": "https://www.bls.gov/schedule/news_release/bls.ics",
       "rows": [
         {
@@ -185,865 +185,216 @@
       ]
     },
     "earnings": {
-      "observed_at": "2026-11-24T23:44:24.702356+00:00",
+      "observed_at": "2026-11-26T01:23:30.088268+00:00",
       "source_url": "https://www.nasdaq.com/market-activity/earnings",
       "rows": [
-        {
-          "date": "2026-11-23",
-          "symbol": "CRWD",
-          "name": "CrowdStrike Holdings, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": 0.0,
-          "last_year_eps": null,
-          "estimates_count": 13.0,
-          "market_cap": 213971665000.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "HPE",
-          "name": "Hewlett Packard Enterprise Company",
-          "session": "시간대 미제공",
-          "eps_estimate": 1.18,
-          "last_year_eps": null,
-          "estimates_count": 7.0,
-          "market_cap": 63744860000.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "A",
-          "name": "Agilent Technologies, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": 1.72,
-          "last_year_eps": null,
-          "estimates_count": 7.0,
-          "market_cap": 49630757000.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "ZS",
-          "name": "Zscaler, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": 0.12,
-          "last_year_eps": null,
-          "estimates_count": 12.0,
-          "market_cap": 37378658000.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "ZM",
-          "name": "Zoom Communications, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": 1.0,
-          "last_year_eps": null,
-          "estimates_count": 8.0,
-          "market_cap": 25102151700.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "SYM",
-          "name": "Symbotic Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": 0.08,
-          "last_year_eps": null,
-          "estimates_count": 5.0,
-          "market_cap": 21149915100.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "J",
-          "name": "Jacobs Solutions Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": 2.11,
-          "last_year_eps": null,
-          "estimates_count": 3.0,
-          "market_cap": 18437093400.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "SMTC",
-          "name": "Semtech Corporation",
-          "session": "시간대 미제공",
-          "eps_estimate": 0.92,
-          "last_year_eps": null,
-          "estimates_count": 8.0,
-          "market_cap": 9717997600.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "AMTM",
-          "name": "Amentum Holdings, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": 0.63,
-          "last_year_eps": null,
-          "estimates_count": 3.0,
-          "market_cap": 5049057300.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "CENT",
-          "name": "Central Garden & Pet Company",
-          "session": "시간대 미제공",
-          "eps_estimate": -0.06,
-          "last_year_eps": null,
-          "estimates_count": 3.0,
-          "market_cap": 2780989180.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "CENTA",
-          "name": "Central Garden & Pet Company",
-          "session": "시간대 미제공",
-          "eps_estimate": -0.06,
-          "last_year_eps": null,
-          "estimates_count": 3.0,
-          "market_cap": 2780989180.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "DAC",
-          "name": "Danaos Corporation",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 2687196930.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "FSCO",
-          "name": "FS Credit Opportunities Corp.",
-          "session": "장후",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": 1.0,
-          "market_cap": 995746620.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "CTY",
-          "name": "City Therapeutics, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": -3.14,
-          "last_year_eps": null,
-          "estimates_count": 2.0,
-          "market_cap": 931147140.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "TUYA",
-          "name": "Tuya Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": 0.03,
-          "last_year_eps": null,
-          "estimates_count": 1.0,
-          "market_cap": 895397700.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "CMP",
-          "name": "Compass Minerals International, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": -0.01,
-          "last_year_eps": null,
-          "estimates_count": 2.0,
-          "market_cap": 853471170.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "VREX",
-          "name": "Varex Imaging Corporation",
-          "session": "시간대 미제공",
-          "eps_estimate": 0.33,
-          "last_year_eps": null,
-          "estimates_count": 1.0,
-          "market_cap": 764115010.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "VNET",
-          "name": "VNET Group, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": 0.53,
-          "last_year_eps": null,
-          "estimates_count": 2.0,
-          "market_cap": 723464320.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "FLNC",
-          "name": "Fluence Energy, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": -0.54,
-          "last_year_eps": null,
-          "estimates_count": 4.0,
-          "market_cap": 701466180.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "PFLT",
-          "name": "PennantPark Floating Rate Capital Ltd.",
-          "session": "시간대 미제공",
-          "eps_estimate": 0.27,
-          "last_year_eps": null,
-          "estimates_count": 2.0,
-          "market_cap": 620111870.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "ALCO",
-          "name": "Alico, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": -1.53,
-          "last_year_eps": null,
-          "estimates_count": 1.0,
-          "market_cap": 260984976.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "HTT",
-          "name": "High Templar Tech Limited",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": 1.0,
-          "market_cap": 215844064.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "PNNT",
-          "name": "PennantPark Investment Corporation",
-          "session": "시간대 미제공",
-          "eps_estimate": 0.14,
-          "last_year_eps": null,
-          "estimates_count": 3.0,
-          "market_cap": 186746832.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "GDEV",
-          "name": "GDEV Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": 1.33,
-          "last_year_eps": null,
-          "estimates_count": 1.0,
-          "market_cap": 145203904.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "EPSN",
-          "name": "Epsilon Energy Ltd.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 144150784.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "LOT",
-          "name": "Lotus Technology Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 126812752.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "ZSQR",
-          "name": "Z Squared Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 120575904.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "SOWG",
-          "name": "Sow Good Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 102915584.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "HTLM",
-          "name": "HomesToLife Ltd",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 87468752.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "LX",
-          "name": "LexinFintech Holdings Ltd.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": 1.0,
-          "market_cap": 85689904.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "FSI",
-          "name": "Flexible Solutions International Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": -0.04,
-          "last_year_eps": null,
-          "estimates_count": 1.0,
-          "market_cap": 76391496.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "ZSTK",
-          "name": "ZeroStack Corp.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 58260808.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "BNAI",
-          "name": "Brand Engagement Network Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 54923308.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "OFAL",
-          "name": "OFA Group",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 44935200.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "ADBT",
-          "name": "Advasa Holdings, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 44378384.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "CRGO",
-          "name": "Freightos Limited",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 33925876.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "THCH",
-          "name": "TH International Limited",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 33243582.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "CIRC",
-          "name": "Circle8 Group, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 19410104.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "LOCL",
-          "name": "Local Bounti Corporation",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 16913178.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "EONR",
-          "name": "EON Resources Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 13429527.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "COSM",
-          "name": "Cosmos Health Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": -0.82,
-          "last_year_eps": null,
-          "estimates_count": 2.0,
-          "market_cap": 13132708.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "ASBP",
-          "name": "Aspire-Lakewood Holdings, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 12869291.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "SOAR",
-          "name": "SOAR AI, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 10735096.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "DCM",
-          "name": "DeFi Capital Markets, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 8933966.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "SURG",
-          "name": "SurgePays, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": -0.07,
-          "last_year_eps": null,
-          "estimates_count": 1.0,
-          "market_cap": 7639930.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "DFNS",
-          "name": "T3 Defense Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": -2.03,
-          "last_year_eps": null,
-          "estimates_count": 2.0,
-          "market_cap": 5934476.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "BLRX",
-          "name": "BioLineRx Ltd.",
-          "session": "시간대 미제공",
-          "eps_estimate": -0.39,
-          "last_year_eps": null,
-          "estimates_count": 2.0,
-          "market_cap": 5127562.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "NIKI",
-          "name": "Niki BioSolutions, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 4528421.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "ATXG",
-          "name": "Addentax Group Corp.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 4441672.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "CENN",
-          "name": "Cenntro Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 4134400.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "XWEL",
-          "name": "XWELL, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 4088062.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "OLB",
-          "name": "The OLB Group, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 4040304.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "LIMN",
-          "name": "Liminatus Pharma, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 3277428.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "SONM",
-          "name": "DNA X, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 2248326.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "BURU",
-          "name": "Nuburu, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 2241487.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "KALA",
-          "name": "KALA BIO, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 1772812.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "WORX",
-          "name": "SCWorx Corp.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 1595164.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "POLA",
-          "name": "Polar Power, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 1436806.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "VBIO",
-          "name": "Valion Bio, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 1029317.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
-        {
-          "date": "2026-11-23",
-          "symbol": "DBGI",
-          "name": "Digital Brands Group, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 146934.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23"
-        },
         {
           "date": "2026-11-24",
           "symbol": "DELL",
           "name": "Dell Technologies Inc.",
-          "session": "장후",
+          "session": "시간대 미제공",
           "eps_estimate": 6.55,
-          "last_year_eps": 2.35,
+          "last_year_eps": null,
           "estimates_count": 8.0,
-          "market_cap": 212940046000.0,
+          "market_cap": 187742781000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "ADI",
           "name": "Analog Devices, Inc.",
-          "session": "장전",
-          "eps_estimate": 3.89,
-          "last_year_eps": 2.26,
-          "estimates_count": 10.0,
-          "market_cap": 183529177000.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
-        },
-        {
-          "date": "2026-11-24",
-          "symbol": "BHP",
-          "name": "BHP Group Limited",
           "session": "시간대 미제공",
-          "eps_estimate": null,
+          "eps_estimate": 3.89,
           "last_year_eps": null,
-          "estimates_count": 3.0,
-          "market_cap": 179729154000.0,
+          "estimates_count": 10.0,
+          "market_cap": 151644766000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "MDT",
           "name": "Medtronic plc",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": 1.34,
-          "last_year_eps": 1.36,
+          "last_year_eps": null,
           "estimates_count": 8.0,
-          "market_cap": 128834765000.0,
+          "market_cap": 122963526000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "ADSK",
           "name": "Autodesk, Inc.",
-          "session": "장후",
+          "session": "시간대 미제공",
           "eps_estimate": 2.27,
-          "last_year_eps": 1.8,
+          "last_year_eps": null,
           "estimates_count": 10.0,
-          "market_cap": 53363970000.0,
+          "market_cap": 53441298000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "WDAY",
           "name": "Workday, Inc.",
-          "session": "장후",
+          "session": "시간대 미제공",
           "eps_estimate": 1.28,
-          "last_year_eps": 1.09,
+          "last_year_eps": null,
           "estimates_count": 10.0,
-          "market_cap": 42435281000.0,
+          "market_cap": 43194429000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "DLTR",
           "name": "Dollar Tree, Inc.",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": 0.89,
-          "last_year_eps": 1.21,
+          "last_year_eps": null,
           "estimates_count": 10.0,
-          "market_cap": 26099374100.0,
+          "market_cap": 29017026600.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "HPQ",
           "name": "HP Inc.",
-          "session": "장후",
+          "session": "시간대 미제공",
           "eps_estimate": 0.74,
-          "last_year_eps": 0.93,
+          "last_year_eps": null,
           "estimates_count": 5.0,
-          "market_cap": 26061758500.0,
+          "market_cap": 25196040200.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "BBY",
           "name": "Best Buy Co., Inc.",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": 1.48,
-          "last_year_eps": 1.4,
+          "last_year_eps": null,
           "estimates_count": 10.0,
-          "market_cap": 20343586800.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
-        },
-        {
-          "date": "2026-11-24",
-          "symbol": "NTNX",
-          "name": "Nutanix, Inc.",
-          "session": "장후",
-          "eps_estimate": 0.29,
-          "last_year_eps": 0.23,
-          "estimates_count": 8.0,
-          "market_cap": 15698469900.0,
+          "market_cap": 20893073400.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "BURL",
           "name": "Burlington Stores, Inc.",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": 1.67,
-          "last_year_eps": 1.8,
+          "last_year_eps": null,
           "estimates_count": 7.0,
-          "market_cap": 14771620900.0,
+          "market_cap": 15348265000.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
+        },
+        {
+          "date": "2026-11-24",
+          "symbol": "NTNX",
+          "name": "Nutanix, Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": 0.29,
+          "last_year_eps": null,
+          "estimates_count": 8.0,
+          "market_cap": 14888455200.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "SJM",
           "name": "The J.M. Smucker Company ",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": 2.57,
-          "last_year_eps": 2.1,
+          "last_year_eps": null,
           "estimates_count": 5.0,
-          "market_cap": 14183982100.0,
+          "market_cap": 13977813000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "DKS",
           "name": "Dick's Sporting Goods Inc",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": 1.38,
-          "last_year_eps": 2.07,
+          "last_year_eps": null,
           "estimates_count": 8.0,
-          "market_cap": 11886813200.0,
+          "market_cap": 13620880400.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "URBN",
           "name": "Urban Outfitters, Inc.",
-          "session": "장후",
+          "session": "시간대 미제공",
           "eps_estimate": 1.53,
-          "last_year_eps": 1.28,
+          "last_year_eps": null,
           "estimates_count": 5.0,
-          "market_cap": 7305956900.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
-        },
-        {
-          "date": "2026-11-24",
-          "symbol": "DY",
-          "name": "Dycom Industries, Inc.",
-          "session": "장전",
-          "eps_estimate": 4.33,
-          "last_year_eps": 3.63,
-          "estimates_count": 5.0,
-          "market_cap": 6586248200.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
-        },
-        {
-          "date": "2026-11-24",
-          "symbol": "VIPS",
-          "name": "Vipshop Holdings Limited",
-          "session": "장전",
-          "eps_estimate": 0.31,
-          "last_year_eps": 0.33,
-          "estimates_count": 2.0,
-          "market_cap": 6056211500.0,
+          "market_cap": 7330798100.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "ANF",
           "name": "Abercrombie & Fitch Company",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": 3.15,
-          "last_year_eps": 2.36,
+          "last_year_eps": null,
           "estimates_count": 5.0,
-          "market_cap": 5959908400.0,
+          "market_cap": 7133218800.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
+        },
+        {
+          "date": "2026-11-24",
+          "symbol": "VIPS",
+          "name": "Vipshop Holdings Limited",
+          "session": "시간대 미제공",
+          "eps_estimate": 0.31,
+          "last_year_eps": null,
+          "estimates_count": 2.0,
+          "market_cap": 6257925100.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
+        },
+        {
+          "date": "2026-11-24",
+          "symbol": "DY",
+          "name": "Dycom Industries, Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": 4.33,
+          "last_year_eps": null,
+          "estimates_count": 5.0,
+          "market_cap": 5399112700.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
+        },
+        {
+          "date": "2026-11-24",
+          "symbol": "MMED",
+          "name": "MiniMed Group, Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": 0.1,
+          "last_year_eps": null,
+          "estimates_count": 4.0,
+          "market_cap": 5365343200.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
+        },
+        {
+          "date": "2026-11-24",
+          "symbol": "CMBT",
+          "name": "CMB.TECH NV",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": null,
+          "market_cap": 5089578000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "BILI",
           "name": "Bilibili Inc.",
-          "session": "장전",
-          "eps_estimate": 0.17,
-          "last_year_eps": 0.15,
+          "session": "시간대 미제공",
+          "eps_estimate": 0.18,
+          "last_year_eps": null,
           "estimates_count": 2.0,
-          "market_cap": 4537031700.0,
+          "market_cap": 4624522200.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
@@ -1052,75 +403,75 @@
           "name": "Grupo Financiero Galicia S.A.",
           "session": "시간대 미제공",
           "eps_estimate": 1.05,
-          "last_year_eps": 0.08,
+          "last_year_eps": null,
           "estimates_count": 3.0,
-          "market_cap": 4275847420.0,
+          "market_cap": 4121647100.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
-          "symbol": "AMBA",
-          "name": "Ambarella, Inc.",
-          "session": "장후",
-          "eps_estimate": -0.17,
-          "last_year_eps": -0.33,
-          "estimates_count": 5.0,
-          "market_cap": 2452472320.0,
+          "symbol": "BWLP",
+          "name": "BW LPG Limited",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": null,
+          "market_cap": 3583845120.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "KSS",
           "name": "Kohl's Corporation",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": -0.01,
-          "last_year_eps": 0.1,
+          "last_year_eps": null,
           "estimates_count": 6.0,
-          "market_cap": 2403580670.0,
+          "market_cap": 2871825410.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
+        },
+        {
+          "date": "2026-11-24",
+          "symbol": "AMBA",
+          "name": "Ambarella, Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": -0.17,
+          "last_year_eps": null,
+          "estimates_count": 5.0,
+          "market_cap": 1962948990.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "BBAR",
           "name": "Banco BBVA Argentina S.A.",
-          "session": "장후",
+          "session": "시간대 미제공",
           "eps_estimate": 0.41,
-          "last_year_eps": 0.13,
+          "last_year_eps": null,
           "estimates_count": 1.0,
-          "market_cap": 1878977540.0,
+          "market_cap": 1868765700.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "KC",
           "name": "Kingsoft Cloud Holdings Limited",
-          "session": "장전",
-          "eps_estimate": -0.08,
-          "last_year_eps": -0.04,
-          "estimates_count": 2.0,
-          "market_cap": 1799211650.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
-        },
-        {
-          "date": "2026-11-24",
-          "symbol": "DRVN",
-          "name": "Driven Brands Holdings Inc.",
           "session": "시간대 미제공",
-          "eps_estimate": 0.27,
-          "last_year_eps": 0.32,
-          "estimates_count": 3.0,
-          "market_cap": 1773533060.0,
+          "eps_estimate": -0.08,
+          "last_year_eps": null,
+          "estimates_count": 2.0,
+          "market_cap": 1859085570.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "CLSK",
           "name": "CleanSpark, Inc.",
-          "session": "장후",
+          "session": "시간대 미제공",
           "eps_estimate": -0.36,
-          "last_year_eps": -0.01,
+          "last_year_eps": null,
           "estimates_count": 3.0,
-          "market_cap": 1420198400.0,
+          "market_cap": 1313619330.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
@@ -1129,141 +480,163 @@
           "name": "GoodRx Holdings, Inc.",
           "session": "시간대 미제공",
           "eps_estimate": 0.04,
-          "last_year_eps": 0.04,
+          "last_year_eps": null,
           "estimates_count": 3.0,
-          "market_cap": 1033670530.0,
+          "market_cap": 1023436160.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "ITRN",
           "name": "Ituran Location and Control Ltd.",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": 0.91,
-          "last_year_eps": 0.74,
+          "last_year_eps": null,
           "estimates_count": 1.0,
-          "market_cap": 926642940.0,
+          "market_cap": 895410050.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "TIGR",
           "name": "UP Fintech Holding Limited",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": null,
-          "last_year_eps": 0.29,
+          "last_year_eps": null,
           "estimates_count": null,
-          "market_cap": 691571580.0,
+          "market_cap": 707654590.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "MOV",
           "name": "Movado Group Inc.",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": 0.55,
-          "last_year_eps": 0.45,
+          "last_year_eps": null,
           "estimates_count": 2.0,
-          "market_cap": 674499140.0,
+          "market_cap": 624965950.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "QFIN",
           "name": "Qfin Holdings, Inc. ",
-          "session": "장후",
+          "session": "시간대 미제공",
           "eps_estimate": 0.46,
-          "last_year_eps": 1.52,
+          "last_year_eps": null,
           "estimates_count": 2.0,
-          "market_cap": 573451390.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
-        },
-        {
-          "date": "2026-11-24",
-          "symbol": "VALN",
-          "name": "Valneva SE",
-          "session": "장전",
-          "eps_estimate": -0.23,
-          "last_year_eps": -0.61,
-          "estimates_count": 2.0,
-          "market_cap": 500996064.0,
+          "market_cap": 561276160.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "TITN",
           "name": "Titan Machinery Inc.",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": -0.08,
-          "last_year_eps": 0.05,
+          "last_year_eps": null,
           "estimates_count": 2.0,
-          "market_cap": 488307616.0,
+          "market_cap": 479600448.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
-          "symbol": "NOAH",
-          "name": "Noah Holdings Ltd.",
-          "session": "장후",
-          "eps_estimate": null,
-          "last_year_eps": 0.46,
-          "estimates_count": null,
-          "market_cap": 429801120.0,
+          "symbol": "VALN",
+          "name": "Valneva SE",
+          "session": "시간대 미제공",
+          "eps_estimate": -0.23,
+          "last_year_eps": null,
+          "estimates_count": 2.0,
+          "market_cap": 474428096.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
           "symbol": "EMBC",
           "name": "Embecta Corp.",
-          "session": "장전",
+          "session": "시간대 미제공",
           "eps_estimate": 0.31,
-          "last_year_eps": 0.5,
+          "last_year_eps": null,
           "estimates_count": 1.0,
-          "market_cap": 325509408.0,
+          "market_cap": 457809568.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
-          "symbol": "ZENA",
-          "name": "ZenaTech, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": -0.18,
-          "last_year_eps": -0.25,
-          "estimates_count": 1.0,
-          "market_cap": 96052888.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
-        },
-        {
-          "date": "2026-11-24",
-          "symbol": "AFJK",
-          "name": "Aimei Health Technology Co., Ltd",
+          "symbol": "NOAH",
+          "name": "Noah Holdings Ltd.",
           "session": "시간대 미제공",
           "eps_estimate": null,
-          "last_year_eps": 0.06,
-          "estimates_count": 3.0,
-          "market_cap": 77040000.0,
+          "last_year_eps": null,
+          "estimates_count": null,
+          "market_cap": 417731808.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
-          "symbol": "DAVA",
-          "name": "Endava plc",
+          "symbol": "SHOE",
+          "name": "Shoe Station Group, Inc.",
           "session": "시간대 미제공",
-          "eps_estimate": 0.03,
-          "last_year_eps": 0.04,
-          "estimates_count": 2.0,
-          "market_cap": 59217088.0,
+          "eps_estimate": 0.21,
+          "last_year_eps": null,
+          "estimates_count": 1.0,
+          "market_cap": 314788576.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
-          "symbol": "JFIN",
-          "name": "Jiayin Group Inc.",
+          "symbol": "ELLO",
+          "name": "Ellomay Capital Ltd.",
           "session": "시간대 미제공",
           "eps_estimate": null,
-          "last_year_eps": 1.04,
-          "estimates_count": 3.0,
-          "market_cap": 58609092.0,
+          "last_year_eps": null,
+          "estimates_count": null,
+          "market_cap": 248787296.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
+        },
+        {
+          "date": "2026-11-24",
+          "symbol": "ZH",
+          "name": "Zhihu Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": null,
+          "market_cap": 209452704.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
+        },
+        {
+          "date": "2026-11-24",
+          "symbol": "BZUN",
+          "name": "Baozun Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": null,
+          "market_cap": 141833264.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
+        },
+        {
+          "date": "2026-11-24",
+          "symbol": "FLX",
+          "name": "BingEx Limited",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": null,
+          "market_cap": 108232264.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
+        },
+        {
+          "date": "2026-11-24",
+          "symbol": "PLG",
+          "name": "Platinum Group Metals Ltd.",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": null,
+          "market_cap": 104829000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
@@ -1272,20 +645,20 @@
           "name": "Anavex Life Sciences Corp.",
           "session": "시간대 미제공",
           "eps_estimate": -0.11,
-          "last_year_eps": -0.11,
+          "last_year_eps": null,
           "estimates_count": 1.0,
-          "market_cap": 57796480.0,
+          "market_cap": 75130792.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-24",
-          "symbol": "EVTL",
-          "name": "Vertical Aerospace Ltd.",
+          "symbol": "JFIN",
+          "name": "Jiayin Group Inc.",
           "session": "시간대 미제공",
-          "eps_estimate": -0.29,
-          "last_year_eps": -0.32,
-          "estimates_count": 3.0,
-          "market_cap": 48872548.0,
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": 1.0,
+          "market_cap": 63842048.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
@@ -1294,9 +667,9 @@
           "name": "Yiren Digital Ltd.",
           "session": "시간대 미제공",
           "eps_estimate": null,
-          "last_year_eps": 0.51,
-          "estimates_count": null,
-          "market_cap": 24216806.0,
+          "last_year_eps": null,
+          "estimates_count": 1.0,
+          "market_cap": 22913228.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
@@ -1305,21 +678,10 @@
           "name": "Performance Shipping Inc.",
           "session": "시간대 미제공",
           "eps_estimate": null,
-          "last_year_eps": 0.1,
-          "estimates_count": 3.0,
-          "market_cap": 22749568.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
-        },
-        {
-          "date": "2026-11-25",
-          "symbol": "DE",
-          "name": "Deere & Company",
-          "session": "장전",
-          "eps_estimate": 4.07,
-          "last_year_eps": 3.93,
+          "last_year_eps": null,
           "estimates_count": 1.0,
-          "market_cap": 170680975000.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
+          "market_cap": 22625254.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24"
         },
         {
           "date": "2026-11-25",
@@ -1340,7 +702,7 @@
           "eps_estimate": -0.02,
           "last_year_eps": 0.24,
           "estimates_count": 2.0,
-          "market_cap": 6124222500.0,
+          "market_cap": 6010986000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1351,7 +713,7 @@
           "eps_estimate": 1.44,
           "last_year_eps": -0.39,
           "estimates_count": 2.0,
-          "market_cap": 3225018880.0,
+          "market_cap": 3124587780.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1362,18 +724,7 @@
           "eps_estimate": 1.31,
           "last_year_eps": 0.45,
           "estimates_count": 1.0,
-          "market_cap": 3029709570.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
-        },
-        {
-          "date": "2026-11-25",
-          "symbol": "IMKTA",
-          "name": "Ingles Markets, Incorporated",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": 1.35,
-          "estimates_count": null,
-          "market_cap": 1603695100.0,
+          "market_cap": 2763207170.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1383,8 +734,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 920619260.0,
+          "estimates_count": 1.0,
+          "market_cap": 816451330.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1405,19 +756,8 @@
           "session": "장후",
           "eps_estimate": null,
           "last_year_eps": 0.34,
-          "estimates_count": 1.0,
-          "market_cap": 590235010.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
-        },
-        {
-          "date": "2026-11-25",
-          "symbol": "GOTU",
-          "name": "Gaotu Techedu Inc.",
-          "session": "장전",
-          "eps_estimate": null,
-          "last_year_eps": -0.09,
           "estimates_count": null,
-          "market_cap": 491190208.0,
+          "market_cap": 585513150.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1428,7 +768,7 @@
           "eps_estimate": null,
           "last_year_eps": null,
           "estimates_count": null,
-          "market_cap": 420557120.0,
+          "market_cap": 450127552.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1444,24 +784,13 @@
         },
         {
           "date": "2026-11-25",
-          "symbol": "DSX",
-          "name": "Diana Shipping inc.",
-          "session": "장전",
-          "eps_estimate": null,
-          "last_year_eps": 0.05,
-          "estimates_count": 1.0,
-          "market_cap": 284907360.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
-        },
-        {
-          "date": "2026-11-25",
           "symbol": "GASS",
           "name": "StealthGas, Inc.",
           "session": "장전",
           "eps_estimate": null,
           "last_year_eps": 0.36,
-          "estimates_count": null,
-          "market_cap": 280380064.0,
+          "estimates_count": 1.0,
+          "market_cap": 279264512.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1472,7 +801,7 @@
           "eps_estimate": null,
           "last_year_eps": -0.16,
           "estimates_count": null,
-          "market_cap": 185821136.0,
+          "market_cap": 175202784.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1482,19 +811,8 @@
           "session": "장전",
           "eps_estimate": null,
           "last_year_eps": null,
-          "estimates_count": 1.0,
-          "market_cap": 163427504.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
-        },
-        {
-          "date": "2026-11-25",
-          "symbol": "YSG",
-          "name": "Yatsen Holding Limited",
-          "session": "장전",
-          "eps_estimate": null,
-          "last_year_eps": -0.1,
-          "estimates_count": 1.0,
-          "market_cap": 156755216.0,
+          "estimates_count": null,
+          "market_cap": 159182640.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1504,8 +822,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -1.06,
-          "estimates_count": 1.0,
-          "market_cap": 138210672.0,
+          "estimates_count": null,
+          "market_cap": 138879440.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1515,19 +833,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": 0.32,
-          "estimates_count": null,
-          "market_cap": 120381104.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
-        },
-        {
-          "date": "2026-11-25",
-          "symbol": "PLG",
-          "name": "Platinum Group Metals Ltd.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": -0.01,
-          "estimates_count": null,
-          "market_cap": 105935528.0,
+          "estimates_count": 1.0,
+          "market_cap": 117665736.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1537,19 +844,8 @@
           "session": "시간대 미제공",
           "eps_estimate": -0.11,
           "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 98642808.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
-        },
-        {
-          "date": "2026-11-25",
-          "symbol": "AMBR",
-          "name": "Amber International Holding Limited",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": 0.03,
           "estimates_count": 1.0,
-          "market_cap": 66341496.0,
+          "market_cap": 99143536.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1559,8 +855,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -0.02,
-          "estimates_count": null,
-          "market_cap": 55804752.0,
+          "estimates_count": 1.0,
+          "market_cap": 56116508.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1570,8 +866,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": 0.15,
-          "estimates_count": null,
-          "market_cap": 52867240.0,
+          "estimates_count": 1.0,
+          "market_cap": 52669976.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1582,7 +878,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.02,
           "estimates_count": null,
-          "market_cap": 45647476.0,
+          "market_cap": 45010536.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1593,7 +889,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.02,
           "estimates_count": 1.0,
-          "market_cap": 32575180.0,
+          "market_cap": 30945736.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1604,7 +900,7 @@
           "eps_estimate": null,
           "last_year_eps": -0.65,
           "estimates_count": null,
-          "market_cap": 16843984.0,
+          "market_cap": 17064476.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1614,8 +910,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -0.18,
-          "estimates_count": 1.0,
-          "market_cap": 16097480.0,
+          "estimates_count": null,
+          "market_cap": 16312113.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1625,8 +921,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -0.47,
-          "estimates_count": 1.0,
-          "market_cap": 11596732.0,
+          "estimates_count": null,
+          "market_cap": 11162402.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1636,8 +932,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -2.7,
-          "estimates_count": null,
-          "market_cap": 9934062.0,
+          "estimates_count": 1.0,
+          "market_cap": 9626506.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1648,7 +944,7 @@
           "eps_estimate": -0.9,
           "last_year_eps": -1.95,
           "estimates_count": 1.0,
-          "market_cap": 8889548.0,
+          "market_cap": 9121266.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1659,7 +955,7 @@
           "eps_estimate": null,
           "last_year_eps": -0.68,
           "estimates_count": 1.0,
-          "market_cap": 7930512.0,
+          "market_cap": 7500368.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1670,7 +966,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.19,
           "estimates_count": null,
-          "market_cap": 7023531.0,
+          "market_cap": 7014106.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1681,7 +977,7 @@
           "eps_estimate": null,
           "last_year_eps": -1.5,
           "estimates_count": null,
-          "market_cap": 5962996.0,
+          "market_cap": 6576332.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1691,8 +987,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -2.64,
-          "estimates_count": null,
-          "market_cap": 1885233.0,
+          "estimates_count": 1.0,
+          "market_cap": 2041467.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1702,8 +998,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -18.04,
-          "estimates_count": null,
-          "market_cap": 1740414.0,
+          "estimates_count": 1.0,
+          "market_cap": 1838886.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1714,7 +1010,7 @@
           "eps_estimate": -2.6,
           "last_year_eps": -7.6,
           "estimates_count": 1.0,
-          "market_cap": 1347705.0,
+          "market_cap": 1588297.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1725,7 +1021,7 @@
           "eps_estimate": null,
           "last_year_eps": -99.99,
           "estimates_count": 1.0,
-          "market_cap": 519491.0,
+          "market_cap": 236646.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-25"
         },
         {
@@ -1747,7 +1043,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.73,
           "estimates_count": 5.0,
-          "market_cap": 1679582210.0,
+          "market_cap": 1678408830.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1758,7 +1054,7 @@
           "eps_estimate": 0.26,
           "last_year_eps": 0.49,
           "estimates_count": 3.0,
-          "market_cap": 1415703810.0,
+          "market_cap": 1409588350.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1769,7 +1065,7 @@
           "eps_estimate": -0.19,
           "last_year_eps": -0.28,
           "estimates_count": 5.0,
-          "market_cap": 644801920.0,
+          "market_cap": 678912580.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1791,7 +1087,7 @@
           "eps_estimate": null,
           "last_year_eps": -0.26,
           "estimates_count": 5.0,
-          "market_cap": 144379440.0,
+          "market_cap": 147965184.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1802,7 +1098,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.11,
           "estimates_count": 5.0,
-          "market_cap": 100042920.0,
+          "market_cap": 101250072.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1812,8 +1108,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": 0.08,
-          "estimates_count": 3.0,
-          "market_cap": 51476968.0,
+          "estimates_count": 5.0,
+          "market_cap": 49399648.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1824,7 +1120,7 @@
           "eps_estimate": -0.17,
           "last_year_eps": -0.14,
           "estimates_count": 1.0,
-          "market_cap": 20939936.0,
+          "market_cap": 19054764.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1834,8 +1130,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -10.5,
-          "estimates_count": 5.0,
-          "market_cap": 15880732.0,
+          "estimates_count": 3.0,
+          "market_cap": 15389968.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1846,7 +1142,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.09,
           "estimates_count": 3.0,
-          "market_cap": 12530704.0,
+          "market_cap": 11441871.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1857,18 +1153,7 @@
           "eps_estimate": null,
           "last_year_eps": -0.02,
           "estimates_count": 3.0,
-          "market_cap": 7176378.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
-        },
-        {
-          "date": "2026-11-26",
-          "symbol": "SEGG",
-          "name": "Sports Entertainment Gaming Global Corporation ",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": -8.33,
-          "estimates_count": 3.0,
-          "market_cap": 3621132.0,
+          "market_cap": 6779694.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1879,7 +1164,29 @@
           "eps_estimate": null,
           "last_year_eps": 0.05,
           "estimates_count": 5.0,
-          "market_cap": 2963108.0,
+          "market_cap": 3988083.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
+        },
+        {
+          "date": "2026-11-26",
+          "symbol": "SEGG",
+          "name": "Sports Entertainment Gaming Global Corporation ",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": -8.33,
+          "estimates_count": 5.0,
+          "market_cap": 3512624.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
+        },
+        {
+          "date": "2026-11-26",
+          "symbol": "RBNE",
+          "name": "Robin Energy Ltd.",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": 56.36,
+          "estimates_count": 3.0,
+          "market_cap": 3472560.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1890,7 +1197,7 @@
           "eps_estimate": null,
           "last_year_eps": -4.4,
           "estimates_count": 3.0,
-          "market_cap": 1647149.0,
+          "market_cap": 1187944.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-26"
         },
         {
@@ -1912,7 +1219,7 @@
           "eps_estimate": 0.1,
           "last_year_eps": -0.01,
           "estimates_count": 1.0,
-          "market_cap": 1357321730.0,
+          "market_cap": 1361556740.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -1923,7 +1230,7 @@
           "eps_estimate": null,
           "last_year_eps": 1.43,
           "estimates_count": 1.0,
-          "market_cap": 289253408.0,
+          "market_cap": 286514240.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -1934,7 +1241,7 @@
           "eps_estimate": -0.08,
           "last_year_eps": -0.07,
           "estimates_count": 2.0,
-          "market_cap": 111280448.0,
+          "market_cap": 114490464.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -1945,7 +1252,7 @@
           "eps_estimate": null,
           "last_year_eps": -0.24,
           "estimates_count": 1.0,
-          "market_cap": 83409672.0,
+          "market_cap": 75007968.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -1956,7 +1263,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.02,
           "estimates_count": 1.0,
-          "market_cap": 60390000.0,
+          "market_cap": 61710000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -1966,8 +1273,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -0.08,
-          "estimates_count": null,
-          "market_cap": 53332060.0,
+          "estimates_count": 1.0,
+          "market_cap": 57877408.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -1978,7 +1285,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.02,
           "estimates_count": 1.0,
-          "market_cap": 23864828.0,
+          "market_cap": 24476746.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -1988,8 +1295,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -0.88,
-          "estimates_count": null,
-          "market_cap": 19642396.0,
+          "estimates_count": 1.0,
+          "market_cap": 24162776.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -1999,19 +1306,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -0.15,
-          "estimates_count": null,
-          "market_cap": 16215870.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
-        },
-        {
-          "date": "2026-11-27",
-          "symbol": "ASBP",
-          "name": "Aspire-Lakewood Holdings, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": -48.05,
           "estimates_count": 1.0,
-          "market_cap": 12869291.0,
+          "market_cap": 16215870.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -2021,19 +1317,8 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -22.17,
-          "estimates_count": null,
-          "market_cap": 5138265.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
-        },
-        {
-          "date": "2026-11-27",
-          "symbol": "ICON",
-          "name": "Icon Energy Corp.",
-          "session": "시간대 미제공",
-          "eps_estimate": -0.24,
-          "last_year_eps": null,
-          "estimates_count": null,
-          "market_cap": 2988655.0,
+          "estimates_count": 1.0,
+          "market_cap": 5089430.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -2044,18 +1329,7 @@
           "eps_estimate": -4.48,
           "last_year_eps": -21.59,
           "estimates_count": 1.0,
-          "market_cap": 2065294.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
-        },
-        {
-          "date": "2026-11-27",
-          "symbol": "VBIO",
-          "name": "Valion Bio, Inc.",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": -49.25,
-          "estimates_count": null,
-          "market_cap": 1029317.0,
+          "market_cap": 2180032.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-27"
         },
         {
@@ -2066,7 +1340,7 @@
           "eps_estimate": -0.38,
           "last_year_eps": -0.3,
           "estimates_count": 9.0,
-          "market_cap": 23564294100.0,
+          "market_cap": 22934089700.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
         },
         {
@@ -2077,7 +1351,7 @@
           "eps_estimate": 0.34,
           "last_year_eps": 0.29,
           "estimates_count": 2.0,
-          "market_cap": 2109842430.0,
+          "market_cap": 2083135490.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
         },
         {
@@ -2088,18 +1362,7 @@
           "eps_estimate": -0.31,
           "last_year_eps": -0.19,
           "estimates_count": 3.0,
-          "market_cap": 508521440.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
-        },
-        {
-          "date": "2026-11-30",
-          "symbol": "AIV",
-          "name": "Apartment Investment and Management Company",
-          "session": "시간대 미제공",
-          "eps_estimate": null,
-          "last_year_eps": null,
-          "estimates_count": 9.0,
-          "market_cap": 212972000.0,
+          "market_cap": 474691616.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
         },
         {
@@ -2110,7 +1373,18 @@
           "eps_estimate": null,
           "last_year_eps": 0.05,
           "estimates_count": null,
-          "market_cap": 208844304.0,
+          "market_cap": 211089952.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
+        },
+        {
+          "date": "2026-11-30",
+          "symbol": "AIV",
+          "name": "Apartment Investment and Management Company",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": 9.0,
+          "market_cap": 208595856.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
         },
         {
@@ -2121,7 +1395,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.03,
           "estimates_count": null,
-          "market_cap": 82493816.0,
+          "market_cap": 81563032.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
         },
         {
@@ -2132,7 +1406,18 @@
           "eps_estimate": 0.04,
           "last_year_eps": 0.03,
           "estimates_count": 1.0,
-          "market_cap": 54862556.0,
+          "market_cap": 63121436.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
+        },
+        {
+          "date": "2026-11-30",
+          "symbol": "PXS",
+          "name": "Pyxis Tankers Inc.",
+          "session": "장후",
+          "eps_estimate": null,
+          "last_year_eps": 0.11,
+          "estimates_count": 9.0,
+          "market_cap": 50142680.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
         },
         {
@@ -2143,18 +1428,7 @@
           "eps_estimate": 0.09,
           "last_year_eps": 0.28,
           "estimates_count": 2.0,
-          "market_cap": 51136000.0,
-          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
-        },
-        {
-          "date": "2026-11-30",
-          "symbol": "PXS",
-          "name": "Pyxis Tankers Inc.",
-          "session": "장후",
-          "eps_estimate": null,
-          "last_year_eps": 0.11,
-          "estimates_count": null,
-          "market_cap": 50964688.0,
+          "market_cap": 45120000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
         },
         {
@@ -2165,7 +1439,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.1,
           "estimates_count": 9.0,
-          "market_cap": 29298212.0,
+          "market_cap": 30498380.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
         },
         {
@@ -2176,7 +1450,7 @@
           "eps_estimate": null,
           "last_year_eps": null,
           "estimates_count": null,
-          "market_cap": 17242656.0,
+          "market_cap": 16470596.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
         },
         {
@@ -2187,7 +1461,7 @@
           "eps_estimate": null,
           "last_year_eps": 40.0,
           "estimates_count": 9.0,
-          "market_cap": 4620375.0,
+          "market_cap": 3663000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
         },
         {
@@ -2198,8 +1472,30 @@
           "eps_estimate": null,
           "last_year_eps": 1.0,
           "estimates_count": 9.0,
-          "market_cap": 1503859.0,
+          "market_cap": 1459341.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
+        },
+        {
+          "date": "2026-11-30",
+          "symbol": "PWRL",
+          "name": "Powerlaw Corp.",
+          "session": "장전",
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": null,
+          "market_cap": null,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-30"
+        },
+        {
+          "date": "2026-12-01",
+          "symbol": "BHP",
+          "name": "BHP Group Limited",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": null,
+          "market_cap": 174515847000.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
           "date": "2026-12-01",
@@ -2209,7 +1505,7 @@
           "eps_estimate": 0.79,
           "last_year_eps": 0.62,
           "estimates_count": 12.0,
-          "market_cap": 126922506000.0,
+          "market_cap": 115373736000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2220,7 +1516,7 @@
           "eps_estimate": 0.43,
           "last_year_eps": 0.31,
           "estimates_count": 10.0,
-          "market_cap": 36062061000.0,
+          "market_cap": 34635522000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2231,7 +1527,7 @@
           "eps_estimate": 2.14,
           "last_year_eps": 1.63,
           "estimates_count": 8.0,
-          "market_cap": 33713358800.0,
+          "market_cap": 32016298000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2239,10 +1535,10 @@
           "symbol": "CPRT",
           "name": "Copart, Inc.",
           "session": "장전",
-          "eps_estimate": 0.41,
+          "eps_estimate": 0.4,
           "last_year_eps": 0.41,
           "estimates_count": 4.0,
-          "market_cap": 29292073000.0,
+          "market_cap": 29968328700.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2253,7 +1549,7 @@
           "eps_estimate": 1.07,
           "last_year_eps": 3.76,
           "estimates_count": 2.0,
-          "market_cap": 25880885200.0,
+          "market_cap": 25647894500.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2264,7 +1560,7 @@
           "eps_estimate": 0.08,
           "last_year_eps": -0.08,
           "estimates_count": 9.0,
-          "market_cap": 25189163000.0,
+          "market_cap": 24851632100.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2275,7 +1571,7 @@
           "eps_estimate": 1.03,
           "last_year_eps": 0.44,
           "estimates_count": 6.0,
-          "market_cap": 23016591400.0,
+          "market_cap": 20009361400.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2286,7 +1582,7 @@
           "eps_estimate": 0.96,
           "last_year_eps": 0.82,
           "estimates_count": 4.0,
-          "market_cap": 7778546700.0,
+          "market_cap": 7906755100.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2297,7 +1593,7 @@
           "eps_estimate": -0.09,
           "last_year_eps": null,
           "estimates_count": 7.0,
-          "market_cap": 7300411900.0,
+          "market_cap": 7490335700.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2308,7 +1604,7 @@
           "eps_estimate": -0.03,
           "last_year_eps": -0.21,
           "estimates_count": 1.0,
-          "market_cap": 6439564300.0,
+          "market_cap": 6464621100.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2319,7 +1615,7 @@
           "eps_estimate": 0.09,
           "last_year_eps": 0.02,
           "estimates_count": 3.0,
-          "market_cap": 6249495000.0,
+          "market_cap": 6300259300.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2330,7 +1626,7 @@
           "eps_estimate": 0.16,
           "last_year_eps": 0.17,
           "estimates_count": 6.0,
-          "market_cap": 2183451900.0,
+          "market_cap": 2236320000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2341,7 +1637,7 @@
           "eps_estimate": -0.17,
           "last_year_eps": -0.16,
           "estimates_count": 3.0,
-          "market_cap": 2122552960.0,
+          "market_cap": 2154608900.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2352,7 +1648,18 @@
           "eps_estimate": 0.17,
           "last_year_eps": 0.03,
           "estimates_count": 2.0,
-          "market_cap": 1907070340.0,
+          "market_cap": 1904427140.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
+        },
+        {
+          "date": "2026-12-01",
+          "symbol": "DRVN",
+          "name": "Driven Brands Holdings Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": 0.27,
+          "last_year_eps": 0.32,
+          "estimates_count": 3.0,
+          "market_cap": 1841174780.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2363,7 +1670,7 @@
           "eps_estimate": null,
           "last_year_eps": 0.84,
           "estimates_count": 3.0,
-          "market_cap": 602025280.0,
+          "market_cap": 624234820.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2374,7 +1681,7 @@
           "eps_estimate": 0.21,
           "last_year_eps": 0.14,
           "estimates_count": 6.0,
-          "market_cap": 492108000.0,
+          "market_cap": 494592000.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2384,8 +1691,8 @@
           "session": "장전",
           "eps_estimate": null,
           "last_year_eps": -0.88,
-          "estimates_count": 8.0,
-          "market_cap": 345503296.0,
+          "estimates_count": 3.0,
+          "market_cap": 354259712.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2396,7 +1703,7 @@
           "eps_estimate": 0.03,
           "last_year_eps": -0.11,
           "estimates_count": 1.0,
-          "market_cap": 298519680.0,
+          "market_cap": 290378240.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2407,7 +1714,18 @@
           "eps_estimate": null,
           "last_year_eps": -0.02,
           "estimates_count": 3.0,
-          "market_cap": 238712032.0,
+          "market_cap": 232147712.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
+        },
+        {
+          "date": "2026-12-01",
+          "symbol": "ZENA",
+          "name": "ZenaTech, Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": -0.18,
+          "last_year_eps": -0.25,
+          "estimates_count": 1.0,
+          "market_cap": 95187912.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
         },
         {
@@ -2417,14 +1735,355 @@
           "session": "시간대 미제공",
           "eps_estimate": null,
           "last_year_eps": -0.06,
-          "estimates_count": 8.0,
-          "market_cap": 84560920.0,
+          "estimates_count": null,
+          "market_cap": 83516952.0,
           "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
+        },
+        {
+          "date": "2026-12-01",
+          "symbol": "AFJK",
+          "name": "Aimei Health Technology Co., Ltd",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": 0.06,
+          "estimates_count": 3.0,
+          "market_cap": 76560000.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
+        },
+        {
+          "date": "2026-12-01",
+          "symbol": "AMBR",
+          "name": "Amber International Holding Limited",
+          "session": "장전",
+          "eps_estimate": null,
+          "last_year_eps": 0.03,
+          "estimates_count": null,
+          "market_cap": 62259376.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
+        },
+        {
+          "date": "2026-12-01",
+          "symbol": "DAVA",
+          "name": "Endava plc",
+          "session": "시간대 미제공",
+          "eps_estimate": 0.03,
+          "last_year_eps": 0.04,
+          "estimates_count": 2.0,
+          "market_cap": 54327604.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
+        },
+        {
+          "date": "2026-12-01",
+          "symbol": "EVTL",
+          "name": "Vertical Aerospace Ltd.",
+          "session": "시간대 미제공",
+          "eps_estimate": -0.29,
+          "last_year_eps": -0.32,
+          "estimates_count": 3.0,
+          "market_cap": 44648148.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "CRM",
+          "name": "Salesforce, Inc.",
+          "session": "장후",
+          "eps_estimate": 2.41,
+          "last_year_eps": 2.66,
+          "estimates_count": 13.0,
+          "market_cap": 159052972000.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "BMO",
+          "name": "Bank Of Montreal",
+          "session": "장전",
+          "eps_estimate": 2.69,
+          "last_year_eps": 2.36,
+          "estimates_count": 2.0,
+          "market_cap": 111724724000.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "BNS",
+          "name": "Bank of Nova Scotia (The)",
+          "session": "장전",
+          "eps_estimate": 1.55,
+          "last_year_eps": 1.39,
+          "estimates_count": 3.0,
+          "market_cap": 104282898000.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "SNOW",
+          "name": "Snowflake Inc.",
+          "session": "장후",
+          "eps_estimate": -0.32,
+          "last_year_eps": -0.84,
+          "estimates_count": 11.0,
+          "market_cap": 95640551000.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "FIVE",
+          "name": "Five Below, Inc.",
+          "session": "장후",
+          "eps_estimate": 1.17,
+          "last_year_eps": 0.68,
+          "estimates_count": 8.0,
+          "market_cap": 12410281000.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "NTSK",
+          "name": "Netskope, Inc.",
+          "session": "장후",
+          "eps_estimate": -0.21,
+          "last_year_eps": -0.1,
+          "estimates_count": 3.0,
+          "market_cap": 10431245300.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "DCI",
+          "name": "Donaldson Company, Inc.",
+          "session": "장전",
+          "eps_estimate": 0.97,
+          "last_year_eps": 0.94,
+          "estimates_count": 5.0,
+          "market_cap": 9597359100.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "DSGX",
+          "name": "The Descartes Systems Group Inc.",
+          "session": "장후",
+          "eps_estimate": 0.61,
+          "last_year_eps": 0.5,
+          "estimates_count": 2.0,
+          "market_cap": 7823455200.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "VFS",
+          "name": "VinFast Auto Ltd.",
+          "session": "장전",
+          "eps_estimate": null,
+          "last_year_eps": -0.41,
+          "estimates_count": null,
+          "market_cap": 6410328600.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "M",
+          "name": "Macy's Inc",
+          "session": "장전",
+          "eps_estimate": -0.16,
+          "last_year_eps": 0.09,
+          "estimates_count": 4.0,
+          "market_cap": 6393604100.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "SIG",
+          "name": "Signet Jewelers Limited",
+          "session": "장전",
+          "eps_estimate": 0.84,
+          "last_year_eps": 0.63,
+          "estimates_count": 3.0,
+          "market_cap": 4018329340.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "AEO",
+          "name": "American Eagle Outfitters, Inc.",
+          "session": "장후",
+          "eps_estimate": 0.49,
+          "last_year_eps": 0.53,
+          "estimates_count": 7.0,
+          "market_cap": 3818996220.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "KEN",
+          "name": "Kenon Holdings Ltd.",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": 0.45,
+          "estimates_count": 6.0,
+          "market_cap": 2931097340.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "BLBD",
+          "name": "Blue Bird Corporation",
+          "session": "장후",
+          "eps_estimate": 1.42,
+          "last_year_eps": 1.28,
+          "estimates_count": 2.0,
+          "market_cap": 1770795650.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "CBRL",
+          "name": "Cracker Barrel Old Country Store, Inc.",
+          "session": "장전",
+          "eps_estimate": 0.0,
+          "last_year_eps": -0.74,
+          "estimates_count": 3.0,
+          "market_cap": 1680679170.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "AI",
+          "name": "C3.ai, Inc.",
+          "session": "장후",
+          "eps_estimate": -0.58,
+          "last_year_eps": -0.75,
+          "estimates_count": 6.0,
+          "market_cap": 1582073730.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "CXM",
+          "name": "Sprinklr, Inc.",
+          "session": "장전",
+          "eps_estimate": 0.05,
+          "last_year_eps": 0.03,
+          "estimates_count": 4.0,
+          "market_cap": 1564834820.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "PHR",
+          "name": "Phreesia, Inc.",
+          "session": "장후",
+          "eps_estimate": 0.13,
+          "last_year_eps": 0.1,
+          "estimates_count": 4.0,
+          "market_cap": 749817020.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "YB",
+          "name": "Yuanbao Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": 1.08,
+          "estimates_count": 6.0,
+          "market_cap": 511951040.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "WDH",
+          "name": "Waterdrop Inc.",
+          "session": "장전",
+          "eps_estimate": null,
+          "last_year_eps": 0.06,
+          "estimates_count": 6.0,
+          "market_cap": 362894976.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "MEI",
+          "name": "Methode Electronics, Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": -0.32,
+          "last_year_eps": -0.19,
+          "estimates_count": 1.0,
+          "market_cap": 352886016.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "AOUT",
+          "name": "American Outdoor Brands, Inc.",
+          "session": "장후",
+          "eps_estimate": 0.38,
+          "last_year_eps": 0.24,
+          "estimates_count": 1.0,
+          "market_cap": 237846992.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "SY",
+          "name": "So-Young International Inc.",
+          "session": "장전",
+          "eps_estimate": null,
+          "last_year_eps": -0.09,
+          "estimates_count": 6.0,
+          "market_cap": 171516704.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "TLYS",
+          "name": "Tilly's, Inc.",
+          "session": "장후",
+          "eps_estimate": 0.09,
+          "last_year_eps": -0.05,
+          "estimates_count": 2.0,
+          "market_cap": 123266680.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "HNNA",
+          "name": "Hennessy Advisors, Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": 0.31,
+          "estimates_count": 6.0,
+          "market_cap": 79202192.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "PTIV",
+          "name": "Pineapple Financial Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": null,
+          "estimates_count": 6.0,
+          "market_cap": 13512509.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
+        },
+        {
+          "date": "2026-12-02",
+          "symbol": "CTRM",
+          "name": "Castor Maritime Inc.",
+          "session": "시간대 미제공",
+          "eps_estimate": null,
+          "last_year_eps": 0.03,
+          "estimates_count": 6.0,
+          "market_cap": 10048848.0,
+          "source_url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02"
         }
       ]
     },
     "sec": {
-      "observed_at": "2026-11-24T23:44:24.702356+00:00",
+      "observed_at": "2026-11-26T01:24:05.701185+00:00",
       "source_url": "https://www.sec.gov/search-filings",
       "rows": [
         {
@@ -3074,31 +2733,37 @@
           "form": "10-Q",
           "report_date": "2026-07-31",
           "url": "https://www.sec.gov/Archives/edgar/data/104169/000010416926000154/wmt-20260731.htm"
-        },
-        {
-          "market": "us",
-          "symbol": "NVDA",
-          "name": "엔비디아",
-          "date": "2026-08-26",
-          "form": "10-Q",
-          "report_date": "2026-07-26",
-          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/nvda-20260726.htm"
-        },
-        {
-          "market": "us",
-          "symbol": "NVDA",
-          "name": "엔비디아",
-          "date": "2026-08-26",
-          "form": "8-K",
-          "report_date": "2026-08-26",
-          "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/nvda-20260826.htm"
         }
       ]
     },
     "ipo": {
-      "observed_at": "2026-11-24T23:44:24.702356+00:00",
+      "observed_at": "2026-11-26T01:23:30.088512+00:00",
       "source_url": "https://www.nasdaq.com/market-activity/ipos",
       "rows": [
+        {
+          "name": "EarLens Corp",
+          "symbol": "EARS",
+          "date": "2026-11-24",
+          "date_kind": "신고일",
+          "status": "등록신고",
+          "price": null,
+          "amount": "$30,000,000",
+          "exchange": null,
+          "source_url": "https://www.nasdaq.com/market-activity/ipos",
+          "id": "filed:827665-120049"
+        },
+        {
+          "name": "Cafe Deco Group Ltd",
+          "symbol": null,
+          "date": "2026-11-24",
+          "date_kind": "철회일",
+          "status": "철회",
+          "price": null,
+          "amount": "$25,875,000",
+          "exchange": null,
+          "source_url": "https://www.nasdaq.com/market-activity/ipos",
+          "id": "withdrawn:1361518-116517"
+        },
         {
           "name": "LIBERTYSTREAM INFRASTRUCTURE PARTNERS INC.",
           "symbol": "LSTM",
