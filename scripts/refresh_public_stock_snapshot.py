@@ -18,7 +18,7 @@ def main():
     result = collect_public_research({}, load_settings())
     for key in CACHE_HOURS:
         source = result["sources"][key]
-        rows = [row for target in ("economic_events", "earnings", "filings", "ipos") for row in result[target] if row.get("_source") == key]
+        rows = [row for target in ("economic_events", "earnings", "filings", "ipos", "reported_earnings") for row in result[target] if row.get("_source") == key]
         if source["status"] == "정상 수집":
             existing["sources"][key] = {"observed_at": source["observed_at"], "source_url": source["url"], "rows": rows}
             print(f"{key}: {len(rows)} public observations saved")

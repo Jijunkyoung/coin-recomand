@@ -390,7 +390,7 @@ def build_stock_report(
         "benchmark": benchmark, "rankings": rankings,
         "recommendations": rankings[: int(settings.get("recommendation_count", 5))], "screened": len(rankings),
         "methodology": {
-            "intro": "주식은 50점에서 시작해 기술 추세·거래량·변동성·대표지수 국면을 가감합니다. 재무·공시 데이터는 다음 확장 단계에서 별도 점수로 표시하며 현재 점수에 추정값을 넣지 않습니다.",
+            "intro": "주식은 50점에서 시작해 기술 추세·거래량·변동성·대표지수 국면을 가감합니다. 재무·공시 데이터는 별도 참고자료이며 현재 기술점수에는 합산하지 않습니다.",
             "items": ["EMA 정배열 +18 / 역배열 -18", "RSI 45~65 +8 / 75 이상 -10 / 35 미만 -4",
                       "MACD 히스토그램 양수 +10 / 그 외 -6", "과열 없는 7·30일 상승 +10 / 급등 -10",
                       "거래량 확인 +7 / 비정상 급증 -6", "변동성 적정 +3 / 80% 초과 -8", "대표지수 상승 +8 / 하락 -8"],
