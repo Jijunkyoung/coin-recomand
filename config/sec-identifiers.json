@@ -1,0 +1,25 @@
+{
+  "verified_at": "2026-11-25T08:44:24+09:00",
+  "source_url": "https://www.sec.gov/files/company_tickers.json",
+  "note": "공식 목록과 실제 SEC 공시에서 확인한 안정 식별자. 자료 조회 시 회사 CIK·티커를 다시 검증합니다.",
+  "symbols": {
+    "AAPL": 320193,
+    "MSFT": 789019,
+    "NVDA": 1045810,
+    "AMZN": 1018724,
+    "GOOGL": 1652044,
+    "META": 1326801,
+    "TSLA": 1318605,
+    "AVGO": 1730168,
+    "AMD": 2488,
+    "PLTR": 1321655,
+    "JPM": 19617,
+    "LLY": 59478,
+    "COST": 909832,
+    "WMT": 104169,
+    "XOM": 2115436,
+    "NFLX": 1065280,
+    "COIN": 1679788,
+    "ARM": 1973239
+  }
+}

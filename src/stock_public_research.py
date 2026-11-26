@@ -26,7 +26,7 @@ EARNINGS = "https://www.nasdaq.com/market-activity/earnings"
 IPO = "https://www.nasdaq.com/market-activity/ipos"
 DART = "https://dart.fss.or.kr/api/todayRSS.xml"
 ET_ZONE = ZoneInfo("America/New_York")
-CACHE_HOURS = {"bls": 72, "earnings": 24, "sec": 168, "ipo": 48}
+CACHE_HOURS = {"bls": 72, "earnings": 24, "sec": 168, "ipo": 48, "reported": 168}
 PUBLIC_SNAPSHOT = "https://jijunkyoung.github.io/coin-recomand/data/stock-research.json"
 
 
@@ -37,8 +37,10 @@ def download(url: str, json: bool = False):
         response.encoding = "utf-8"
         return response.text
     payload = response.json()
-    if isinstance(payload, dict) and (payload.get("status") or {}).get("rCode", 200) != 200:
-        raise ValueError("Provider reported an error")
+    if isinstance(payload, dict):
+        status = payload.get("status") or {}
+        code = status.get("rCode", 200) if isinstance(status, dict) else status
+        if str(code) != "200": raise ValueError(f"Provider reported status {str(code)[:12]}")
     return payload
 
 
@@ -210,8 +212,7 @@ def collect_earnings(now: datetime) -> tuple[list[dict], list[str]]:
         for day, future in pending:
             try: rows.extend(future.result())
             except (requests.RequestException, ValueError) as error:
-                code = getattr(getattr(error, "response", None), "status_code", None)
-                errors.append(str(day) + (f" (HTTP {code})" if code else ""))
+                errors.append(f"{day} ({failure_label(error)})")
     return sorted(rows, key=lambda row: (row["date"], -(row["market_cap"] or 0), row["symbol"])), errors
 
 
@@ -237,21 +238,50 @@ def parse_filings(payload: dict, stock: dict, now: datetime) -> list[dict]:
     return output
 
 
+def sec_identifiers(settings: dict) -> dict:
+    mapping = {}
+    try:
+        payload = json.loads(Path("config/sec-identifiers.json").read_text(encoding="utf-8"))
+        mapping = {symbol: int(cik) for symbol, cik in payload.get("symbols", {}).items() if str(cik).isdigit()}
+    except (OSError, ValueError, TypeError): pass
+    stocks = settings.get("us", {}).get("universe", [])
+    mapping.update({row["symbol"]: int(row["sec_cik"]) for row in stocks if str(row.get("sec_cik", "")).isdigit()})
+    if any(stock["symbol"] not in mapping for stock in stocks):
+        try:
+            tickers = download("https://www.sec.gov/files/company_tickers.json", json=True)
+            mapping.update({row["ticker"]: int(row["cik_str"]) for row in tickers.values()})
+        except (requests.RequestException, ValueError, KeyError, TypeError): pass
+    return mapping
+
+
+def failure_label(error: Exception) -> str:
+    code = getattr(getattr(error, "response", None), "status_code", None)
+    if code: return f"HTTP {code}"
+    if isinstance(error, ValueError):
+        # Only our own fixed diagnostic phrases, never provider bodies or keys.
+        allowed = ("Provider reported status", "Missing earnings observation date", "Invalid earnings observation date", "IPO response month mismatch", "SEC ticker identity mismatch", "SEC CIK identity mismatch")
+        message = str(error)
+        if message.startswith(allowed): return message[:100]
+        return "자료 형식 확인 필요"
+    return "연결 확인 필요"
+
+
 def collect_filings(settings: dict, now: datetime) -> tuple[list[dict], list[str]]:
-    tickers = download("https://www.sec.gov/files/company_tickers.json", json=True)
-    mapping = {row["ticker"]: row["cik_str"] for row in tickers.values()}
+    mapping = sec_identifiers(settings)
     def fetch(stock):
         time.sleep(.2)  # Two workers, below SEC's public request-rate limit.
         cik = mapping.get(stock["symbol"])
         if cik is None: raise ValueError("Ticker not found")
         payload = download(f"https://data.sec.gov/submissions/CIK{int(cik):010d}.json", json=True)
+        if str(payload.get("cik", "")).lstrip("0") != str(int(cik)): raise ValueError("SEC CIK identity mismatch")
+        if stock["symbol"] not in (payload.get("tickers") or []): raise ValueError("SEC ticker identity mismatch")
         return parse_filings(payload, stock, now)
     rows, errors = [], []
     with ThreadPoolExecutor(max_workers=2) as pool:
         pending = [(stock["symbol"], pool.submit(fetch, stock)) for stock in settings["us"].get("universe", [])]
         for symbol, future in pending:
             try: rows.extend(future.result())
-            except (requests.RequestException, ValueError): errors.append(symbol)
+            except (requests.RequestException, ValueError) as error: errors.append(f"{symbol} ({failure_label(error)})")
     return sorted(rows, key=lambda row: (row["date"], row["symbol"]), reverse=True), errors
 
 
@@ -313,8 +343,7 @@ def collect_ipos(now: datetime) -> tuple[list[dict], list[str]]:
                 raise ValueError("IPO response month mismatch")
             for row in parse_ipos(payload): rows[row["id"]] = row
         except (requests.RequestException, ValueError) as error:
-            code = getattr(getattr(error, "response", None), "status_code", None)
-            errors.append(query + (f" (HTTP {code})" if code else ""))
+            errors.append(f"{query} ({failure_label(error)})")
     return sorted(rows.values(), key=lambda row: row["date"] or "", reverse=True), errors
 
 
@@ -342,7 +371,7 @@ def load_public_cache(output_dir: str | Path, seed_path: str | Path = "config/st
             stamp = source.get("observed_at")
             if not stamp or not (source.get("status") == "정상 수집" or source.get("cached")):
                 continue
-            rows = [row for target in ("economic_events", "earnings", "filings", "ipos")
+            rows = [row for target in ("economic_events", "earnings", "filings", "ipos", "reported_earnings")
                     for row in previous.get(target, []) if row.get("_source") == key]
             if rows and str(stamp) > str(cache.get(key, {}).get("observed_at", "")):
                 cache[key] = {"observed_at": stamp, "rows": rows}
@@ -367,6 +396,7 @@ def cached_rows(cache: dict, key: str, now: datetime) -> tuple[list[dict], str |
         if key == "bls" and not today - timedelta(days=7) <= day <= today + timedelta(days=45): continue
         if key == "earnings" and not today - timedelta(days=1) <= day <= today + timedelta(days=7): continue
         if key == "sec" and not today - timedelta(days=90) <= day <= today: continue
+        if key == "reported" and not today - timedelta(days=500) <= day <= today: continue
         result.append(dict(row))
     return result, stamp if result else None
 
@@ -374,7 +404,7 @@ def cached_rows(cache: dict, key: str, now: datetime) -> tuple[list[dict], str |
 def collect_public_research(reports: dict, settings: dict, now: datetime | None = None, cache: dict | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     result = {"schema_version": 1, "generated_at": now.isoformat(), "economic_events": [], "macro_indicators": [],
-              "earnings": [], "filings": [], "ipos": [], "sources": {},
+              "earnings": [], "filings": [], "ipos": [], "reported_earnings": [], "sources": {},
               "options": {"status": "보류", "reason": "무료로 지속 사용 가능한 옵션 원자료·권한 미확보. 유료 구독은 추가하지 않았습니다."}}
     tasks = {
         "bls": ("BLS 발표 일정", BLS, "economic_events", lambda: parse_ics(download(BLS), "BLS", "https://www.bls.gov/schedule/", now)),
@@ -386,6 +416,8 @@ def collect_public_research(reports: dict, settings: dict, now: datetime | None 
         "dart": ("DART 최근 RSS 중 당일·분석종목 공시", "https://dart.fss.or.kr/", "filings", lambda: parse_dart(download(DART), settings, now)),
         "ipo": ("Nasdaq 공모정보", IPO, "ipos", lambda: collect_ipos(now)),
     }
+    from .stock_reported_earnings import collect_reported_earnings
+    tasks["reported"] = ("SEC 공시 실적 · 분기·연간", "https://www.sec.gov/search-filings/edgar-application-programming-interfaces", "reported_earnings", lambda: collect_reported_earnings(settings, now))
     with ThreadPoolExecutor(max_workers=4) as pool:
         pending = [(key, pool.submit(task[3])) for key, task in tasks.items()]
         for key, future in pending:
@@ -400,7 +432,7 @@ def collect_public_research(reports: dict, settings: dict, now: datetime | None 
                 if key == "macro" and any(row.get("value") is None for row in collected): status = "일부 지표 미수집"
             except (requests.RequestException, ValueError, KeyError, TypeError, ET.ParseError) as error:
                 code = getattr(getattr(error, "response", None), "status_code", None)
-                status = f"미수집 · HTTP {code}" if code else "미수집 · 자료 형식 또는 연결 확인 필요"
+                status = f"미수집 · {failure_label(error)}"
                 failed = True
             if failed and not collected and key in CACHE_HOURS:
                 collected, snapshot_at = cached_rows(cache or {}, key, now)
