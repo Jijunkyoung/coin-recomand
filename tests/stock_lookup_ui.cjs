@@ -19,6 +19,8 @@ async function setup(market='us',directoryError=false){
    setInterval:fn=>{timers.push(fn);return 0;},setTimeout,clearTimeout,
    fetch:async()=>{if(directoryError)throw new Error('offline');return {ok:true,json:async()=>directory};}});
  vm.runInContext(fs.readFileSync('docs/stock-lookup.js','utf8'),context);
+ vm.runInContext(fs.readFileSync('docs/stock-workbench.js','utf8'),context);
+ window.StockWorkbench.render({rankings:[]},row=>opened.push(row));
  window.StockLookup.bind({getReport:()=>({rankings:[]}),openChart:row=>opened.push(row)});await tick();
  return {window,document,stored,requests,opened,timers,change:fn=>behavior=fn};
 }
@@ -26,11 +28,25 @@ async function setup(market='us',directoryError=false){
  const ui=await setup(),{window,document,requests,opened}=ui;
  assert.match(document.querySelector('#stockSearchStatus').textContent,/오래된 목록/);
  assert.doesNotMatch(document.querySelector('#stockWatchlist').textContent,/Private holding/,'anonymous cannot see account holdings');
+ assert.equal(document.querySelector('.wb-tabs button:last-child').textContent,'개별검색');
+ assert.equal(document.querySelector('#stockIndividualSearch').hidden,true);
+ assert.equal(document.querySelectorAll('main > .alt-search-panel').length,0,'no separate search card');
  await window.StockLookup.search('ASP ISOTOPES INC');
+ assert.equal(document.querySelector('#stockIndividualSearch').hidden,false,'search opens its market research tab');
+ assert.equal(document.querySelector('#wbPane').hidden,true);
  assert.equal(requests.length,1);assert.equal(requests[0].symbol,'ASPI');assert.equal(document.querySelector('#stockSearchResult h3').textContent,'ASP 아이소토프 ASPI');
  assert.match(document.querySelector('#stockSearchResult').textContent,/추천 순위·점수를 부여하지/);
  assert.match(document.querySelector('#stockSearchResult').textContent,/Fixture/);
  document.querySelector('[data-lookup-chart]').click();assert.equal(opened[0].symbol,'ASPI');
+ const originalForm=document.querySelector('#stockSearchForm');
+ document.querySelector('[data-wb-tab="themes"]').click();assert.equal(document.querySelector('#stockIndividualSearch').hidden,true);
+ document.querySelector('[data-wb-tab="lookup"]').click();
+ assert.equal(document.querySelector('#stockSearchForm'),originalForm);
+ assert.match(document.querySelector('#stockSearchResult').textContent,/ASP 아이소토프/,'switching tabs preserves search results');
+ window.StockWorkbench.render({rankings:[]},row=>opened.push(row));
+ assert.equal(document.querySelector('#stockSearchForm'),originalForm,'report refresh preserves form listeners');
+ originalForm.dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true}));await tick();
+ assert.equal(requests.length,1,'preserved search handler continues to use its quote cache');
  document.querySelector('[data-lookup-favorite]').click();assert.match(ui.stored.get('stock-favorites-us-v1'),/ASPI/);
  await window.StockLookup.search('ASPI');assert.equal(requests.length,1,'five-minute quote cache');
  document.querySelector('[data-lookup-refresh]').click();await tick();assert.equal(requests.length,2);assert.equal(requests[1].force,true);

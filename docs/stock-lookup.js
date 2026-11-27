@@ -164,7 +164,7 @@
   setInterval(()=>{refreshWatch();if(current&&document.visibilityState!=='hidden')select(current);},300000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='hidden')refreshWatch();});
   window.StockLookup={bind(options){getReport=options.getReport;openChart=options.openChart;loadDirectory().then(()=>refreshWatch()).catch(()=>{});},
-    search(query){input.value=query;form.scrollIntoView?.({behavior:'smooth',block:'center'});input.focus();return search(query);},
+    search(query){window.StockWorkbench?.openLookup();input.value=query;form.scrollIntoView?.({behavior:'smooth',block:'center'});input.focus();return search(query);},
     recent:()=>[...recent.values()],analyze,refreshWatch};
   drawWatch();
 })();
