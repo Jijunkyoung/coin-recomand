@@ -46,3 +46,5 @@
 .lookup-actions button:disabled{opacity:.6;cursor:wait}.lookup-error{border-left:3px solid var(--red,#ff6b78)}
 #stockWatchlist{border-top:1px solid var(--line);margin-top:20px;padding-top:12px}
 @media(max-width:600px){.lookup-results button{align-items:flex-start;flex-direction:column;gap:4px}.lookup-actions button{flex:1}}
+.stock-individual-search[hidden],.wb-pane[hidden]{display:none}
+.stock-individual-search .alt-search-head{margin-top:4px}.stock-individual-search h3{margin:6px 0 0;font-size:1.1rem}

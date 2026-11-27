@@ -1,8 +1,10 @@
-/* Public stock research. Account data never enters these panels or exports. */
+/* Public research panes and a persistent lookup view. Private account access
+   remains controlled by the existing lookup/auth modules. */
 (() => {
   'use strict';
   const root = document.querySelector('#stockWorkbench');
   if (!root) return;
+  const lookupPanel = root.querySelector('#stockIndividualSearch');
   const market = document.body.dataset.stockMarket;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)) ? Number(value) : null;
@@ -29,9 +31,14 @@
   const empty = text => `<p class="wb-empty">${esc(text)}</p>`;
   function render(report, onStock) {
     data = report; openStock = onStock;
-    root.innerHTML = `<div class="section-head"><div><span class="eyebrow">STOCK RESEARCH DESK</span><h2>시장 탐색</h2></div><p>공개 분석자료 · 계좌정보 제외</p></div>
-      <div class="wb-tabs" aria-label="시장 탐색 메뉴">${[['themes','테마·주도주'],['screener','조건검색·즐겨찾기'],['macro','경제일정·지표'],['companies','실적·공시·신규상장']].map(([id,label]) => `<button type="button" data-wb-tab="${id}" aria-pressed="${active === id}">${label}</button>`).join('')}</div>
+    // Preserve the original form node, its listeners, query and asynchronous
+    // results when the report or a research tab is rendered again.
+    lookupPanel?.remove();
+    if(['#stockSearchForm','#stockIndividualSearch'].includes(window.location?.hash))active='lookup';
+    root.innerHTML = `<div class="section-head"><div><span class="eyebrow">STOCK RESEARCH DESK</span><h2>시장 탐색</h2></div><p>시장 분석 · 전체 종목 검색</p></div>
+      <div class="wb-tabs" aria-label="시장 탐색 메뉴">${[['themes','테마·주도주'],['screener','조건검색·즐겨찾기'],['macro','경제일정·지표'],['companies','실적·공시·신규상장'],['lookup','개별검색']].map(([id,label]) => `<button type="button" data-wb-tab="${id}" aria-pressed="${active === id}">${label}</button>`).join('')}</div>
       <div id="wbPane" class="wb-pane"></div>`;
+    if(lookupPanel)root.append(lookupPanel);
     drawPane();
     if (!externalPromise) externalPromise = fetch(`data/stock-research.json?v=${Date.now()}`).then(response => {
       if (!response.ok) throw new Error('공개 일정 자료를 불러오지 못했습니다.'); return response.json();
@@ -40,6 +47,9 @@
   function drawPane() {
     const pane = root.querySelector('#wbPane');
     if (!pane) return;
+    pane.hidden=active==='lookup';
+    if(lookupPanel)lookupPanel.hidden=active!=='lookup';
+    if(active==='lookup')return;
     if (active === 'themes') drawThemes(pane);
     if (active === 'screener') drawScreener(pane);
     if (active === 'macro') drawMacro(pane);
@@ -159,5 +169,9 @@
   root.addEventListener('change',event=>{const form=event.target.closest('#wbFilterForm');if(form)readFilters(form);if(event.target.closest('#wbReportedFilters'))renderReportedRows();});
   root.addEventListener('input',event=>{const form=event.target.closest('#wbFilterForm');if(form)readFilters(form);if(event.target.closest('#wbReportedFilters'))renderReportedRows();});
   setInterval(updateCountdown,30000);
-  window.StockWorkbench={render};
+  window.StockWorkbench={render,openLookup(){
+    active='lookup';
+    root.querySelectorAll('[data-wb-tab]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.wbTab===active)));
+    drawPane();
+  }};
 })();
