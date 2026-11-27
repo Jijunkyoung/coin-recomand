@@ -27,9 +27,9 @@
     const rows = result.rows; if (!rows?.length) throw new Error("해당 종목의 캔들 자료가 없습니다.");
     const data = { rows, source: "업비트", interval }; cache.set(key, { at: Date.now(), data }); return data;
   }
-  async function loadStock(stock, market, interval) {
+  async function loadStock(stock, market, interval, force = false) {
     const key = `${market}:${stock.symbol}:${interval}`; const previous = cache.get(key);
-    if (previous && Date.now() - previous.at < 60000) return previous.data;
+    if (!force && previous && Date.now() - previous.at < 60000) return previous.data;
     const data = await window.CoinAuth.stockChart({ symbol: stock.symbol, market, interval });
     const rows = aggregate(data.rows, interval); if (!rows.length) throw new Error("해당 봉의 자료가 없습니다.");
     const output = { ...data, rows, interval }; cache.set(key, { at: Date.now(), data: output }); return output;

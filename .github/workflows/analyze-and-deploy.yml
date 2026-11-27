@@ -74,6 +74,7 @@ jobs:
           node --check docs/portfolio-report.js
           node --check docs/stock.js
           node --check docs/stock-workbench.js
+          node --check docs/stock-lookup.js
           node tests/research_ui.cjs
           npm run test:ui
       - name: Configure member authentication
@@ -82,6 +83,8 @@ jobs:
           SUPABASE_PUBLIC_KEY_FILE: config/supabase-publishable-key.txt
           SUPABASE_PROJECT_REF: pgtxtnggjqaysjhtdepz
         run: python scripts/write_supabase_config.py
+      - name: Refresh public stock listing directory
+        run: python -m src.stock_symbols
       - name: Load browser-saved member settings
         continue-on-error: true
         env:

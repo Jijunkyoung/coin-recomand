@@ -17,8 +17,12 @@
   let favorites = new Set();
   const favoriteKey = `stock-favorites-${market}-v1`;
   try { const saved = JSON.parse(localStorage.getItem(favoriteKey) || '[]'); if (Array.isArray(saved)) favorites = new Set(saved.filter(x => typeof x === 'string')); } catch (_) {}
+  window.addEventListener('stock-lookup-update',()=>{
+    try{favorites=new Set(JSON.parse(localStorage.getItem(favoriteKey)||'[]'));}catch{}
+    if(active==='screener')drawResults();
+  });
   const filters = {query:'',sector:'',returnPeriod:'1d',returnMin:'',returnMax:'',rsiMin:'',rsiMax:'',volumeMin:'',average:'',favorites:false,preset:'',sort:'score',direction:'desc'};
-  const stocks = () => data?.rankings || [];
+  const stocks = () => [...new Map([...(window.StockLookup?.recent() || []),...(data?.rankings || [])].map(row=>[row.symbol,row])).values()];
   const themes = () => data?.theme_board?.themes || [];
   const favorite = stock => `<button type="button" class="wb-star" data-favorite="${esc(stock.symbol)}" aria-label="${esc(stock.name)} 즐겨찾기" aria-pressed="${favorites.has(stock.symbol)}">${favorites.has(stock.symbol) ? '★' : '☆'}</button>`;
   const stockButton = stock => `<button type="button" class="wb-stock-link" data-stock="${esc(stock.symbol)}"><strong>${esc(stock.name || stock.symbol)}</strong><small>${esc(stock.symbol)}</small></button>`;
@@ -79,12 +83,12 @@
     return rows.sort((a,b) => { const x=value(a),y=value(b); if(x===null||y===null)return x===y?String(a.symbol).localeCompare(b.symbol):x===null?1:-1;return (filters.direction==='asc'?x-y:y-x)||String(a.symbol).localeCompare(b.symbol); });
   }
   function drawScreener(pane) {
-    pane.innerHTML = `<div class="wb-presets" aria-label="빠른 조건"><button type="button" data-preset="all">전체</button><button type="button" data-preset="trend">50일선 위</button><button type="button" data-preset="oversold">RSI 30 이하</button><button type="button" data-preset="high">52주 고점 5% 이내</button><button type="button" data-preset="low">52주 저점 5% 이내</button></div>
+    pane.innerHTML = `<p class="wb-note">전체 상장종목은 종목 검색에서 찾은 뒤 선택해 분석할 수 있습니다. 아래 조건검색은 정기 분석 및 이 브라우저에서 조회한 종목에 적용합니다.</p><button type="button" data-full-lookup>전체 상장종목에서 찾기</button><div class="wb-presets" aria-label="빠른 조건"><button type="button" data-preset="all">조회된 종목 전체</button><button type="button" data-preset="trend">50일선 위</button><button type="button" data-preset="oversold">RSI 30 이하</button><button type="button" data-preset="high">52주 고점 5% 이내</button><button type="button" data-preset="low">52주 저점 5% 이내</button></div>
       <form id="wbFilterForm" class="wb-filters"><label>종목 검색<input name="query" type="search" value="${esc(filters.query)}" placeholder="종목명 또는 코드"></label><label>테마<select name="sector"><option value="">전체 테마</option>${themes().map(row => `<option value="${esc(row.id)}" ${filters.sector===row.id?'selected':''}>${esc(row.label)}</option>`).join('')}</select></label>
       <label>수익률 기간<select name="returnPeriod">${[['1d','일간'],['5','1주 · 5거래일'],['21','1개월 · 21거래일'],['63','3개월 · 63거래일'],['126','6개월 · 126거래일'],['252','1년 · 252거래일']].map(([v,t])=>`<option value="${v}" ${filters.returnPeriod===v?'selected':''}>${t}</option>`).join('')}</select></label><label>선택기간 수익률 최소 %<input name="returnMin" type="number" step="0.1" value="${esc(filters.returnMin)}"></label><label>선택기간 수익률 최대 %<input name="returnMax" type="number" step="0.1" value="${esc(filters.returnMax)}"></label><label>RSI 최소<input name="rsiMin" type="number" min="0" max="100" step="0.1" value="${esc(filters.rsiMin)}"></label><label>RSI 최대<input name="rsiMax" type="number" min="0" max="100" step="0.1" value="${esc(filters.rsiMax)}"></label><label>거래량 배수 최소<input name="volumeMin" type="number" min="0" step="0.1" value="${esc(filters.volumeMin)}"></label>
       <label>이동평균<select name="average">${[['','제한 없음'],['50:above','50일선 위'],['50:below','50일선 아래'],['200:above','200일선 위'],['200:below','200일선 아래']].map(([v,t])=>`<option value="${v}" ${filters.average===v?'selected':''}>${t}</option>`).join('')}</select></label>
       <label>정렬<select name="sort">${[['score','기술점수'],['return_1d','일간 등락률'],['return_21','21거래일 수익률'],['rsi','RSI'],['turnover','추정 거래대금']].map(([v,t])=>`<option value="${v}" ${filters.sort===v?'selected':''}>${t}</option>`).join('')}</select></label><label>순서<select name="direction"><option value="desc" ${filters.direction==='desc'?'selected':''}>높은 순</option><option value="asc" ${filters.direction==='asc'?'selected':''}>낮은 순</option></select></label><label class="wb-check"><input name="favorites" type="checkbox" ${filters.favorites?'checked':''}>즐겨찾기만</label><button type="submit">조건 적용</button><button type="button" data-export="stocks">검색결과 CSV</button></form>
-      <p class="wb-note">현재 분석대상 ${stocks().length}종목 안에서 검색합니다. 즐겨찾기는 이 브라우저에 저장합니다. 52주=최근 252개 일봉 · 1개월=21거래일 · 이력이 부족한 지표는 —로 표시하고 해당 조건에서 제외합니다. 추천점수에는 추가 가산하지 않습니다.</p><div id="wbSearchResults" aria-live="polite"></div>`;
+      <p class="wb-note">현재 조회된 ${stocks().length}종목에 조건을 적용합니다. 즐겨찾기는 이 브라우저에 저장합니다. 52주=최근 252개 일봉 · 1개월=21거래일 · 이력이 부족한 지표는 —로 표시하고 해당 조건에서 제외합니다. 개별 조회 종목의 기술점수는 —이며 자동 추천에 추가하지 않습니다.</p><div id="wbSearchResults" aria-live="polite"></div>`;
     drawResults();
   }
   function drawResults() {
@@ -142,8 +146,9 @@
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`stocks-${market}-screening.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   root.addEventListener('click', event => {
+    if(event.target.closest('[data-full-lookup]')){window.StockLookup?.search(filters.query);return;}
     const tab=event.target.closest('[data-wb-tab]');if(tab){active=tab.dataset.wbTab;root.querySelectorAll('[data-wb-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b===tab)));drawPane();return;}
-    const star=event.target.closest('[data-favorite]');if(star){const id=star.dataset.favorite;favorites.has(id)?favorites.delete(id):favorites.add(id);try{localStorage.setItem(favoriteKey,JSON.stringify([...favorites]));}catch(_){}drawResults();return;}
+    const star=event.target.closest('[data-favorite]');if(star){const id=star.dataset.favorite;favorites.has(id)?favorites.delete(id):favorites.add(id);try{localStorage.setItem(favoriteKey,JSON.stringify([...favorites]));}catch(_){}drawResults();window.dispatchEvent(new window.CustomEvent('stock-favorites-change'));return;}
     const stock=event.target.closest('[data-stock]');if(stock){const row=stocks().find(x=>x.symbol===stock.dataset.stock);if(row)openStock?.(row);return;}
     const theme=event.target.closest('[data-theme]');if(theme){selectedTheme=theme.dataset.theme;drawPane();return;}
     const preset=event.target.closest('[data-preset]');if(preset){Object.assign(filters,{query:'',sector:'',returnPeriod:'1d',returnMin:'',returnMax:'',rsiMin:'',rsiMax:'',volumeMin:'',average:'',favorites:false,preset:''});if(preset.dataset.preset==='trend')filters.average='50:above';if(preset.dataset.preset==='oversold')filters.rsiMax='30';if(['high','low'].includes(preset.dataset.preset))filters.preset=preset.dataset.preset;drawPane();return;}

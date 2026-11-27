@@ -28,7 +28,7 @@
       {"symbol": "JPM", "name": "JP모건", "exchange": "NYS"},
       {"symbol": "LLY", "name": "일라이릴리", "exchange": "NYS"},
       {"symbol": "COST", "name": "코스트코", "exchange": "NAS"},
-      {"symbol": "WMT", "name": "월마트", "exchange": "NYS"},
+      {"symbol": "WMT", "name": "월마트", "exchange": "NAS"},
       {"symbol": "XOM", "name": "엑슨모빌", "exchange": "NYS"},
       {"symbol": "NFLX", "name": "넷플릭스", "exchange": "NAS"},
       {"symbol": "COIN", "name": "코인베이스", "exchange": "NAS"},
